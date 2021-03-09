@@ -4,36 +4,37 @@ library(tidyverse)
 theme_set(theme_bw())
 library(sf)
 
-#Test polygon set (only deals with overlap of 2, plus exact overlap)
-m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
-p <- st_polygon(list(m))
-dat <- vector("list", 2)
-dat[[1]] <- p
-dat[[2]] <- p + c(0.65,0.75)
-dat[[3]] <- p + 3
-dat[[4]] <- p*0.25+0.25
-dat[[5]] <- dat[[3]] #5 and 6 exactly overlap 3
-dat[[6]] <- dat[[3]]
-dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),1,3),st_sfc(dat)) %>%
-  st_set_crs(3401)
-dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
-
-# #Test polygon set (deals with overlaps of 3)
+# #Test polygon set (only deals with overlap of 2, plus exact overlap)
 # m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
 # p <- st_polygon(list(m))
 # dat <- vector("list", 2)
 # dat[[1]] <- p
-# dat[[2]] <- p + 0.75
+# dat[[2]] <- p + c(0.65,0.75)
 # dat[[3]] <- p + 3
 # dat[[4]] <- p*0.25+0.25
-# dat[[5]] <- p*0.5+0.2
-# dat[[6]] <- p+c(0.75,0)
-# dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
-# dat[[8]] <- p + c(2.1,3.1)
-# dat[[9]] <- p + c(3,1)
+# dat[[5]] <- dat[[3]] #5 and 6 exactly overlap 3
+# dat[[6]] <- dat[[3]]
+# dat[[7]] <- p + c(3,2)
 # dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
 #   st_set_crs(3401)
 # dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
+
+#Test polygon set (deals with overlaps of 3)
+m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
+p <- st_polygon(list(m))
+dat <- vector("list", 2)
+dat[[1]] <- p
+dat[[2]] <- p + 0.75
+dat[[3]] <- p + 3
+dat[[4]] <- p*0.25+0.25
+dat[[5]] <- p*0.5+0.2
+dat[[6]] <- p+c(0.75,0)
+dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
+dat[[8]] <- p + c(2.1,3.1)
+dat[[9]] <- p + c(3,1)
+dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
+  st_set_crs(3401)
+dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
 
 # #Triangulate turns a polygon into a set of triangles. 
 # dat2 <- rbind(c(1,0), c(1,1), c(0.5,1.5),c(0,1), c(0,0),c(0.5,-0.5),c(1,0))
@@ -102,7 +103,8 @@ dat2 <- dat %>%
 #Looks OK
 dat2 %>% mutate(r=1:n()) %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.5)
 
-# 2. For intersecting areas, split into 2 using st_voronoi (st_triangulate makes random triangles)
+# 2. For intersecting areas, merge together overlapping ares
+# Voronai polygons work in simple cases (2 polygons), but not in multiple, which is the majority of yield polygons
 weldPoly <- function(dat,weldVars){
   #Function to "weld" overlapping polygons
   # weldVars = vars to spatially average
@@ -125,7 +127,17 @@ weldPoly <- function(dat,weldVars){
   dat <- dat2 #Prototyping
   
   #All cases
-  intPoly <- unique(st_intersects(dat))
+  doesIntersect <- unique(st_intersects(dat))
+  # 
+  # st_intersects(dat)
+  # st_disjoint(dat)
+  # st_touches(dat)
+  # st_crosses(dat)
+  # st_within(dat)
+  # st_contains(dat)
+  # st_overlaps(dat)
+  # st_covers(dat)
+  
   
   # #Pairwise cases
   # intPoly <- unique(c(st_overlaps(dat))) #Get overlapping polygons
@@ -134,76 +146,74 @@ weldPoly <- function(dat,weldVars){
   
   # for(i in 1:length(intPoly)){
   
-  i <- 2 #Eventually inside a for/lapply loop
+  i <- 1 #Eventually inside a for/lapply loop
   
-  polySet <- intPoly[[i]] #Pairs of polygons to use
-    # if(length(polySet)>1){
-      p1 <- dat[polySet,] #Dataframe with overlapping polygons
+  polySet <- doesIntersect[[i]] #Set of polygons to use
+  # if(length(polySet)>1){
+  p1 <- dat[polySet,] #Dataframe with overlapping polygons
+  
+  p1 %>% rownames_to_column('poly') %>% 
+    ggplot()+geom_sf(aes(col=poly),fill=NA)+
+    geom_sf_text(aes(label=poly,col=poly))
       
-      p1 %>% rownames_to_column('poly') %>% 
-      ggplot()+geom_sf(aes(col=poly),fill=NA)+
-        geom_sf_text(aes(label=poly,col=poly))
+  # #Calculate new geometry - pairwise
+  # #This works only for pairwise overlap
+  # pDiff <- st_sym_difference(st_geometry(p1[1,]), #Polygons with intersection clipped
+  #                            st_geometry(p1[2,])) %>% st_cast('POLYGON')
+  # pInt <- st_intersection(st_geometry(p1[1,]), #Only intersection
+  #                         st_geometry(p1[2,]))
+  
+  # st_intersection(p1) %>% ggplot()+geom_sf(alpha=0.3)
       
-      # #Calculate new geometry - pairwise
-      # pDiff <- st_sym_difference(st_geometry(p1[1,]), #Polygons with intersection clipped
-      #                            st_geometry(p1[2,])) %>% st_cast('POLYGON')
-      # pInt <- st_intersection(st_geometry(p1[1,]), #Only intersection
-      #                         st_geometry(p1[2,]))
+  intPoly <- st_intersection(p1)# %>% st_geometry() #Polygon intersections
       
-      # st_intersection(p1) %>% ggplot()+geom_sf(alpha=0.3)
+  p1 %>% ggplot()+geom_sf(alpha=0.3)
+  
+  #Decompose into list of polygons. Each level has polygons of 1,2,3 sets of overlap
+  pList <- lapply(1:max(intPoly$n.overlaps),function(x){
+    st_cast(st_cast(intPoly[intPoly$n.overlaps==x,],'MULTIPOLYGON'),'POLYGON') #%>% 
+      # select(-n.overlaps,-contains('origins')) #%>% st_geometry()
+  })
       
-      intPoly <- st_intersection(p1) #Polygon intersections
+  for(j in 1:(length(pList)-1)){ #Remove difference from upper-level intersections (ie 3-overlap separate from 2, separate from 1)
+    pList[[j]] <- st_difference(pList[[j]],st_union(do.call('rbind',pList[(j+1):length(pList)])))
+      # select(-matches('\\.\\d'))
+  }
       
-      #Decompose into list of polygons
-      pList <- lapply(1:max(intPoly$n.overlaps),function(x){
-        st_cast(st_cast(intPoly[intPoly$n.overlaps==x,],'MULTIPOLYGON'),'POLYGON') %>% select(-n.overlaps,-contains('origins'))
-      })
+  # Bits of the intersecting polygons
+  intPoly <- do.call('rbind',pList) %>% mutate(area=as.numeric(st_area(.)))
+  
+  intPoly %>% #Subdivisions
+    mutate(r=1:n()) %>%
+    ggplot()+
+    geom_sf(alpha=0.3)+
+    geom_sf_label(aes(label=r))
+  
+  
+
+  # #Original 3 polygons
+  # p1 %>% mutate(r=1:n()) %>% 
+  #   ggplot()+
+  #   geom_sf(alpha=0.3)+
+  #   geom_sf_label(aes(label=r))
+  
+  #Features to merge together
+  st_intersection(intPoly,st_geometry(p1[1,])) %>%
+    filter(grepl("POLYGON", st_geometry_type(.))) %>% 
+    select(-matches('\\.\\d')) %>%
+    mutate(area=as.numeric(st_area(.))) %>% 
+    st_drop_geometry()
+    # ggplot()+geom_sf(alpha=0.3)
+  
+  st_overlaps(intPoly,p1[1,])
+  
+  st_intersection(intPoly,p1[1,]) 
       
-      for(j in 1:(length(pList)-1)){ #Remove difference from upper-level intersections
-        pList[[j]] <- st_difference(pList[[j]],st_union(do.call('rbind',pList[(j+1):length(pList)]))) %>% 
-          select(-matches('\\.\\d'))
-      }
-      
-      #Bits of the intersecting polygons
-      intPoly <- do.call('rbind',pList)
-      
-      intPoly %>% #Works
-        mutate(r=1:n()) %>% 
-        ggplot()+
-        geom_sf(alpha=0.3)+
-        geom_sf_label(aes(label=r))
-      
-      #Original 3 polygons
-      p1 %>% mutate(r=1:n()) %>% 
-        ggplot()+
-        geom_sf(alpha=0.3)+
-        geom_sf_label(aes(label=r))
-      
-      #Features to combine into p1[3]
-      st_intersection(p1[1,],intPoly) %>% filter(grepl("POLYGON", st_geometry_type(.)))
-      
-      st_overlaps(intPoly,p1[1,])
-      
-      
-     
-     
-     st_intersection(intPoly,p1[3,]) 
-      
-      
-        
-      
-      
-      
-      
-      
-      
-      
-      
-      intPoly %>% mutate(r=1:n()) %>% 
-        ggplot()+geom_sf(alpha=0.5,fill='red')+
-        geom_sf_text(aes(label=n.overlaps))+
-        geom_sf(data=st_intersection(p1),fill=NA)+
-        facet_wrap(~r)
+  intPoly %>% mutate(r=1:n()) %>% 
+    ggplot()+geom_sf(alpha=0.5,fill='red')+
+    geom_sf_text(aes(label=n.overlaps))+
+    geom_sf(data=st_intersection(p1),fill=NA)+
+    facet_wrap(~r)
       
       
       
