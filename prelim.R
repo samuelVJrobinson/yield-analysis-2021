@@ -75,24 +75,23 @@ dat %>% filter(Date=='2019-10-31') %>%
   ggplot()+geom_sf(alpha=0.5)
 
 
-dat %>% filter(Date=='2019-10-31') %>% 
+dat %>% filter(Date!='2019-10-31',Pass==5) %>% 
   makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>% 
-  ggplot()+geom_sf(alpha=0.5)
-  # st_intersection() %>%
-  # filter(r==1|r==2|r==3) %>% 
-  # group_by(r) %>% 
-  # st_union() %>% ggplot()+geom_sf(alpha=0.5)#+
-  # st_combine() %>% ggplot()+geom_sf(alpha=0.5)#+
+  select(ID,Pass,DryYield) %>% mutate(pArea=st_area(.)) %>% 
+  mutate(YieldMass=convertYield(DryYield,'tpha','gpm2')*as.numeric(pArea)) %>% 
+  # ggplot()+geom_sf()
+  # mergePoly(fList=lst(YieldMass = sum)) %>%
+  ggplot()+geom_sf()
 
 
-  ggplot()+geom_sf(aes(fill=DryYield,col=DryYield),alpha=0.5)#+
-  # geom_sf(dat=filter(dat,Date=='2019-10-31'),col='red')
 
-dat %>% filter(Date=='2019-10-31') %>% 
-  makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>% 
-  mergePoly()
-  # st_intersection() %>% 
-  ggplot()+geom_sf(aes(fill=DryYield,col=DryYield),alpha=0.5)
+  
+  # mutate(pArea=as.numeric(st_area(.))) %>% 
+  # mutate(DryYield=convertYield(YieldMass/pArea,'gpm2','tpha')) %>%
+  # # filter(pArea>15) %>% 
+  # ggplot()+geom_sf(aes(fill=DryYield,col=DryYield),alpha=0.5)
+
+
 
 
 # Additive model ----------------------------------------------------------

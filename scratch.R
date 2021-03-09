@@ -4,35 +4,36 @@ library(tidyverse)
 theme_set(theme_bw())
 library(sf)
 
-# #Test polygon set (only deals with overlap of 2)
-# m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
-# p <- st_polygon(list(m))
-# dat <- vector("list", 2)
-# dat[[1]] <- p
-# dat[[2]] <- p + c(0.65,0.75)
-# dat[[3]] <- p + 3
-# dat[[4]] <- p*0.25+0.25
-# dat[[5]] <- dat[[3]] #5 completely overlaps 3
-# dat <- st_sf(speed=c(1,1,1,1,1),yield=c(1,1.5,0.5,2,0.2),st_sfc(dat)) %>%
-#   st_set_crs(3401)
-# dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
-
-#Test polygon set (deals with overlaps of 3)
+#Test polygon set (only deals with overlap of 2, plus exact overlap)
 m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
 p <- st_polygon(list(m))
 dat <- vector("list", 2)
 dat[[1]] <- p
-dat[[2]] <- p + 0.75
+dat[[2]] <- p + c(0.65,0.75)
 dat[[3]] <- p + 3
 dat[[4]] <- p*0.25+0.25
-dat[[5]] <- p*0.5+0.2
-dat[[6]] <- p+c(0.75,0)
-dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
-dat[[8]] <- p + c(2.1,3.1)
-dat[[9]] <- p + c(3,1)
-dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
+dat[[5]] <- dat[[3]] #5 and 6 exactly overlap 3
+dat[[6]] <- dat[[3]]
+dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),1,3),st_sfc(dat)) %>%
   st_set_crs(3401)
 dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
+
+# #Test polygon set (deals with overlaps of 3)
+# m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
+# p <- st_polygon(list(m))
+# dat <- vector("list", 2)
+# dat[[1]] <- p
+# dat[[2]] <- p + 0.75
+# dat[[3]] <- p + 3
+# dat[[4]] <- p*0.25+0.25
+# dat[[5]] <- p*0.5+0.2
+# dat[[6]] <- p+c(0.75,0)
+# dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
+# dat[[8]] <- p + c(2.1,3.1)
+# dat[[9]] <- p + c(3,1)
+# dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
+#   st_set_crs(3401)
+# dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
 
 # #Triangulate turns a polygon into a set of triangles. 
 # dat2 <- rbind(c(1,0), c(1,1), c(0.5,1.5),c(0,1), c(0,0),c(0.5,-0.5),c(1,0))
@@ -96,6 +97,7 @@ dat2 <- dat %>%
   mutate(mass=as.numeric(yield*st_area(.))) %>% #Turn yield into raw mass (difficult to deal with areas inside of mergePoly)
   mergePoly(fList=lst(speed= mean, mass= sum)) %>% 
   mutate(yield=as.numeric(mass/st_area(.))) #Turn raw mass back into yield
+# debugonce(mergePoly)
   
 #Looks OK
 dat2 %>% mutate(r=1:n()) %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.5)
