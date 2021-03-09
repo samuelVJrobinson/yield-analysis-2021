@@ -1,12 +1,22 @@
 # Helper functions
 
-seqGroup <- function(x){ #Turns sequential IDs into numbered groups
-  xl <- (x-lag(x))!=1
+seqGroup <- function(x,singles=TRUE){ #Turns sequential IDs into numbered groups.
+  #Singles = TRUE, sequential values must be exactly 1 greater (gaps matter)
+  #Singles = FALSE, sequential values must be greater (gaps don't matter)
+  if(singles){
+    xl <- (x-lag(x))!=1
+  } else {
+    xl <- (x-lag(x))<0
+  }
   cumsum(ifelse(is.na(xl),FALSE,xl))+1
 }
 
 makePolys <- function(dat,width='w',dist='d',angle='a',backwards=FALSE){
   # Make polygons from width, dist, and angle measurements, centered on location from dat
+  
+  gType <- dat %>% st_geometry_type(FALSE)
+  
+  if(gType!='POINT') warning(paste('Input data type is',gType,'not POINT',sep=' '))
   
   rectFun <- function(x,y,w,d,a,b){
     #Function to create corners of rotated rectangle from:
