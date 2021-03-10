@@ -11,6 +11,11 @@ library(sf)
 # datLoc <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2019\\SW02.csv" #Multivac
 datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/SW02.csv" #Galpern machine
 
+#Name of field
+fieldName <- unlist(strsplit(datLoc,split='/'))
+fieldName <- paste(fieldName[c((length(fieldName)-1):length(fieldName))],collapse=' - ')
+fieldName <- gsub('\\.csv','',fieldName)
+
 source('helperFunctions.R')
 
 dat <- read.csv(datLoc,stringsAsFactors=TRUE) %>% 
@@ -46,6 +51,12 @@ dat <- dat %>%  #Distance from edge of field
   mutate(dist=as.numeric(st_distance(.,fieldEdge))[1:nrow(.)]) %>% 
   mutate(dist=dist-min(dist)) #Shrink to 0
 
+yieldMap <- ggplot(dat)+
+  geom_sf(aes(fill=log(DryYield),col=log(DryYield)))+
+  geom_sf(data=fieldEdge,col='red')+
+  labs(title=fieldName)
+ggsave(paste0('./Figures/YieldMaps/',fieldName,'.png'),yieldMap,height=8,width=8)  
+
 # Look at data ------------------------------------------------------------
 
 dat %>% #Mostly done on Nov 4 2019
@@ -70,7 +81,10 @@ dat %>% ggplot(aes(x=r,y=DryYield,col=Pass))+geom_point()+
   facet_wrap(~Date,scales='free_x')
 
 #Distance from edge of field
-dat %>% ggplot()+geom_sf(aes(col=dist,fill=dist))+geom_sf(data=fieldEdge,col='red')
+dat %>% 
+  ggplot()+geom_sf(aes(col=sqrt(dist),fill=sqrt(dist)))+
+  geom_sf(data=fieldEdge,col='red')
+
 
 # Deal with overlapping point data ----------------------------------------
 
@@ -110,16 +124,24 @@ par(mfrow=c(2,2)); gam.check(m1); abline(0,1,col='red'); par(mfrow=c(1,1))
 plot(m1,scheme=2,all.terms=TRUE,too.far=0.01,pages=1)
 
 #Non-isotropic model - much better than first one
-f2 <- ~ s(pArea) + s(dist,k=6) + s(E,N,k=60) + s(r,k=60) #Variance model
+f2 <- ~ s(dist,k=6) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Variance model
 flist <- list(f,f2)
 
-m2 <- gam(flist,data=dat, #Takes about 60 seconds to fit
+a <- Sys.time()
+m2 <- gam(flist,data=dat, 
           family=gaulss())
+Sys.time()-a #Takes about 2 mins
+beep(1)
+
 summary(m2)
 plot(m2,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
 par(mfrow=c(2,2)); gam.check(m2); abline(0,1,col='red'); par(mfrow=c(1,1))
 
 c(m1$aic,m2$aic) #Variance very clearly non-constant
+
+save(m1,m2,file=paste('./Models/',fieldName,'.Rdata'))
+
+
 
 #Bottom line: 
 # - non-isotropic model required
