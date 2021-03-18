@@ -9,7 +9,7 @@ library(mgcv)
 library(sf)
 
 # datLoc <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2019\\SW02.csv" #Multivac
-datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/SW02.csv" #Galpern machine
+datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/2019/SW02.csv" #Galpern machine
 
 #Name of field
 fieldName <- unlist(strsplit(datLoc,split='/'))
@@ -18,7 +18,7 @@ fieldName <- gsub('\\.csv','',fieldName)
 
 source('helperFunctions.R')
 
-dat <- read.csv(datLoc,stringsAsFactors=TRUE) %>% 
+dat <- read.csv(datLoc,stringsAsFactors=TRUE,fileEncoding='latin1') %>% 
   rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
   rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
   rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
