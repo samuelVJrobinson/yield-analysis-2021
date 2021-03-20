@@ -16,6 +16,13 @@ datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>%
 
 datSource %>% count(grower,year) 
 
+# for(i in 1:nrow(datSource)){ #Looped version
+#   
+#   
+# }
+
+
+
 
 
   

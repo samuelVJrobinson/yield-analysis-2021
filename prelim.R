@@ -7,13 +7,14 @@ library(tidyverse)
 theme_set(theme_bw())
 library(mgcv)
 library(sf)
+library(beepr)
 
 # datLoc <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2019\\SW02.csv" #Multivac
-datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/2019/SW02.csv" #Galpern machine
+datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/2019/SW 02.csv" #Galpern machine
 
 #Name of field
 fieldName <- unlist(strsplit(datLoc,split='/'))
-fieldName <- paste(fieldName[c((length(fieldName)-1):length(fieldName))],collapse=' - ')
+fieldName <- paste(fieldName[c((length(fieldName)-2):length(fieldName))],collapse='_')
 fieldName <- gsub('\\.csv','',fieldName)
 
 source('helperFunctions.R')
@@ -86,26 +87,6 @@ dat %>%
   geom_sf(data=fieldEdge,col='red')
 
 
-# Deal with overlapping point data ----------------------------------------
-
-#Problem: some points are registered as 0 yield because combine drove over areas that were already harvested.
-#Possible solutions: 
-
-dat %>% filter(Date=='2019-10-31',Pass==1) %>% 
-  ggplot() + geom_sf()
-  # ggplot(aes(x=Lon,y=Lat))+
-  # geom_point(alpha=0.7) + geom_path()
-
-dat %>% filter(Date=='2019-10-31',Pass==1) %>% 
-  slice(1:3) %>% ggplot()+geom_sf(alpha=0.3)
-
-dat %>% filter(Date=='2019-10-31') %>%
-  ggplot()+geom_sf(alpha=0.5)
-
-dat %>% filter(Date=='2019-10-31') %>% 
-  select(ID,Pass,DryYield) %>% 
-  ggplot()+geom_sf(aes(fill=DryYield))
-
 
 # Additive model ----------------------------------------------------------
 
@@ -116,19 +97,21 @@ cl <- makeCluster(12)
 #Isotropic model:
 
 #DryYield ~ distance from edge, polygon area (turning + speed), geographic smoother
-f <- sqrt(DryYield) ~ s(dist,k=10) + s(E,N,k=60) + s(r,k=30) + log(pArea) 
+f <- sqrt(DryYield) ~ s(dist,k=10) + s(E,N,k=60) + s(r,k=30) + log(pArea) #Mean model
 m1 <- bam(f,cluster=cl,data=dat)
 
 summary(m1)
 par(mfrow=c(2,2)); gam.check(m1); abline(0,1,col='red'); par(mfrow=c(1,1))
 plot(m1,scheme=2,all.terms=TRUE,too.far=0.01,pages=1)
 
+stopCluster(cl) 
+
 #Non-isotropic model - much better than first one
 f2 <- ~ s(dist,k=6) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Variance model
 flist <- list(f,f2)
 
 a <- Sys.time()
-m2 <- gam(flist,data=dat, 
+m2 <- gam(flist,data=dat,  #Gaussian location-scale
           family=gaulss())
 Sys.time()-a #Takes about 2 mins
 beep(1)
@@ -137,16 +120,82 @@ summary(m2)
 plot(m2,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
 par(mfrow=c(2,2)); gam.check(m2); abline(0,1,col='red'); par(mfrow=c(1,1))
 
-c(m1$aic,m2$aic) #Variance very clearly non-constant
+dat$res2 <- resid(m2) #Add residuals to df
+dat$pred <- m2$fit[,1] #Predicted value
+dat$sePred <- m2$fit[,2] #SE of prediction
 
-save(m1,m2,file=paste('./Models/',fieldName,'.Rdata'))
+
+#OK plots, but still messed up by small yield polygons
+p1 <- ggplot(dat)+geom_sf(aes(fill=pred,col=pred))+labs(title='Predicted')
+p2 <- ggplot(dat)+geom_sf(aes(fill=sePred,col=sePred))+labs(title='SE of Prediction')
+p3 <- ggplot(dat)+geom_sf(aes(fill=res2,col=res2))+labs(title='Residuals')
+ggarrange(p1,p2,p3)
+
+#Create prediction grid
+fieldEdge2 <- st_cast(fieldEdge,'POLYGON') %>% st_buffer(dist=-10) #Shrink to edge of polygons 
+grid <-  st_make_grid(fieldEdge2,what='centers',cellsize=10,square=TRUE) 
+grid <- grid[st_covers(fieldEdge2,grid)[[1]],] %>% ggplot()+geom_sf() #Chop out grid locations that aren't in field boundary
+
+st_distance(st_cast(fieldEdge2,'LINESTRING'),grid)
 
 
+
+#Temporal plot of residuals
+ggplot(dat)+geom_point(aes(x=ID,y=res2))+labs(title='Residuals')
+acf(dat$res2) #Bunch of autocorrelation in residuals
+
+
+
+
+
+
+
+#Other distributions
+
+a <- Sys.time() 
+m3 <- gam(flist,data=dat, #Gamma location-scale 
+          family=gammals())
+Sys.time()-a #Takes about 1.4 mins
+beep(2)
+
+summary(m3)
+plot(m3,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+par(mfrow=c(2,2)); gam.check(m3); abline(0,1,col='red'); par(mfrow=c(1,1))
+ 
+# samp <- sample(1:nrow(dat),round(nrow(dat)/3)) #Use only random 1/3rd of data
+# a <- Sys.time() #Gumbel
+# m4 <- gam(flist,data=dat[samp,], 
+#           family=gumbls())
+# Sys.time()-a  #Went over 20mins without converging, even with only 1/3rd of data (4103 rows). Not sure this is going to work
+# beep(2)
+
+# samp <- sort(sample(1:nrow(dat),round(nrow(dat)/4))) #Use only random 1/4th of data (3077 samples)
+# sampDat <- dat[samp,]
+# flist2 <- list(f,f2,~1) #Location, scale, and shape (~1) parameter
+# a <- Sys.time() 
+# m4 <- gam(flist2,data=dat, #Generalized extreme value location-scale
+#           family=gevlss())
+# Sys.time()-a  #20 mins on entire dataset
+# beep(2)
+# summary(m4)
+# plot(m4,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+# par(mfrow=c(2,2)); gam.check(m4); abline(0,1,col='red'); par(mfrow=c(1,1))
+
+
+#Compare different models
+
+c(m1$aic,m2$aic) #Variance very clearly non-constant. (sqrt)-Gaussian still appears best for the moment
+#AIC scores for sqrt data:  55.32474 (gaussian) -21245.06753 (gaulss) -18560.69299 (gammals) -17427.36314 (gevlss)
 
 #Bottom line: 
 # - non-isotropic model required
-# - need to examine model family more. gaussian has long tails for residuals, so perhaps gammals or gevlss?
+# - Gaussian and Gamma both have long tails for residuals. gumbls didn't converge, even after 20 mins.
 
-stopCluster(cl)
+# save(m1,m2,file=paste('./Models/',fieldName,'.Rdata'))
+
+
+
+
+
 
 
