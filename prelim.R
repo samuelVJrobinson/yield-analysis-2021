@@ -136,7 +136,7 @@ fieldEdge2 <- st_cast(fieldEdge,'POLYGON') %>% st_buffer(dist=-10) #Shrink to ed
 grid <-  st_make_grid(fieldEdge2,what='centers',cellsize=10,square=TRUE) 
 grid <- grid[st_covers(fieldEdge2,grid)[[1]],] %>% ggplot()+geom_sf() #Chop out grid locations that aren't in field boundary
 
-st_distance(st_cast(fieldEdge2,'LINESTRING'),grid)
+# st_distance(st_cast(fieldEdge2,'LINESTRING'),grid)
 
 
 

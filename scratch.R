@@ -19,19 +19,30 @@ library(sf)
 #   st_set_crs(3401)
 # dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
 
-#Test polygon set (deals with overlaps of 3)
+# #Test polygon set (deals with overlaps of 3)
+# m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
+# p <- st_polygon(list(m))
+# dat <- vector("list", 2)
+# dat[[1]] <- p
+# dat[[2]] <- p + 0.75
+# dat[[3]] <- p + 3
+# dat[[4]] <- p*0.25+0.25
+# dat[[5]] <- p*0.5+0.2
+# dat[[6]] <- p+c(0.75,0)
+# dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
+# dat[[8]] <- p + c(2.1,3.1)
+# dat[[9]] <- p + c(3,1)
+# dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
+#   st_set_crs(3401)
+# dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)
+
+#Test polygon set (no overlap)
 m <- rbind(c(1,0), c(1,1), c(0,1), c(0,0),c(1,0))
 p <- st_polygon(list(m))
 dat <- vector("list", 2)
 dat[[1]] <- p
-dat[[2]] <- p + 0.75
+dat[[2]] <- p + 1.25
 dat[[3]] <- p + 3
-dat[[4]] <- p*0.25+0.25
-dat[[5]] <- p*0.5+0.2
-dat[[6]] <- p+c(0.75,0)
-dat[[7]] <- p*c(2,0.3) + c(2.5,3.5)
-dat[[8]] <- p + c(2.1,3.1)
-dat[[9]] <- p + c(3,1)
 dat <- st_sf(speed=rep(1,length(dat)),yield=runif(length(dat),0,3),st_sfc(dat)) %>%
   st_set_crs(3401)
 dat %>% ggplot()+geom_sf(aes(fill=yield),alpha=0.6)

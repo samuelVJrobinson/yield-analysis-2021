@@ -49,13 +49,14 @@ mergePoly <- function(dat,fList=NULL){
   # takes a list of functions (fList)
   # columns not mentioned are dropped
   
-  
   vList <- as.list(names(fList))
   # doesContain <- unique(st_contains(dat)) #Deals with identical overlap
   doesContain <- st_covers(dat) 
   #Find polygons that are overlapped by others
   remove <- unique(unlist(lapply(doesContain,function(x) if(length(x)>1) x[2:length(x)] else logical(0)))) 
   doesContain <- doesContain[-remove] #Remove polygons from list
+  
+  if(length(doesContain)==0) return(dat) #If polygons completely overlap, return original data
   
   # cMat <- table(rep(1:length(doesContain),sapply(doesContain,length)),unlist(doesContain))
   # diag(cMat) <- 0
