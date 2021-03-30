@@ -1,0 +1,15 @@
+March 24:
+Things to test using Lan's yield data predictions
+
+- Main question: Does yield increase with intermediate distance to edge
+- Secondary: Does variance increase with intermediate distance to edge
+- Tertiary: Do edge types matter? (e.g. forest different than road)
+
+With each field: (N=2.5m)
+- yield ~ s(dist to Edge), variance ~ s(dist to Edge)
+- yield ~ s(dist to Edge, by = Edge type?): edge types = road, water, other crops, trees...
+
+
+Among fields: (N=500)
+- average field yield ~ total pixels that are within certain distance classes from edge + edge density of field
+- average field yield variance ~ total pixels that are with certain distance classes from edge + edge density of field

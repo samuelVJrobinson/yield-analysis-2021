@@ -20,7 +20,7 @@ datSource %>% count(grower,year)
 set.seed(1)
 datSource <- datSource %>%
   # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
-  slice_sample(n=12) #Smaller set to experiment with
+  slice_sample(n=10) #Smaller set to experiment with
 
 #Function to run the ith model
 runModI <- function(i,dS,rP,nSubSamp=50000){ 
@@ -28,13 +28,14 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   # dS <- datSource
   # rP <- rootPath
   # nSubSamp <- 50000
-  
+  # 
   if(dS$completed[i]) return('Already completed')
   
-  library(tidyverse)
+  require(tidyverse)
   theme_set(theme_bw())
-  library(mgcv)
-  library(sf)
+  require(mgcv)
+  require(sf)
+  require(ggpubr)
   
   source('helperFunctions.R')
   
@@ -122,7 +123,8 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   #Plot results - FAILS HERE WHEN ALL.TERMS=TRUE. SOME KIND OF GAM NAMESPACE PROBLEM THAT ONLY OCCURS WITHIN FUNCTIONS
   #https://stackoverflow.com/questions/45918662/plot-gam-from-mgcv-with-all-terms-true-within-a-function
   png(paste0('./Figures/ModelCheck/',fieldName,' Summary.png'),width=8,height=8,units='in',res=200)
-  plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+  # plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+  plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
   dev.off()
   
   #GAM check results
@@ -140,7 +142,7 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   
   #Actual, Predicted, and SE maps
   print('Making yield map')
-  yieldMap <- ggplot(dat) + geom_sf(aes(col=log(DryYield),alpha=0.3)) + geom_sf(data=fieldEdge,col='black')+
+  yieldMap <- ggplot(dat) + geom_sf(aes(col=log(DryYield),alpha=0.3)) + geom_sf(data=fieldEdge,col='magenta')+
     labs(title=paste(fieldName,'Data'))+guides(alpha='none') + scale_colour_distiller(type='div',palette = "Spectral") +
     theme(legend.position='bottom')
   dat <- dat %>% mutate(yieldPred=mod$fit[,1],yieldVar=mod$fit[,2],resid=resid(mod))
@@ -166,7 +168,7 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
     labs(title='Residual variogram',x='Distance',y='Semivariance')
   # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
   #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
-  res_acf <- acf(dat$resid,lag.max=500,type='correlation')
+  res_acf <- acf(dat$resid,lag.max=500,type='correlation',plot=FALSE)
   p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
     ggplot(aes(x=lag,y=acf))+geom_col()+
     labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
@@ -175,8 +177,11 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   ggsave(paste0('./Figures/ModelCheck/',fieldName,' residuals.png'),p,height=8,width=10,dpi=100)  
   
   #Models are huge, so saving only key components (about 25% of the size)
-  modList <- list(coefs=coef(mod),vcv=vcov(mod),smooths=mod$smooth,
-                  maxDist=max(dat$dist))
+  modList <- list(coefs=coef(mod), #Coefficients
+                  vcv=vcov(mod), #Covariance matrix
+                  smooths=mod$smooth, #Smooth specifications
+                  distRange=range(dat$dist), #Range of distances
+                  pAreaRange=range(dat$pArea)) #Range of polygon areas
   save(modList,file=paste0('./Figures/ModelCheck/',fieldName,' modList.Rdata'))
   
   print('Done')
@@ -201,10 +206,15 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   # par(mfrow=c(1,1))
 }
 
-runModI(1,dS=datSource,rP=rootPath) #Test
+# runModI(1,dS=datSource,rP=rootPath) #Test
+# beep(1)
 
 library(parallel)
-cluster <- makeCluster(6) #Number of cores to use
-parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource,rP=rootPath)
+cluster <- makeCluster(10) #10 procs max - uses about 90% of memory
+parLapply(cl=cluster,1:10,runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs
 beep(1)
 stopCluster(cluster)
+
+#Need to identify field boundaries. Distance is not consistent at all fields, and boundary types are likely different
+
+
