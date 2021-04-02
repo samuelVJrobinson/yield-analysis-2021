@@ -9,6 +9,8 @@ library(mgcv)
 library(sf)
 library(beepr)
 
+# Get paths to data -------------------------------------------------------
+
 rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
 datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
@@ -209,12 +211,16 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
 # runModI(1,dS=datSource,rP=rootPath) #Test
 # beep(1)
 
+# Run models --------------------------------------------------------------
+
 library(parallel)
 cluster <- makeCluster(10) #10 procs max - uses about 90% of memory
-parLapply(cl=cluster,1:10,runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs
+parLapply(cl=cluster,1:10,runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
 beep(1)
 stopCluster(cluster)
 
 #Need to identify field boundaries. Distance is not consistent at all fields, and boundary types are likely different
+
+
 
 
