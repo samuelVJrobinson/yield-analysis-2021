@@ -19,10 +19,12 @@ datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>%
 
 datSource %>% count(grower,year) 
 
-set.seed(1)
-datSource <- datSource %>%
-  # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
-  slice_sample(n=10) #Smaller set to experiment with
+# set.seed(1) # Run subset of models
+# datSource <- datSource %>%
+#   # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
+#   slice_sample(n=10) #Smaller set to experiment with
+
+# Run models --------------------------------------------------------------
 
 #Function to run the ith model
 runModI <- function(i,dS,rP,nSubSamp=50000){ 
@@ -121,7 +123,7 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
   
   print('Saving model results')
-
+  
   #Plot results - FAILS HERE WHEN ALL.TERMS=TRUE. SOME KIND OF GAM NAMESPACE PROBLEM THAT ONLY OCCURS WITHIN FUNCTIONS
   #https://stackoverflow.com/questions/45918662/plot-gam-from-mgcv-with-all-terms-true-within-a-function
   png(paste0('./Figures/ModelCheck/',fieldName,' Summary.png'),width=8,height=8,units='in',res=200)
@@ -211,16 +213,119 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
 # runModI(1,dS=datSource,rP=rootPath) #Test
 # beep(1)
 
-# Run models --------------------------------------------------------------
-
 library(parallel)
-cluster <- makeCluster(10) #10 procs max - uses about 90% of memory
-parLapply(cl=cluster,1:10,runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
+cluster <- makeCluster(8) #10 procs max - uses about 90% of memory
+parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
 beep(1)
 stopCluster(cluster)
 
 #Need to identify field boundaries. Distance is not consistent at all fields, and boundary types are likely different
 
 
+# Get smoother info from models -------------------------------------------
 
+#Function to extract smooth info from modList.Rdata at specified path
+# l = number of replicates in each smooth prediction (length.out)
+getSmooths <- function(path,l=c(30,100,500)){
+  
+  # path <- paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')
+  # l <- c(20,100,500)
+  
+  load(path) #Load data
+  
+  smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
+  
+  #Polygon area (basically speed) regression
+  
+  logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
+  pArea <- exp(logPArea) 
+  
+  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
+  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
+  
+  pAreaDat <- data.frame(pArea, #Set intercept to 1 
+                         predMean=cbind(rep(1,length(logPArea)),logPArea) %*% modList$coefs[meanVars],
+                         predSD=cbind(rep(1,length(logPArea)),logPArea) %*% modList$coefs[sdVars])
+  
+  #Field boundary distance smoothers
+  
+  meanDistSmooth <- which(smoothLabs=='s(dist)')
+  sdDistSmooth <- which(smoothLabs=='s.1(dist)')
+  
+  meanSmoothList <- modList$smooth[[meanDistSmooth]]
+  sdSmoothList <- modList$smooth[[sdDistSmooth]]
+  
+  d <- seq(min(modList$distRange),max(modList$distRange),length.out=l[2])
+  
+  meanVars <- c(meanSmoothList$first.para:meanSmoothList$last.para)
+  sdVars <- c(sdSmoothList$first.para:sdSmoothList$last.para)
+  
+  distDat <- data.frame(dist=d,
+                        predMean=PredictMat(meanSmoothList,data=data.frame(dist=d)) %*% modList$coef[meanVars],
+                        predSD=PredictMat(sdSmoothList,data=data.frame(dist=d)) %*% modList$coef[sdVars])  
+  
+  #Point order (time of combining) smoothers
+  
+  meanRSmooth <- which(smoothLabs=='s(r)')
+  sdRSmooth <- which(smoothLabs=='s.1(r)')
+  
+  meanSmoothList <- modList$smooth[[meanRSmooth]]
+  sdSmoothList <- modList$smooth[[sdRSmooth]]
+  
+  r <- seq(0,max(meanSmoothList$Xu)-min(meanSmoothList$Xu),length.out=l[3])
+  
+  meanVars <- c(meanSmoothList$first.para:meanSmoothList$last.para)
+  sdVars <- c(sdSmoothList$first.para:sdSmoothList$last.para)
+  
+  rDat <- data.frame(r=r,
+                     predMean=PredictMat(meanSmoothList,data=data.frame(r=r)) %*% modList$coef[meanVars],
+                     predSD=PredictMat(sdSmoothList,data=data.frame(r=r)) %*% modList$coef[sdVars])  
+  
+  #Assemble into list
+  
+  datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
+  
+  return(datList)
+  
+}
 
+# getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')) #Test
+# debugonce(getSmooths)
+
+#Takes about 10 seconds
+allSmooths <- lapply(paste0('./Figures/ModelCheck/',datSource$filename,' modList.Rdata'),
+                     getSmooths)
+names(allSmooths) <- gsub(' ','-',datSource$filename)
+
+names(allSmooths[[1]]) #Variables to get from allSmooths
+
+#Get df of predictions for each variable
+allEff <- lapply(names(allSmooths[[1]]),function(y){
+  lapply(allSmooths,function(x) x[[y]]) %>% 
+    do.call('rbind',.) %>% 
+    rownames_to_column('field') %>% 
+    mutate(field=gsub('\\.\\d{1,3}','',field))
+})
+
+#Pred area - looks weird
+p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predMean))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x),col='red',se=FALSE)+
+  labs(x='Polygon Area',y='Mean Yield')+coord_cartesian(xlim = c(0,200))
+p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predSD))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x,k=6),col='red',se=FALSE)+
+  labs(x='Polygon Area',y='log(SD Yield)')+coord_cartesian(xlim = c(0,200))
+
+p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predMean))+geom_line(aes(group=field),alpha=0.3)+labs(x='Boundary Distance',y='Mean Yield')+coord_cartesian(xlim = c(0,400))+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predSD))+geom_line(aes(group=field),alpha=0.3)+labs(x='Boundary Distance',y='log(SD Yield)')+coord_cartesian(xlim = c(0,400))+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+
+p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=predMean))+geom_line(aes(group=field),alpha=0.3)+labs(x='Point Order',y='Mean Yield')+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=predSD))+geom_line(aes(group=field),alpha=0.3)+labs(x='Point Order',y='log(SD Yield)')+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+
+p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2)
+ggsave(paste0('./Figures/ModelSummary.png'),p,height=6,width=12,dpi=300)  
