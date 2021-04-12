@@ -88,7 +88,7 @@ makeBoundary <- function(i,dS,rP,outerOnly=TRUE,overwrite=FALSE,nSubSamp=50000){
   rm(dat,fieldEdge,fieldEdge2); gc() #Garbage collection
 }
 
-# makeBoundary(6,datSource,rootPath,overwrite=TRUE) #Test
+makeBoundary(17,datSource,rootPath,overwrite=TRUE) #Test
 
 library(parallel)
 library(beepr)
