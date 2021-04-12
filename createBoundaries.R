@@ -96,3 +96,24 @@ cluster <- makeCluster(8) #8 procs max
 parLapply(cl=cluster,1:nrow(datSource),makeBoundary,dS=datSource,rP=rootPath,outerOnly=TRUE) 
 beep(1)
 stopCluster(cluster)
+
+# Turn polygons into linestrings ------------------------------------------
+library(tidyverse)
+library(sf)
+
+shpFiles <- paste0('./Figures/FieldBoundaries/',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE))
+
+makeLinestring <- function(shp){
+  # shp <-shpFiles[1] 
+  fieldName <- strsplit(shp,'/')[[1]][length(strsplit(shp,'/')[[1]])]
+  
+  #Polygon
+  p <- read_sf(shp) %>% st_cast('MULTILINESTRING')
+  st_write(p,paste0('./Figures/FieldBoundariesLine/',fieldName),append=FALSE,driver='ESRI Shapefile')
+}
+
+sapply(shpFiles[1:5],makeLinestring)
+
+
+
+

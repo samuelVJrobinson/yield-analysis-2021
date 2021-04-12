@@ -1,0 +1,317 @@
+\documentclass[]{elsarticle} %review=doublespace preprint=single 5p=2 column
+%%% Begin My package additions %%%%%%%%%%%%%%%%%%%
+\usepackage[hyphens]{url}
+
+
+
+\usepackage{lineno} % add
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\usepackage{graphicx}
+\usepackage{booktabs} % book-quality tables
+%%%%%%%%%%%%%%%% end my additions to header
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \usepackage{fontspec}
+  \ifxetex
+    \usepackage{xltxtra,xunicode}
+  \fi
+  \defaultfontfeatures{Mapping=tex-text,Scale=MatchLowercase}
+  \newcommand{\euro}{€}
+\fi
+% use microtype if available
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+\usepackage[left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\bibliographystyle{elsarticle-harv}
+\usepackage{longtable}
+\ifxetex
+  \usepackage[setpagesize=false, % page size defined by xetex
+              unicode=false, % unicode breaks when used with xetex
+              xetex]{hyperref}
+\else
+  \usepackage[unicode=true]{hyperref}
+\fi
+\hypersetup{breaklinks=true,
+            bookmarks=true,
+            pdfauthor={},
+            pdftitle={Edge effects and optimal field sizes in Alberta},
+            colorlinks=false,
+            urlcolor=blue,
+            linkcolor=magenta,
+            pdfborder={0 0 0}}
+\urlstyle{same}  % don't use monospace font for urls
+
+\setcounter{secnumdepth}{5}
+% Pandoc toggle for numbering sections (defaults to be off)
+
+% Pandoc citation processing
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+% for Pandoc 2.8 to 2.10.1
+\newenvironment{cslreferences}%
+  {}%
+  {\par}
+% For Pandoc 2.11+
+\newenvironment{CSLReferences}[3] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1 \everypar{\setlength{\hangindent}{\cslhangindent}}\ignorespaces\fi
+  % set entry spacing
+  \ifnum #2 > 0
+  \setlength{\parskip}{#2\baselineskip}
+  \fi
+ }%
+ {}
+\usepackage{calc} % for calculating minipage widths
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+
+% Pandoc header
+\makeatletter \def\ps@pprintTitle{  \let\@oddhead\@empty  \let\@evenhead\@empty  \def\@oddfoot{\centerline{\thepage}} \let\@evenfoot\@oddfoot} \makeatother \usepackage{float} \floatplacement{figure}{H} \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}} \usepackage{setspace} \linenumbers
+
+
+
+\begin{document}
+\begin{frontmatter}
+
+  \title{Edge effects and optimal field sizes in Alberta}
+    \author[University of Calgary]{Samuel V. J. Robinson\corref{1}}
+   \ead{samuel.robinson@ucalgary.ca} 
+    \author[University of Calgary]{Lan H. Nguyen}
+   \ead{hoanglan.nguyen@ucalgary.ca} 
+    \author[University of Calgary]{Paul Galpern}
+   \ead{paul.galpern@ucalgary.ca} 
+      \address[University of Calgary]{2500 University Drive NW, Calgary, AB}
+      \cortext[1]{Corresponding Author}
+  
+  \begin{abstract}
+  Abstract goes here
+  \end{abstract}
+   \begin{keyword} beetles; spiders; harvestmen;\end{keyword}
+ \end{frontmatter}
+
+\newpage
+\doublespacing
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+\begin{itemize}
+\tightlist
+\item
+  Preserving SNL around fields is important for agriculture and conservation
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Ecosystem services
+  \item
+    Act as reservoirs for beneficial insects
+  \item
+    Microclimate zones
+  \item
+    Poorly studied in North America
+  \item
+    Studies tend to be limited in scope (e.g.~only certain organisms/crops) and applicability
+  \end{itemize}
+\item
+  Ecosystem services can influence both the mean and variability of yield in agroecosystems
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Typically only averages (means) are considered, but higher stability (lower variance) in yield is also valuable
+  \end{itemize}
+\item
+  Field size and field boundaries are directly related to the conservation of SNL in agroecosystems
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Size examples: wheat study from the UK
+  \item
+    Boundary examples: flower strip studies, hedgerows
+  \item
+    In North America, large financial incentives to make fields large and homogeneous, especially with large harvesting and planting equipment
+  \item
+    Crop edge effects cause low yields at the margins of fields because of late emergence, poor microclimate, and competition with weeds
+  \item
+    Ecosystem services should decay with distance from edge, so crops at the centre of a large field will not benefit from ecosystem services
+  \item
+    Therefore, there should be a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
+  \end{itemize}
+\item
+  Precision yield data holds enormous promise for agronomy
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Limited because of:
+  \item
+    Lack of standardized formats
+  \item
+    Yearly calibration data
+  \item
+    Clear statistical protocols
+  \end{itemize}
+\end{itemize}
+
+\hypertarget{methods}{%
+\section{Methods}\label{methods}}
+
+\hypertarget{data-collection}{%
+\subsection{Data collection}\label{data-collection}}
+
+\begin{itemize}
+\tightlist
+\item
+  Precision yield data were collected directly from farmers across Alberta
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Farmers were solicited for yield data through local agronomists, and we received data from a total of X growers across a total of X years
+  \item
+    Most fields represented only a single year of data, but we did sometimes receive multiple years of data from the same field
+  \item
+    File formats vary depending on the brand of combine, so we converted data to a standard format (csv) using Ag Leader SMS
+  \item
+    In total, we analyzed yield data from X field-years of data, containing a total of X million data points
+  \end{itemize}
+\item
+  Yield data was collected in discrete rectangles of the same length as the data interval (distance = speed \(\times\) interval, typically 1 second) and the same width as the combine header (5-7 m)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    We extracted the size of each polygon (m\(^2\)), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
+  \item
+    Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location
+  \item
+    Seeding and application rates were constant with each field, so we did not consider inputs in our analysis
+  \end{itemize}
+\item
+  Field boundaries were automatically digitized, then manually checked using satellite imagery and classified land cover data
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Crop boundaries are flexible, and often change from year to year depending on planting and emergence conditions (e.g.~flooding during some years)
+  \item
+    Additionally, seminatural features often change from year to year
+
+    \begin{itemize}
+    \tightlist
+    \item
+      Ephemeral wetlands are flooded during some years, but consist mainly of grasses during dry years
+    \item
+      Grass boundaries can change if fields are used for as haying or pasture during crop rotation
+    \end{itemize}
+  \item
+    This makes accurate and consistent classification of field boundaries very difficult
+  \item
+    Because of this, we used the following general categories for field boundaries:
+
+    \begin{enumerate}
+    \def\labelenumi{\arabic{enumi}.}
+    \tightlist
+    \item
+      Standard: thin (\(<10\) m wide) grassy field boundary, often grassy road right-of-ways
+    \item
+      Wetland: permanent wetland, whose borders are largely unchanged from year-to-year
+    \item
+      Forest/shrub: permanent windbreaks or remnant forests
+    \item
+      Grass: larger grassy area (pasture or permanent seminatural grassland)
+    \item
+      Other crop: different crop with little or no visible boundary between planted areas
+    \item
+      Bare: unplanted (fallow), flooded area, or unpaved roads
+    \end{enumerate}
+  \end{itemize}
+\end{itemize}
+
+\hypertarget{analysis}{%
+\subsection{Analysis}\label{analysis}}
+
+\begin{itemize}
+\tightlist
+\item
+  At each field, we fit an additive model of the effect of boundary distance on crop yield while accounting for within-field spatial variation and temporal variation in the combine yield monitor
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Crop yield varies within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices such as strip farming
+  \item
+    While sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields), this does not address sensor drift over time that occurs within fields
+  \item
+    The yield monitors may record lower yields as sensors accumulate debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time
+  \item
+    Additionally, ground speed is known to be extremely important to yield monitor accuracy (Arslan \& Colvin 2002)
+  \item
+    To address this, we fit the following model:
+  \end{itemize}
+
+  \begin{equation}
+  ln(yield) 
+  \end{equation}
+\end{itemize}
+
+\hypertarget{results}{%
+\section{Results}\label{results}}
+
+Results here
+
+\hypertarget{discussion}{%
+\section{Discussion}\label{discussion}}
+
+Discussion here
+
+\hypertarget{authors-contributions}{%
+\section{Authors' contributions}\label{authors-contributions}}
+
+Author's contribution
+
+\hypertarget{acknowledgements}{%
+\section{Acknowledgements}\label{acknowledgements}}
+
+Funding for this research was provided by Ducks Unlimited Canada's Institute for Wetland and Waterfowl Research, the Alberta Canola Producers Commission, Manitoba Canola Growers Association, SaskCanola, the Alberta Biodiversity Monitoring Institute, and the Alberta Conservation Association.
+
+\hypertarget{references}{%
+\section*{References}\label{references}}
+\addcontentsline{toc}{section}{References}
+
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\hypertarget{ref-arslan2002}{}%
+Arslan, S. \& Colvin, T.S. (2002). An evaluation of the response of yield monitors and combines to varying yields. \emph{Precision Agriculture}, 3, 107--122.
+
+\end{CSLReferences}
+
+\newpage
+
+\hypertarget{appendix-a-supplementary-material}{%
+\section*{Appendix A: Supplementary Material}\label{appendix-a-supplementary-material}}
+\addcontentsline{toc}{section}{Appendix A: Supplementary Material}
+
+Supplemental materials here
+
+
+\end{document}
+
