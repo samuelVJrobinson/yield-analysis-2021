@@ -3,6 +3,8 @@
 library(tidyverse)
 library(sf)
 
+setwd("~/Documents/yield-analysis-2021")
+
 rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
 datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
@@ -88,7 +90,9 @@ makeBoundary <- function(i,dS,rP,outerOnly=TRUE,overwrite=FALSE,nSubSamp=50000){
   rm(dat,fieldEdge,fieldEdge2); gc() #Garbage collection
 }
 
-makeBoundary(17,datSource,rootPath,overwrite=TRUE) #Test
+# makeBoundary(58,datSource,rootPath,overwrite=TRUE) #Test
+# debugonce(makeBoundary)
+
 
 library(parallel)
 library(beepr)

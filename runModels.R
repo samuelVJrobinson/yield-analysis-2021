@@ -11,11 +11,20 @@ library(beepr)
 
 # Get paths to data -------------------------------------------------------
 
-rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
-datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
-  separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
-  mutate(field=gsub('\\.csv','',field)) %>% unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
-  mutate(completed=filename %in% gsub(' modList.Rdata','',dir('./Figures/ModelCheck',pattern=".Rdata",recursive=TRUE))) #Have files already been processed?
+# #Generate new dataSource dataframe
+# rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files" #Path to csv files
+# datSource <- data.frame(dataPath=dir(rootPath,pattern=".csv",recursive=TRUE,full.names = TRUE)) %>% 
+#   mutate(path=gsub('/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/','',dataPath)) %>% 
+#   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% select(-path) %>% 
+#   mutate(field=gsub('\\.csv','',field)) %>% 
+#   unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
+#   mutate(boundaryPath=paste0('./Figures/FieldBoundaries/',filename,' boundary.shp')) %>% #Paths to boundary shapefiles
+#   mutate(modelPath=paste0('./Figures/ModelCheck/',filename,' modList.Rdata'))  #Paths to saved model files
+# write.csv(datSource,'./Data/datSource_new.csv',row.names = FALSE)
+
+datSource <- read.csv('./Data/datSource.csv') #Read previous datasource file
+datSource <- datSource %>% mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
+  mutate(modelComplete=file.exists(modelPath)) #Has model already been run?
 
 datSource %>% count(grower,year) 
 
@@ -27,13 +36,13 @@ datSource %>% count(grower,year)
 # Run models --------------------------------------------------------------
 
 #Function to run the ith model
-runModI <- function(i,dS,rP,nSubSamp=50000){ 
-  # i <- 3 #Debugging
+runModI <- function(i,dS,nSubSamp=50000){ 
+  # i <- 1 #Debugging
   # dS <- datSource
-  # rP <- rootPath
   # nSubSamp <- 50000
-  # 
-  if(dS$completed[i]) return('Already completed')
+
+  if(dS$modelComplete[i]) return('Already completed')
+  if(!dS$use[i]) return('Not used')
   
   require(tidyverse)
   theme_set(theme_bw())
@@ -43,8 +52,9 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   
   source('helperFunctions.R')
   
-  csvPath <- paste(rP,dS$path[i],sep='/')
-  fieldName <- with(dS[i,],paste(grower,year,field))
+  csvPath <- dS$dataPath[i]
+  fieldName <- dS$filename[i]
+  boundaryPath <- dS$boundaryPath[i]
   
   print('Reading in data')
   dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
@@ -77,42 +87,18 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
   
-  ##Old method 42.493 seconds
-  # dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
-  #   rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
-  #   rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
-  #   rename_with(.fn = ~gsub('.km.h.$','_kmh',.x)) %>%
-  #   rename_with(.fn = ~gsub('..tonne.h.$','_th',.x)) %>%
-  #   rename_with(.fn = ~gsub('.ha.h.','_hah',.x)) %>%
-  #   rename_with(.fn = ~gsub('.m.','_m',.x)) %>%
-  #   rename_with(.fn = ~gsub('.deg.','Angle',.x)) %>%
-  #   rename_with(.fn = ~gsub('\\.','',.x)) %>%
-  #   rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
-  #   st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
-  #   st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
-  #   makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%  
-  #   mutate(pArea=as.numeric(st_area(.))) %>% 
-  #   mutate(YieldMass=convertYield(DryYield,'tpha','gpm2')*pArea) %>% 
-  #   mergePoly(fList=lst(Date= first, ID = first, Pass= first, Speed= mean, YieldMass = sum)) %>% #Merges completely overlapping polygons. Takes a few seconds
-  #   mutate(pArea=as.numeric(st_area(.))) %>%
-  #   mutate(DryYield=convertYield(YieldMass/pArea,'gpm2','tpha')) %>%
-  #   mutate(r=1:n()) %>% #row number
-  #   mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
-  #   group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
-  #   mutate(E=st_coordinates(st_centroid(.))[,1],N=st_coordinates(st_centroid(.))[,2]) %>% 
-  #   mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  print('Calculating distance from boundary')  
   
-  print('Calculating field edge')
-  fieldEdge <- dat %>% st_union() %>% st_buffer(dist=10) %>% st_cast('MULTILINESTRING')
+  fieldEdge <- read_sf(boundaryPath) %>% st_cast('MULTILINESTRING') #Read in boundary file
+  # fieldEdge <- dat %>% st_union() %>% st_buffer(dist=10) %>% st_cast('MULTILINESTRING') #Old method
   
-  dat <- dat %>%  #Distance from edge of field
-    mutate(dist=as.numeric(st_distance(.,fieldEdge))[1:nrow(.)]) %>% 
-    mutate(dist=dist-min(dist)) #Shrink to 0
+  dat <- dat %>%  #Distance from boundary
+    mutate(dist=as.numeric(st_distance(.,fieldEdge))[1:nrow(.)]) 
   
-  print('Fitting yield model')
+  print('Fitting model')
   #Fit non-isotropic GAM:
-  f <- sqrt(DryYield) ~ s(dist,k=10) + s(E,N,k=60) + s(r,k=30) + log(pArea) #Mean model
-  f2 <- ~ s(dist,k=6) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Variance model
+  f <- sqrt(DryYield) ~ s(dist,k=12) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Mean model
+  f2 <- ~ s(dist,k=12) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Variance model
   flist <- list(f,f2) #List of model formulae
   
   #Fit Gaussian location-scale  model
@@ -122,11 +108,14 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   mod <- gam(flist,data=dat,family=gaulss())
   fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
   
+  #Model with dist(10) E,N(60) r(30); s.1dist(6) s.1E,N(60) s.1r(60) - Has a very large amount of temporal/spatial autocorrelation, but only takes 6 mins or so
+  #Trying with dist(12) E,N(80) r(80); s.1dist(12) s.1E,N(80) s.1r(80) - Similar temporal/spatial autocorrelation, but takes 4 times as long, and gives roughly the same answer
+  
   print('Saving model results')
   
   #Plot results - FAILS HERE WHEN ALL.TERMS=TRUE. SOME KIND OF GAM NAMESPACE PROBLEM THAT ONLY OCCURS WITHIN FUNCTIONS
   #https://stackoverflow.com/questions/45918662/plot-gam-from-mgcv-with-all-terms-true-within-a-function
-  png(paste0('./Figures/ModelCheck/',fieldName,' Summary.png'),width=8,height=8,units='in',res=200)
+  png(paste0('./Figures/ModelCheck/',fieldName,' Summary.png'),width=12,height=8,units='in',res=200)
   # plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
   plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
   dev.off()
@@ -146,12 +135,44 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   
   #Actual, Predicted, and SE maps
   print('Making yield map')
-  yieldMap <- ggplot(dat) + geom_sf(aes(col=log(DryYield),alpha=0.3)) + geom_sf(data=fieldEdge,col='magenta')+
-    labs(title=paste(fieldName,'Data'))+guides(alpha='none') + scale_colour_distiller(type='div',palette = "Spectral") +
+  yieldMap <- dat %>% filter(DryYield<quantile(DryYield,0.95)) %>% #Chop out upper 5% of data (mainly crazy high numbers)
+    ggplot() + 
+    geom_sf(data=dat,col='grey',size=1)+
+    geom_sf(aes(col=DryYield),alpha=0.3) + 
+    geom_sf(data=fieldEdge,col='magenta')+ #Field boundary
+    labs(title=paste(fieldName,'Data')) + #guides(alpha='none') + 
+    scale_colour_distiller(type='div',palette = "Spectral") +
     theme(legend.position='bottom')
-  dat <- dat %>% mutate(yieldPred=mod$fit[,1],yieldVar=mod$fit[,2],resid=resid(mod))
-  p1 <- ggplot(dat)+geom_sf(aes(col=yieldPred),alpha=0.5)+labs(title='Predicted yield',fill='(sqrt)\nYield',col='(sqrt)\nYield')+scale_colour_distiller(type='div',palette = "Spectral")+theme(legend.position='bottom')
-  p2 <- ggplot(dat)+geom_sf(aes(col=yieldVar),alpha=0.5)+labs(title='Yield SD',fill='SD\nYield',col='SD\nYield')+scale_colour_distiller(type='div',palette = "Spectral")+theme(legend.position='bottom')
+  # dat <- dat %>% mutate(yieldPred=mod$fit[,1],yieldVar=mod$fit[,2],resid=resid(mod))
+  
+  #Marginalize across r (point order) and pArea (speed)
+  pred <- dat %>% 
+    mutate(pArea=median(pArea)) %>% #Set pArea to its median value
+    predict(mod,newdata = .,type='response',exclude='s(r)') #Exclude s(r)
+    # mutate(r=1,pArea=median(pArea)) %>% #Sets r to 1, pArea to median
+    # predict(mod,newdata = .,type='response')
+  
+  # pred2 <- dat %>% 
+  #   # mutate(r=1,pArea=mean(pArea)) %>%
+  #   predict(mod,newdata = .,se.fit=TRUE)
+  # 
+  # predVals <- cbind(sapply(pred,function(x) x[,1]),sapply(pred2,function(x) x[,1])) %>% as.data.frame() 
+  # colnames(predVals) <- c('mean1','se1','mean2','se2')
+  # 
+  # predVals %>% pivot_longer(everything()) %>% mutate(par=ifelse(grepl('mean',name),'mean','se')) %>% 
+  #   mutate(name=ifelse(grepl('1',name),'type1','type2')) %>% 
+  #   ggplot()+geom_histogram(aes(x=value))+facet_grid(name~par,scales='free_x')
+    
+  dat <- dat %>% mutate(yieldMean=pred[,1],yieldSD=1/pred[,2],resid=resid(mod))
+  
+  #Predicted yield, marginalizing across pArea and r
+  p1 <- ggplot(dat)+geom_sf(aes(col=yieldMean^2),alpha=0.3)+
+    labs(title='Predicted yield | Combine Speed, Point Order',fill='Yield (T per Ha)',col='Yield (T per Ha)')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  #Predicted SD
+  p2 <- ggplot(dat)+geom_sf(aes(col=yieldSD^2),alpha=0.3)+
+    labs(title='Yield SD | Combine Speed, Point Order',fill='SD Yield ',col='SD Yield')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
   p <- ggarrange(yieldMap,p1,p2,ncol=3)
   ggsave(paste0('./Figures/YieldMaps/',fieldName,'.png'),p,height=6,width=15,dpi=100)  
   
@@ -166,13 +187,15 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   library(gstat)
   library(spacetime) 
   dat_sp <- as_Spatial(select(dat,ID,resid))
-  p5 <- gstat::variogram(resid~1, data=dat_sp,width=5,cutoff=150) %>% 
+  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=300) #Variogram
+  # vmod <- fit.variogram(v,vgm('Mat'),fit.kappa=TRUE) #Fit Matern covariance model
+  # plot(v,vmod)
+  p5 <- v %>% 
     ggplot()+geom_point(aes(x=dist,y=gamma))+
-    geom_line(aes(x=dist,y=gamma))+
     labs(title='Residual variogram',x='Distance',y='Semivariance')
   # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
   #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
-  res_acf <- acf(dat$resid,lag.max=500,type='correlation',plot=FALSE)
+  res_acf <- acf(dat$resid,lag.max=300,type='correlation',plot=FALSE)
   p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
     ggplot(aes(x=lag,y=acf))+geom_col()+
     labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
@@ -185,7 +208,8 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
                   vcv=vcov(mod), #Covariance matrix
                   smooths=mod$smooth, #Smooth specifications
                   distRange=range(dat$dist), #Range of distances
-                  pAreaRange=range(dat$pArea)) #Range of polygon areas
+                  pAreaRange=range(dat$pArea), #Range of polygon areas
+                  rRange=range(dat$r)) #Range of r
   save(modList,file=paste0('./Figures/ModelCheck/',fieldName,' modList.Rdata'))
   
   print('Done')
@@ -209,18 +233,20 @@ runModI <- function(i,dS,rP,nSubSamp=50000){
   # lines(x,p%*%betas,lwd=3)
   # par(mfrow=c(1,1))
 }
-
-# runModI(1,dS=datSource,rP=rootPath) #Test
+# 
+# a <- Sys.time()
+# runModI(2,dS=datSource) #Test
+# Sys.time()-a
 # beep(1)
 
 library(parallel)
 cluster <- makeCluster(8) #10 procs max - uses about 90% of memory
-parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource,rP=rootPath) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
+parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
 beep(1)
 stopCluster(cluster)
+Sys.time() #Takes ~ 7 hrs
 
-#Need to identify field boundaries. Distance is not consistent at all fields, and boundary types are likely different
-
+#Need to identify oundary types at each field
 
 # Get smoother info from models -------------------------------------------
 
@@ -293,9 +319,11 @@ getSmooths <- function(path,l=c(30,100,500)){
 # debugonce(getSmooths)
 
 #Takes about 10 seconds
-allSmooths <- lapply(paste0('./Figures/ModelCheck/',datSource$filename,' modList.Rdata'),
+getFiles <- datSource$filename[datSource$use]
+
+allSmooths <- lapply(paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata'),
                      getSmooths)
-names(allSmooths) <- gsub(' ','-',datSource$filename)
+names(allSmooths) <- gsub(' ','-',getFiles)
 
 names(allSmooths[[1]]) #Variables to get from allSmooths
 
@@ -307,25 +335,38 @@ allEff <- lapply(names(allSmooths[[1]]),function(y){
     mutate(field=gsub('\\.\\d{1,3}','',field))
 })
 
-#Pred area - looks weird
-p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predMean))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x),col='red',se=FALSE)+
-  labs(x='Polygon Area',y='Mean Yield')+coord_cartesian(xlim = c(0,200))
-p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predSD))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x,k=6),col='red',se=FALSE)+
-  labs(x='Polygon Area',y='log(SD Yield)')+coord_cartesian(xlim = c(0,200))
+tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
+ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(-2.5,2.5)*tHa2buAc) #Y limits
+ylabMean <- 'Mean Yield (bushels/acre)'
+ylabSD <- 'log(SD Yield)'
 
-p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predMean))+geom_line(aes(group=field),alpha=0.3)+labs(x='Boundary Distance',y='Mean Yield')+coord_cartesian(xlim = c(0,400))+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
-  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
-p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predSD))+geom_line(aes(group=field),alpha=0.3)+labs(x='Boundary Distance',y='log(SD Yield)')+coord_cartesian(xlim = c(0,400))+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
-  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
 
-p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=predMean))+geom_line(aes(group=field),alpha=0.3)+labs(x='Point Order',y='Mean Yield')+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
-  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
-p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=predSD))+geom_line(aes(group=field),alpha=0.3)+labs(x='Point Order',y='log(SD Yield)')+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
-  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x),col='red',se=FALSE)+
+  labs(x='Polygon Area',y=ylabMean)+coord_cartesian(xlim = c(0,200))
+p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x,k=6),col='red',se=FALSE)+
+  labs(x='Polygon Area',y=ylabSD)+coord_cartesian(xlim = c(0,200))
 
-p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2)
+p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Boundary Distance',y=ylabMean)+
+  coord_cartesian(xlim = c(0,400),ylim=ylimVals$mean)+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x,k=10),col='blue',se=TRUE)
+p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Boundary Distance',y=ylabSD)+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
+  coord_cartesian(xlim = c(0,400),ylim=ylimVals$sd)
+
+p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Point Order',y=ylabMean)+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
+  coord_cartesian(ylim=ylimVals$mean)
+p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=exp(predSD)*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Point Order',y=ylabSD)+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
+  coord_cartesian(ylim=ylimVals$sd)
+
+(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
 ggsave(paste0('./Figures/ModelSummary.png'),p,height=6,width=12,dpi=300)  

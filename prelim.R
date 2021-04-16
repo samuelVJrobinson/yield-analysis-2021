@@ -145,11 +145,6 @@ ggplot(dat)+geom_point(aes(x=ID,y=res2))+labs(title='Residuals')
 acf(dat$res2) #Bunch of autocorrelation in residuals
 
 
-
-
-
-
-
 #Other distributions
 
 a <- Sys.time() 
