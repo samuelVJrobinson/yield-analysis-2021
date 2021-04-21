@@ -103,3 +103,115 @@ convertYield <- function(x,inUnits=NULL,outUnits=NULL){
   
   return(xOut)
 } 
+
+#Function to extract smooth info from modList.Rdata at specified path
+# l = number of replicates in each smooth prediction (length.out)
+# margInt = marginalize across intercepts
+# samp = sample from posterior distribution of coefficients rather than using the mean
+getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
+  require(mgcv)
+  # path <- paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')
+  # l <- c(20,100,500)
+  
+  load(path) #Load data
+  
+  smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
+  
+  #Polygon area (basically speed) regression
+  
+  logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
+  pArea <- exp(logPArea) 
+  
+  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
+  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
+  
+  #Coefficients (intercept and slope) for mean and logSD relationship
+  if(samp){ #Sample from posterior
+    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
+  } else {
+    meanCoefs <- modList$coefs[meanVars] 
+    sdCoefs <- modList$coefs[sdVars]
+  }
+  
+  if(margInt[1]){ #Marginalize across intercept (set intercept coef to 0)
+    meanCoefs[1] <- 0 
+    sdCoefs[1] <- 0  
+  }
+  
+  pAreaDat <- data.frame(pArea, 
+                         mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
+                         logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
+  
+  #Field boundary distance smoothers
+  
+  meanDistSmooth <- which(smoothLabs=='s(dist)')
+  sdDistSmooth <- which(smoothLabs=='s.1(dist)')
+  
+  meanSmoothList <- modList$smooth[[meanDistSmooth]]
+  sdSmoothList <- modList$smooth[[sdDistSmooth]]
+  
+  d <- seq(min(modList$distRange),max(modList$distRange),length.out=l[2])
+  
+  #Intercept + distance smoother basis functions
+  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
+  sdVars <- c(which(grepl('Intercept',names(modList$coefs)))[2],sdSmoothList$first.para:sdSmoothList$last.para)
+  
+  #Coefficients (intercept and slope) for mean and logSD relationship
+  if(samp){ #Sample from posterior
+    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
+  } else {
+    meanCoefs <- modList$coefs[meanVars] 
+    sdCoefs <- modList$coefs[sdVars]
+  }
+  
+  if(margInt[2]){ #Marginalize across intercept (set intercept coef to 0)
+    meanCoefs[1] <- 0 
+    sdCoefs[1] <- 0  
+  }
+  
+  distDat <- data.frame(dist=d,
+                        mean=cbind(rep(1,length(d)),PredictMat(meanSmoothList,data=data.frame(dist=d))) %*% meanCoefs,
+                        logSD=cbind(rep(1,length(d)),PredictMat(sdSmoothList,data=data.frame(dist=d))) %*% sdCoefs)  
+  
+  #Point order (time of combining) smoothers
+  
+  meanRSmooth <- which(smoothLabs=='s(r)')
+  sdRSmooth <- which(smoothLabs=='s.1(r)')
+  
+  meanSmoothList <- modList$smooth[[meanRSmooth]]
+  sdSmoothList <- modList$smooth[[sdRSmooth]]
+  
+  r <- seq(0,max(meanSmoothList$Xu)-min(meanSmoothList$Xu),length.out=l[3])
+  
+  #Intercept + order smoother basis functions
+  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
+  sdVars <- c(which(grepl('Intercept',names(modList$coefs)))[2],sdSmoothList$first.para:sdSmoothList$last.para)
+  
+  #Coefficients (intercept and slope) for mean and logSD relationship
+  if(samp){ #Sample from posterior
+    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
+  } else {
+    meanCoefs <- modList$coefs[meanVars] 
+    sdCoefs <- modList$coefs[sdVars]
+  }
+  if(margInt[3]){ #Marginalize across intercept (set intercept coef to 0)
+    meanCoefs[1] <- 0 
+    sdCoefs[1] <- 0  
+  }
+  
+  rDat <- data.frame(r=r,
+                     mean=cbind(rep(1,length(d)),PredictMat(meanSmoothList,data=data.frame(r=r))) %*% modList$coef[meanVars],
+                     logSD=cbind(rep(1,length(d)),PredictMat(sdSmoothList,data=data.frame(r=r))) %*% modList$coef[sdVars])  
+  
+  #Assemble into list
+  datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
+  
+  return(datList)
+}
+
+# debugonce(getSmooths)
+# getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE) #Test
+

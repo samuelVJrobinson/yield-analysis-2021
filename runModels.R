@@ -8,6 +8,7 @@ library(ggpubr)
 library(mgcv)
 library(sf)
 library(beepr)
+source('helperFunctions.R')
 
 # Get paths to data -------------------------------------------------------
 
@@ -246,85 +247,26 @@ beep(1)
 stopCluster(cluster)
 Sys.time() #Takes ~ 7 hrs
 
-#Need to identify oundary types at each field
+#Need to identify boundary types at each field
 
 # Get smoother info from models -------------------------------------------
 
-#Function to extract smooth info from modList.Rdata at specified path
-# l = number of replicates in each smooth prediction (length.out)
-getSmooths <- function(path,l=c(30,100,500)){
-  
-  # path <- paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')
-  # l <- c(20,100,500)
-  
-  load(path) #Load data
-  
-  smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
-  
-  #Polygon area (basically speed) regression
-  
-  logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
-  pArea <- exp(logPArea) 
-  
-  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
-  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
-  
-  pAreaDat <- data.frame(pArea, #Set intercept to 1 
-                         predMean=cbind(rep(1,length(logPArea)),logPArea) %*% modList$coefs[meanVars],
-                         predSD=cbind(rep(1,length(logPArea)),logPArea) %*% modList$coefs[sdVars])
-  
-  #Field boundary distance smoothers
-  
-  meanDistSmooth <- which(smoothLabs=='s(dist)')
-  sdDistSmooth <- which(smoothLabs=='s.1(dist)')
-  
-  meanSmoothList <- modList$smooth[[meanDistSmooth]]
-  sdSmoothList <- modList$smooth[[sdDistSmooth]]
-  
-  d <- seq(min(modList$distRange),max(modList$distRange),length.out=l[2])
-  
-  meanVars <- c(meanSmoothList$first.para:meanSmoothList$last.para)
-  sdVars <- c(sdSmoothList$first.para:sdSmoothList$last.para)
-  
-  distDat <- data.frame(dist=d,
-                        predMean=PredictMat(meanSmoothList,data=data.frame(dist=d)) %*% modList$coef[meanVars],
-                        predSD=PredictMat(sdSmoothList,data=data.frame(dist=d)) %*% modList$coef[sdVars])  
-  
-  #Point order (time of combining) smoothers
-  
-  meanRSmooth <- which(smoothLabs=='s(r)')
-  sdRSmooth <- which(smoothLabs=='s.1(r)')
-  
-  meanSmoothList <- modList$smooth[[meanRSmooth]]
-  sdSmoothList <- modList$smooth[[sdRSmooth]]
-  
-  r <- seq(0,max(meanSmoothList$Xu)-min(meanSmoothList$Xu),length.out=l[3])
-  
-  meanVars <- c(meanSmoothList$first.para:meanSmoothList$last.para)
-  sdVars <- c(sdSmoothList$first.para:sdSmoothList$last.para)
-  
-  rDat <- data.frame(r=r,
-                     predMean=PredictMat(meanSmoothList,data=data.frame(r=r)) %*% modList$coef[meanVars],
-                     predSD=PredictMat(sdSmoothList,data=data.frame(r=r)) %*% modList$coef[sdVars])  
-  
-  #Assemble into list
-  
-  datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
-  
-  return(datList)
-  
-}
+# #Estimate at field 1
+# est <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)$distDat
+# #Samples around estimate at field 1
+# Nsamp <- 100 #Number of samples
+# samp <- lapply(1:Nsamp,
+#           function(x) getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),
+#                                  margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat) %>% 
+#   do.call('rbind',.) %>% mutate(N=rep(1:length(unique(dist)),each=Nsamp))
+# ggplot()+geom_line(data=test,aes(x=dist,y=mean,group=N),alpha=0.3)+geom_line(data=est,aes(x=dist,y=mean),col='red',size=3)
 
-# getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')) #Test
-# debugonce(getSmooths)
-
+#Get smoother from each field
 #Takes about 10 seconds
 getFiles <- datSource$filename[datSource$use]
-
 allSmooths <- lapply(paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata'),
-                     getSmooths)
+                     getSmooths,margInt=c(FALSE,TRUE,TRUE))
 names(allSmooths) <- gsub(' ','-',getFiles)
-
 names(allSmooths[[1]]) #Variables to get from allSmooths
 
 #Get df of predictions for each variable
@@ -335,38 +277,152 @@ allEff <- lapply(names(allSmooths[[1]]),function(y){
     mutate(field=gsub('\\.\\d{1,3}','',field))
 })
 
+#Plot with individual field-level smoothers
+
 tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
 ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(-2.5,2.5)*tHa2buAc) #Y limits
 ylabMean <- 'Mean Yield (bushels/acre)'
 ylabSD <- 'log(SD Yield)'
 
-
-p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x),col='red',se=FALSE)+
-  labs(x='Polygon Area',y=ylabMean)+coord_cartesian(xlim = c(0,200))
-p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=predSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+#geom_smooth(method='gam',formula=y~s(x,k=6),col='red',se=FALSE)+
+p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  geom_smooth(method='lm',formula=y~log2(x),col='blue',se=FALSE,n=500)+
+  labs(x='Polygon Area',y=ylabMean)+
+  coord_cartesian(xlim = c(0,200))
+p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=logSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  geom_smooth(method='lm',formula=y~log(x),col='blue',se=FALSE,n=500)+
   labs(x='Polygon Area',y=ylabSD)+coord_cartesian(xlim = c(0,200))
 
-p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
   labs(x='Boundary Distance',y=ylabMean)+
-  coord_cartesian(xlim = c(0,400),ylim=ylimVals$mean)+
   geom_hline(yintercept = 0,linetype='dashed',col='red')+
-  geom_smooth(method='gam',formula=y~s(x,k=10),col='blue',se=TRUE)
-p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=predSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  geom_smooth(method='gam',formula=y~s(x,k=10),col='blue',se=TRUE)+
+  coord_cartesian(xlim = c(0,400),ylim=ylimVals$mean)
+p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=log(exp(logSD)*tHa2buAc)))+geom_line(aes(group=field),alpha=0.3)+
   labs(x='Boundary Distance',y=ylabSD)+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
   geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
   coord_cartesian(xlim = c(0,400),ylim=ylimVals$sd)
 
-p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=predMean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
   labs(x='Point Order',y=ylabMean)+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
   geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
   coord_cartesian(ylim=ylimVals$mean)
-p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=exp(predSD)*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=logSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
   labs(x='Point Order',y=ylabSD)+
-  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
   geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
   coord_cartesian(ylim=ylimVals$sd)
 
 (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
 ggsave(paste0('./Figures/ModelSummary.png'),p,height=6,width=12,dpi=300)  
+
+#Get smoother from each field
+#Takes about 10 seconds
+
+getFiles <- datSource$filename[datSource$use] #Field names
+files <- paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata') #File paths
+
+#Function to get predicted smoother values from list of functions, fit models to these, and return results
+# Used for getting 
+# f = files to draw from
+# s = sample from posterior?
+sampleSmooth <- function(f,s,...){
+  require(mgcv)
+  require(tidyverse)
+  
+  allSmooths <- lapply(f,getSmooths,margInt=c(FALSE,TRUE,TRUE),samp=s)
+  names(allSmooths) <- gsub(' ','-',f)
+  names(allSmooths[[1]]) #Variables to get from allSmooths
+  
+  #Get df of predictions for each variable
+  allEff <- lapply(names(allSmooths[[1]]),function(y){
+    lapply(allSmooths,function(x) x[[y]]) %>% 
+      do.call('rbind',.) %>% 
+      rownames_to_column('field') %>% 
+      mutate(field=gsub('\\.\\d{1,3}','',field))
+  })
+  
+  #Fit models of sampled estimates
+  m1mean <- lm(mean~log(pArea),data=allEff[[1]])
+  m1sd <- lm(logSD~log(pArea),data=allEff[[1]])
+  m2mean <- gam(mean~s(dist,k=30),data=allEff[[2]])
+  m2sd <- gam(logSD~s(dist,k=30),data=allEff[[2]])
+  m3mean <- gam(mean~s(r,k=30),data=allEff[[3]])
+  m3sd <- gam(logSD~s(r,k=30),data=allEff[[3]])
+  
+  #Predictions from models
+  datList <- list(
+    #200 locations along log-pArea line
+    pArea=data.frame(pArea=exp(seq(min(log(allEff[[1]]$pArea)),max(log(allEff[[1]]$pArea)),length.out=200))) %>%
+      mutate(mean=predict(m1mean,newdata=.),logSD=predict(m1sd,newdata=.)),
+    #Unique rounded distance measurements
+    dist=data.frame(dist=sort(unique(round(allEff[[2]]$dist)))) %>% 
+      mutate(mean=predict(m2mean,newdata=.),logSD=predict(m2sd,newdata=.)), 
+    #Unique rounded sequence measurements
+    r=data.frame(r=round(seq(min(allEff[[3]]$r),max(allEff[[3]]$r),length.out=1000))) %>% 
+      mutate(mean=predict(m3mean,newdata=.),logSD=predict(m3sd,newdata=.))
+  )
+  rm(list=ls()[ls()!='datList']) #Cleanup
+  gc()
+  return(datList)
+}
+
+temp <- sampleSmooth(f=files,s=FALSE) #Mean smoother
+
+Nrep <- 3
+# temp2 <- replicate(Nrep,sampleSmooth(f=files,s=TRUE),simplify=FALSE)
+debugonce(sampleSmooth)
+debugonce(getSmooths)
+temp2 <- sampleSmooth(f=files,s=TRUE)
+
+
+lapply(temp2,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  group_by(rep) %>% slice(1:3)
+
+library(parallel)
+Nrep <- 30
+cluster <- makeCluster(8) 
+clusterExport(cl = cluster,varlist='getSmooths', envir = .GlobalEnv) #Export function to clusters
+tempSamp <- parLapply(cl=cluster,1:Nrep,fun=sampleSmooth,f=files,s=TRUE)
+beep(1)
+stopCluster(cluster)
+
+#Get range of variability for models 
+
+#Low variability in pArea models
+p1 <- lapply(tempSamp,function(x) x$pArea) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=pArea,y=mean))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$pArea,col='red')
+p2 <- lapply(tempSamp,function(x) x$pArea) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=pArea,y=logSD))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$pArea,col='red')
+
+#Higher variability in dist model
+p3 <- lapply(tempSamp,function(x) x$dist) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=dist,y=mean))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$dist,col='red',size=2)
+p4 <- lapply(tempSamp,function(x) x$dist) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=dist,y=logSD))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$dist,col='red',size=2)
+
+#Low variability in r model
+p5 <- lapply(tempSamp,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=r,y=mean))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$r,col='red',size=2)
+p6 <- lapply(tempSamp,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
+  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+  ggplot(aes(x=r,y=logSD))+
+  geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$r,col='red',size=2)
