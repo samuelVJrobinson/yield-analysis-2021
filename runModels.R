@@ -318,7 +318,6 @@ p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=log(exp(logSD)*tHa2buAc)))+geom_line(aes(
 ggsave(paste0('./Figures/ModelSummary.png'),p,height=6,width=12,dpi=300)  
 
 #Get smoother from each field
-#Takes about 10 seconds
 
 getFiles <- datSource$filename[datSource$use] #Field names
 files <- paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata') #File paths
@@ -370,20 +369,20 @@ sampleSmooth <- function(f,s,...){
 
 temp <- sampleSmooth(f=files,s=FALSE) #Mean smoother
 
-Nrep <- 3
-# temp2 <- replicate(Nrep,sampleSmooth(f=files,s=TRUE),simplify=FALSE)
-debugonce(sampleSmooth)
-debugonce(getSmooths)
-temp2 <- sampleSmooth(f=files,s=TRUE)
+# Nrep <- 3
+# # temp2 <- replicate(Nrep,sampleSmooth(f=files,s=TRUE),simplify=FALSE)
+# debugonce(sampleSmooth)
+# debugonce(getSmooths)
+# temp2 <- sampleSmooth(f=files,s=TRUE)
+# 
+# lapply(temp2,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
+#   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
+#   group_by(rep) %>% slice(1:3)
 
-
-lapply(temp2,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
-  do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
-  group_by(rep) %>% slice(1:3)
-
-library(parallel)
-Nrep <- 30
-cluster <- makeCluster(8) 
+library(parallel) #Parallel version
+Nrep <- 100
+detectCores()
+cluster <- makeCluster(14) 
 clusterExport(cl = cluster,varlist='getSmooths', envir = .GlobalEnv) #Export function to clusters
 tempSamp <- parLapply(cl=cluster,1:Nrep,fun=sampleSmooth,f=files,s=TRUE)
 beep(1)
@@ -426,3 +425,5 @@ p6 <- lapply(tempSamp,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>%
   ggplot(aes(x=r,y=logSD))+
   geom_line(aes(group=rep),alpha=0.3)+
   geom_line(data=temp$r,col='red',size=2)
+(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
+ggsave(paste0('./Figures/ModelSummary2.png'),p,height=6,width=12,dpi=300)  
