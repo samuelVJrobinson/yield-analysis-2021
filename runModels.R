@@ -325,12 +325,13 @@ files <- paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata') #File paths
 #Function to get predicted smoother values from list of functions, fit models to these, and return results
 # Used for getting 
 # f = files to draw from
-# s = sample from posterior?
-sampleSmooth <- function(f,s,...){
+# s = sample from posterior
+# m = marginalize across intercept
+sampleSmooth <- function(f,s,m,...){
   require(mgcv)
   require(tidyverse)
   
-  allSmooths <- lapply(f,getSmooths,margInt=c(FALSE,TRUE,TRUE),samp=s)
+  allSmooths <- lapply(f,getSmooths,margInt=m,samp=s)
   names(allSmooths) <- gsub(' ','-',f)
   names(allSmooths[[1]]) #Variables to get from allSmooths
   
@@ -367,7 +368,7 @@ sampleSmooth <- function(f,s,...){
   return(datList)
 }
 
-temp <- sampleSmooth(f=files,s=FALSE) #Mean smoother
+temp <- sampleSmooth(f=files,s=FALSE,m=c(TRUE,TRUE,TRUE)) #Mean smoother
 
 # Nrep <- 3
 # # temp2 <- replicate(Nrep,sampleSmooth(f=files,s=TRUE),simplify=FALSE)
@@ -380,50 +381,51 @@ temp <- sampleSmooth(f=files,s=FALSE) #Mean smoother
 #   group_by(rep) %>% slice(1:3)
 
 library(parallel) #Parallel version
-Nrep <- 100
+Nrep <- 200
 detectCores()
-cluster <- makeCluster(14) 
+cluster <- makeCluster(15) 
 clusterExport(cl = cluster,varlist='getSmooths', envir = .GlobalEnv) #Export function to clusters
-tempSamp <- parLapply(cl=cluster,1:Nrep,fun=sampleSmooth,f=files,s=TRUE)
+tempSamp <- parLapply(cl=cluster,1:Nrep,fun=sampleSmooth,f=files,s=TRUE,m=c(TRUE,TRUE,TRUE))
 beep(1)
 stopCluster(cluster)
 
 #Get range of variability for models 
 
+ylabMean <- 'Mean Yield (bushels/acre)'
+ylabSD <- 'log(SD Yield)'
+
 #Low variability in pArea models
 p1 <- lapply(tempSamp,function(x) x$pArea) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
-  ggplot(aes(x=pArea,y=mean))+
-  geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$pArea,col='red')
+  ggplot(aes(x=pArea,y=mean))+geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$pArea,col='blue')+labs(x='Polygon Area',y=ylabMean)
 p2 <- lapply(tempSamp,function(x) x$pArea) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
-  ggplot(aes(x=pArea,y=logSD))+
-  geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$pArea,col='red')
+  ggplot(aes(x=pArea,y=logSD))+geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$pArea,col='blue')+labs(x='Polygon Area',y=ylabSD)
+
 
 #Higher variability in dist model
 p3 <- lapply(tempSamp,function(x) x$dist) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
-  ggplot(aes(x=dist,y=mean))+
-  geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$dist,col='red',size=2)
+  ggplot(aes(x=dist,y=mean))+geom_line(aes(group=rep),alpha=0.3)+
+  geom_line(data=temp$dist,col='blue',size=2)+labs(x='Boundary Distance',y=ylabMean)
 p4 <- lapply(tempSamp,function(x) x$dist) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
   ggplot(aes(x=dist,y=logSD))+
   geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$dist,col='red',size=2)
+  geom_line(data=temp$dist,col='blue',size=2)+labs(x='Boundary Distance',y=ylabSD)
 
 #Low variability in r model
 p5 <- lapply(tempSamp,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
   ggplot(aes(x=r,y=mean))+
   geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$r,col='red',size=2)
+  geom_line(data=temp$r,col='blue',size=2)+labs(x='Point Order',y=ylabMean)
 p6 <- lapply(tempSamp,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
   do.call('rbind',.) %>%  rownames_to_column('rep') %>%   mutate(rep=gsub('\\.\\d{1,3}','',rep)) %>% 
   ggplot(aes(x=r,y=logSD))+
   geom_line(aes(group=rep),alpha=0.3)+
-  geom_line(data=temp$r,col='red',size=2)
+  geom_line(data=temp$r,col='blue',size=2)+labs(x='Point Order',y=ylabSD)
 (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
 ggsave(paste0('./Figures/ModelSummary2.png'),p,height=6,width=12,dpi=300)  

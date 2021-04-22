@@ -102,7 +102,7 @@ knitr::opts_chunk$set(echo = TRUE)
     - Grass boundaries can change if fields are used for as haying or pasture during crop rotation
   - This makes accurate and consistent classification of field boundaries very difficult
   - Because of this, we used the following general categories for field boundaries:
-    1. Standard: thin ($<10$ m wide) grassy field boundary, often grassy road right-of-ways 
+    1. Road: thin ($<10$ m wide) grassy field boundary, often grassy road right-of-ways 
     2. Wetland: permanent wetland, whose borders are largely unchanged from year-to-year
     3. Forest/shrub: permanent windbreaks or remnant forests
     4. Grass: larger grassy area (pasture or permanent seminatural grassland)
