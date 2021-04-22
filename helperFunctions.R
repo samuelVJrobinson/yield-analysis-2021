@@ -118,7 +118,6 @@ getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FA
   smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
   
   #Polygon area (basically speed) regression
-  
   logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
   pArea <- exp(logPArea) 
   
@@ -203,8 +202,8 @@ getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FA
   }
   
   rDat <- data.frame(r=r,
-                     mean=cbind(rep(1,length(d)),PredictMat(meanSmoothList,data=data.frame(r=r))) %*% modList$coef[meanVars],
-                     logSD=cbind(rep(1,length(d)),PredictMat(sdSmoothList,data=data.frame(r=r))) %*% modList$coef[sdVars])  
+                     mean=cbind(rep(1,length(r)),PredictMat(meanSmoothList,data=data.frame(r=r))) %*% meanCoefs,
+                     logSD=cbind(rep(1,length(r)),PredictMat(sdSmoothList,data=data.frame(r=r))) %*% sdCoefs)  
   
   #Assemble into list
   datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
@@ -213,5 +212,17 @@ getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FA
 }
 
 # debugonce(getSmooths)
-# getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE) #Test
+# temp <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE) #Test
+# temp2 <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE) #Test
+# 
+# ggplot()+geom_line(data=temp$pAreaDat,aes(x=pArea,y=mean))+ #Works for this (I think)
+#   geom_line(data=temp2$pAreaDat,aes(x=pArea,y=mean),linetype='dashed',col='red')
+# 
+# ggplot()+geom_line(data=temp$dist,aes(x=dist,y=mean))+ #Works for this
+#   geom_line(data=temp2$dist,aes(x=dist,y=mean),linetype='dashed',col='red')
+# 
+# ggplot()+geom_line(data=temp$r,aes(x=r,y=mean))+ #Works for this
+#   geom_line(data=temp2$r,aes(x=r,y=mean),linetype='dashed',col='red')
+
+  
 

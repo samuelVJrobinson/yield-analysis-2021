@@ -280,7 +280,7 @@ allEff <- lapply(names(allSmooths[[1]]),function(y){
 #Plot with individual field-level smoothers
 
 tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
-ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(-2.5,2.5)*tHa2buAc) #Y limits
+ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(0,5)) #Y limits
 ylabMean <- 'Mean Yield (bushels/acre)'
 ylabSD <- 'log(SD Yield)'
 
@@ -308,7 +308,7 @@ p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=mean*tHa2buAc))+geom_line(aes(group=field
   # geom_hline(yintercept = 0,linetype='dashed',col='red')+
   geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
   coord_cartesian(ylim=ylimVals$mean)
-p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=logSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=log(exp(logSD)*tHa2buAc)))+geom_line(aes(group=field),alpha=0.3)+
   labs(x='Point Order',y=ylabSD)+
   # geom_hline(yintercept = 0,linetype='dashed',col='red')+
   geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
