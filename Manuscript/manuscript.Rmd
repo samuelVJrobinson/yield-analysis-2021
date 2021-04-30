@@ -101,13 +101,20 @@ knitr::opts_chunk$set(echo = TRUE)
     - Ephemeral wetlands are flooded during some years, but consist mainly of grasses during dry years
     - Grass boundaries can change if fields are used for as haying or pasture during crop rotation
   - This makes accurate and consistent classification of field boundaries very difficult
-  - Because of this, we used the following general categories for field boundaries:
-    1. Road: thin ($<10$ m wide) grassy field boundary, often grassy road right-of-ways 
+  - Because of this, we define the following general categories for field boundaries:
+    1. Standard: grassy field edge, staging yard, or road right-of-way (grassy strip typically 5-10m wide) 
     2. Wetland: permanent wetland, whose borders are largely unchanged from year-to-year
-    3. Forest/shrub: permanent windbreaks or remnant forests
-    4. Grass: larger grassy area (pasture or permanent seminatural grassland)
-    5. Other crop: different crop with little or no visible boundary between planted areas 
-    6. Bare: unplanted (fallow), flooded area, or unpaved roads
+    3. Shelterbelt: permanent windbreaks, shelterbelts, or remnant forests and shrublands
+    4. Other crop: annual crop or pasture with little or no visible boundary between planted areas 
+    5. Bare: unplanted (fallow), flooded area, staging yard or road with no planted boundary
+    6. Grassland: permanent seminatural grassland
+    
+    STANDARD
+    WETLAND
+    SHELTERBELT
+    OTHERCROP
+    BARE
+    GRASSLAND
     
 ## Analysis
 

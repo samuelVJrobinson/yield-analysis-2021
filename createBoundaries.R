@@ -105,19 +105,26 @@ stopCluster(cluster)
 library(tidyverse)
 library(sf)
 
-shpFiles <- paste0('./Figures/FieldBoundaries/',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE))
+setwd("~/Documents/yield-analysis-2021")
+
+rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
+# datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
+#   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
+#   mutate(field=gsub('\\.csv','',field)) %>% unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
+#   mutate(completed=filename %in% gsub(' boundary.shp','',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE)))
+
+datSource <- read.csv('./Data/datSource.csv') #Read previous datsource file
+datSource <- datSource %>% mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
+  mutate(modelComplete=file.exists(modelPath)) #Has model already been run?
+# shpFiles <- paste0('./Figures/FieldBoundaries/',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE)) #Paths to shapefiles
+shpFiles <- unique(datSource$boundaryPath[datSource$use]) #Only unique shapefiles used (some fields use a single year's boundary)
 
 makeLinestring <- function(shp){
   # shp <-shpFiles[1] 
   fieldName <- strsplit(shp,'/')[[1]][length(strsplit(shp,'/')[[1]])]
-  
   #Polygon
-  p <- read_sf(shp) %>% st_cast('MULTILINESTRING')
-  st_write(p,paste0('./Figures/FieldBoundariesLine/',fieldName),append=FALSE,driver='ESRI Shapefile')
+  p <- read_sf(shp) %>% st_cast('MULTILINESTRING') %>% mutate(type='STANDARD') %>% st_simplify(dTolerance=0.5)
+  st_write(p,paste0('./Figures/FieldBoundaryLines/',fieldName),append=FALSE,driver='ESRI Shapefile')
 }
-
-sapply(shpFiles[1:5],makeLinestring)
-
-
-
-
+makeLinestring(shpFiles[1])
+sapply(shpFiles,makeLinestring)
