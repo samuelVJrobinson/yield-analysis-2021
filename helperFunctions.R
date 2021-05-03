@@ -104,18 +104,62 @@ convertYield <- function(x,inUnits=NULL,outUnits=NULL){
   return(xOut)
 } 
 
-#Function to extract smooth info from modList.Rdata at specified path
+#Function to get smooth predictions from a model list
+#smoothLabel = label of smooth to choose
+#modList = model list to use
+#predRange = range to predict over
+#lengthOut = number of predictions over
+#postSamp = sample posterior?
+#noIntercept = set intercept to 0?
+#returnDF = return DF? Otherwise returns vector of predictions
+getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE){
+  
+  # #Debugging
+  # smoothLabel <- 's(dist)'
+  # postSamp <- FALSE
+  # noIntercept <- TRUE
+  # xvals <- seq(predRange[1],predRange[2],length.out=lengthOut) #x-values to use for smoother predictions
+  
+  smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
+  meanSmoothList <- modList$smooth[[which(smoothLabs==smoothLabel)]] #Get smoother info
+  
+  #Get locations of coefficients
+  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
+  
+  if(postSamp){ #Sample from posterior
+    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+  } else { #Get ML estimate
+    meanCoefs <- unname(modList$coefs[meanVars])
+  }
+  
+  #Marginalize across intercept (set intercept coef to 0)
+  if(noIntercept) meanCoefs[1] <- 0
+  
+  predDF <- data.frame(x=xvals) #Dataframe for holding predictions
+  names(predDF) <- meanSmoothList$term #Name of term
+  
+  #Get predictions (coef %*% model matrix)
+  predDF$pred <- cbind(rep(1,length(xvals)),PredictMat(meanSmoothList,data=predDF)) %*% meanCoefs
+  
+  return(predDF)
+} 
+
+#Function to extract predictions from modList.Rdata at specified path
 # l = number of replicates in each smooth prediction (length.out)
 # margInt = marginalize across intercepts
 # samp = sample from posterior distribution of coefficients rather than using the mean
-getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
+getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
+  
+  # #Debugging
+  # l <- c(30,100,500)
+  # # path <- paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata') #Model type 1
+  # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
+  # margInt <- c(FALSE,TRUE,TRUE)
+  # samp <- FALSE
+  
   require(mgcv)
-  # path <- paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata')
-  # l <- c(20,100,500)
   
   load(path) #Load data
-  
-  smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
   
   #Polygon area (basically speed) regression
   logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
@@ -142,77 +186,59 @@ getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FA
                          mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
                          logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
   
-  #Field boundary distance smoothers
+  # Field boundary distance smoothers
   
-  meanDistSmooth <- which(smoothLabs=='s(dist)')
-  sdDistSmooth <- which(smoothLabs=='s.1(dist)')
+  #Figure out if model has only 1 type of distance (model type 1) or multiple distances (model type 2)
+  #If first type, returns dataframe, otherwise a list of dataframes
   
-  meanSmoothList <- modList$smooth[[meanDistSmooth]]
-  sdSmoothList <- modList$smooth[[sdDistSmooth]]
+  type1 <- !any(grepl('dist_',sapply(modList$smooths,function(x) x$label)))
   
-  d <- seq(min(modList$distRange),max(modList$distRange),length.out=l[2])
-  
-  #Intercept + distance smoother basis functions
-  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
-  sdVars <- c(which(grepl('Intercept',names(modList$coefs)))[2],sdSmoothList$first.para:sdSmoothList$last.para)
-  
-  #Coefficients (intercept and slope) for mean and logSD relationship
-  if(samp){ #Sample from posterior
-    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
-    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
-  } else {
-    meanCoefs <- modList$coefs[meanVars] 
-    sdCoefs <- modList$coefs[sdVars]
+  if(type1){
+    dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(dist)')]],
+                   range(Xu)+rep(shift,2)) #Get range from smooths
+    d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values to sample from
+    
+    distDat <- data.frame(dist=d,
+                          mean=getSmooths(smoothLabel='s(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
+                          logSD=getSmooths(smoothLabel='s.1(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
+  } else { #If using different types of distances
+    
+    #Get names of different distances
+    distTypes <- unique(gsub('(\\)|s\\(|s.1\\()','',sapply(modList$smooths,function(x) x$label)))
+    distTypes <- distTypes[grepl('dist',distTypes)]
+    
+    distDat <- lapply(distTypes,function(dType){
+      meanLab <- paste0('s(',dType,')') #Gets appropriate text labels for smoothers
+      sdLab <- paste0('s.1(',dType,')')
+      
+      dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)==meanLab)]],
+                     range(Xu)+rep(shift,2)) #Get range from smooths
+      d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values values to sample from
+      distDat <- data.frame(dist=d, #
+                            mean=getSmooths(smoothLabel=meanLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
+                            logSD=getSmooths(smoothLabel=sdLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
+      return(distDat)
+    })
+    names(distDat) <- distTypes  
+    
   }
-  
-  if(margInt[2]){ #Marginalize across intercept (set intercept coef to 0)
-    meanCoefs[1] <- 0 
-    sdCoefs[1] <- 0  
-  }
-  
-  distDat <- data.frame(dist=d,
-                        mean=cbind(rep(1,length(d)),PredictMat(meanSmoothList,data=data.frame(dist=d))) %*% meanCoefs,
-                        logSD=cbind(rep(1,length(d)),PredictMat(sdSmoothList,data=data.frame(dist=d))) %*% sdCoefs)  
   
   #Point order (time of combining) smoothers
-  
-  meanRSmooth <- which(smoothLabs=='s(r)')
-  sdRSmooth <- which(smoothLabs=='s.1(r)')
-  
-  meanSmoothList <- modList$smooth[[meanRSmooth]]
-  sdSmoothList <- modList$smooth[[sdRSmooth]]
-  
-  r <- seq(0,max(meanSmoothList$Xu)-min(meanSmoothList$Xu),length.out=l[3])
-  
-  #Intercept + order smoother basis functions
-  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
-  sdVars <- c(which(grepl('Intercept',names(modList$coefs)))[2],sdSmoothList$first.para:sdSmoothList$last.para)
-  
-  #Coefficients (intercept and slope) for mean and logSD relationship
-  if(samp){ #Sample from posterior
-    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
-    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
-  } else {
-    meanCoefs <- modList$coefs[meanVars] 
-    sdCoefs <- modList$coefs[sdVars]
-  }
-  if(margInt[3]){ #Marginalize across intercept (set intercept coef to 0)
-    meanCoefs[1] <- 0 
-    sdCoefs[1] <- 0  
-  }
+  rRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(r)')]],
+                 range(Xu)+rep(shift,2)) #Get range from smooths
+  r <- seq(rRange[1],rRange[2],length.out=l[3]) #r values to sample from
   
   rDat <- data.frame(r=r,
-                     mean=cbind(rep(1,length(r)),PredictMat(meanSmoothList,data=data.frame(r=r))) %*% meanCoefs,
-                     logSD=cbind(rep(1,length(r)),PredictMat(sdSmoothList,data=data.frame(r=r))) %*% sdCoefs)  
+                        mean=getSmooths(smoothLabel='s(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred,
+                        logSD=getSmooths(smoothLabel='s.1(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred)
   
   #Assemble into list
   datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
   
   return(datList)
 }
-
-# debugonce(getSmooths)
-# temp <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE) #Test
+# debugonce(getPreds)
+# (temp <- getPreds(paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with first type of model
 # temp2 <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE) #Test
 # 
 # ggplot()+geom_line(data=temp$pAreaDat,aes(x=pArea,y=mean))+ #Works for this (I think)
@@ -224,5 +250,4 @@ getSmooths <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FA
 # ggplot()+geom_line(data=temp$r,aes(x=r,y=mean))+ #Works for this
 #   geom_line(data=temp2$r,aes(x=r,y=mean),linetype='dashed',col='red')
 
-  
-
+# (temp <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with second type of model

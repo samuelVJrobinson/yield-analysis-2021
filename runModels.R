@@ -36,7 +36,7 @@ datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=l
 #   # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
 #   slice_sample(n=10) #Smaller set to experiment with
 
-# Run models --------------------------------------------------------------
+# Run first set of models - no boundary type --------------------------------------------------------------
 
 #Function to run the ith model
 runModI <- function(i,dS,nSubSamp=50000){ 
@@ -125,18 +125,20 @@ runModI <- function(i,dS,nSubSamp=50000){
   plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
   dev.off()
   
-  #GAM check results
-  sink(paste0('./Figures/ModelCheck/',fieldName,' results.txt'))
-  print("Time taken: "); print(fitTime)
-  print(" ")
-  print("SUMMARY---------------------------------")
-  summary(mod)
-  print(" ")
-  print("GAM.CHECK-------------------------------")
-  png(paste0('./Figures/ModelCheck/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
-  par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
-  sink()
-  dev.off()
+  capture.output({ #Model summary
+    print("Time taken: "); print(fitTime)
+    print(" ")
+    print("SUMMARY---------------------------------")
+    summary(mod) 
+  },file=paste0('./Figures/ModelCheck/',fieldName,' results.txt'))
+  
+  capture.output({ #GAM check results
+    print(" ")
+    print("GAM.CHECK-------------------------------")
+    png(paste0('./Figures/ModelCheck/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
+    par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
+    dev.off()
+  },file=paste0('./Figures/ModelCheck/',fieldName,' results.txt'),append=TRUE) 
   
   #Actual, Predicted, and SE maps
   print('Making yield map')
@@ -254,14 +256,14 @@ Sys.time() #Takes ~ 7 hrs
 
 #Need to identify boundary types at each field
 
-# Get smoother info from models -------------------------------------------
+# Get smoother info from first set of models -------------------------------------------
 
 # #Estimate at field 1
-# est <- getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)$distDat
+# est <- getPreds(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)$distDat
 # #Samples around estimate at field 1
 # Nsamp <- 100 #Number of samples
 # samp <- lapply(1:Nsamp,
-#           function(x) getSmooths(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),
+#           function(x) getPreds(paste0('./Figures/ModelCheck/',datSource$filename[1],' modList.Rdata'),
 #                                  margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat) %>% 
 #   do.call('rbind',.) %>% mutate(N=rep(1:length(unique(dist)),each=Nsamp))
 # ggplot()+geom_line(data=test,aes(x=dist,y=mean,group=N),alpha=0.3)+geom_line(data=est,aes(x=dist,y=mean),col='red',size=3)
@@ -270,7 +272,7 @@ Sys.time() #Takes ~ 7 hrs
 #Takes about 10 seconds
 getFiles <- datSource$filename[datSource$use]
 allSmooths <- lapply(paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata'),
-                     getSmooths,margInt=c(FALSE,TRUE,TRUE))
+                     getPreds,margInt=c(FALSE,TRUE,TRUE))
 names(allSmooths) <- gsub(' ','-',getFiles)
 names(allSmooths[[1]]) #Variables to get from allSmooths
 
@@ -351,7 +353,7 @@ sampleSmooth <- function(f,s,m,...){
   require(mgcv)
   require(tidyverse)
   
-  allSmooths <- lapply(f,getSmooths,margInt=m,samp=s)
+  allSmooths <- lapply(f,getPreds,margInt=m,samp=s)
   names(allSmooths) <- gsub(' ','-',f)
   names(allSmooths[[1]]) #Variables to get from allSmooths
   
@@ -393,7 +395,7 @@ temp <- sampleSmooth(f=files,s=FALSE,m=c(TRUE,TRUE,TRUE)) #Mean smoother
 # Nrep <- 3
 # # temp2 <- replicate(Nrep,sampleSmooth(f=files,s=TRUE),simplify=FALSE)
 # debugonce(sampleSmooth)
-# debugonce(getSmooths)
+# debugonce(getPreds)
 # temp2 <- sampleSmooth(f=files,s=TRUE)
 # 
 # lapply(temp2,function(x) x$r) %>% set_names(paste0('s',1:Nrep)) %>% 
@@ -404,7 +406,7 @@ library(parallel) #Parallel version
 Nrep <- 200
 detectCores()
 cluster <- makeCluster(15) 
-clusterExport(cl = cluster,varlist='getSmooths', envir = .GlobalEnv) #Export function to clusters
+clusterExport(cl = cluster,varlist='getPreds', envir = .GlobalEnv) #Export function to clusters
 tempSamp <- parLapply(cl=cluster,1:Nrep,fun=sampleSmooth,f=files,s=TRUE,m=c(TRUE,TRUE,TRUE))
 beep(1)
 stopCluster(cluster)
@@ -454,10 +456,10 @@ ggsave(paste0('./Figures/ModelSummary2.png'),p,height=6,width=12,dpi=300)
 
 #Function to run the ith model, but with boundary type
 runModII <- function(i,dS,nSubSamp=50000){ 
-  i <- 2 #Debugging
-  dS <- datSource
-  nSubSamp <- 50000
-  
+  # i <- 102 #Debugging
+  # dS <- datSource
+  # nSubSamp <- 50000
+  # 
   if(dS$modelComplete2[i]) return('Already completed')
   if(!dS$use[i]) return('Not used')
   
@@ -537,18 +539,20 @@ runModII <- function(i,dS,nSubSamp=50000){
   plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
   dev.off()
   
-  #GAM check results
-  sink(paste0('./Figures/ModelCheck2/',fieldName,' results.txt'))
-  print("Time taken: "); print(fitTime)
-  print(" ")
-  print("SUMMARY---------------------------------")
-  summary(mod)
-  print(" ")
-  print("GAM.CHECK-------------------------------")
-  png(paste0('./Figures/ModelCheck2/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
-  par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
-  sink()
-  dev.off()
+ capture.output({ #Model summary
+    print("Time taken: "); print(fitTime)
+    print(" ")
+    print("SUMMARY---------------------------------")
+    summary(mod) 
+    },file=paste0('./Figures/ModelCheck2/',fieldName,' results.txt'))
+  
+  capture.output({ #GAM check results
+    print(" ")
+    print("GAM.CHECK-------------------------------")
+    png(paste0('./Figures/ModelCheck2/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
+    par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
+    dev.off()
+  },file=paste0('./Figures/ModelCheck2/',fieldName,' results.txt'),append=TRUE) 
   
   #Actual, Predicted, and SE maps
   print('Making yield map')
@@ -620,3 +624,94 @@ runModII <- function(i,dS,nSubSamp=50000){
   print('Done')
   gc()
 }
+
+a <- Sys.time()
+runModII(102,dS=datSource) #Trent Clark Swanny's 2019 (small field)
+Sys.time()-a
+beep(1)
+
+debugonce(runModII)
+
+library(parallel)
+detectCores()
+cluster <- makeCluster(15) #10 procs uses about 30% of memory - could probably max it out 
+a <- Sys.time()
+parLapply(cl=cluster,1:nrow(datSource),runModII,dS=datSource) 
+beep(1)
+stopCluster(cluster)
+Sys.time()-a #Takes ~ 10 hrs for 50 models at 15 procs
+
+# Get smoother info from second set of models ---------------------------
+
+# #Estimate at single field
+# est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)$distDat %>% 
+#   bind_rows(.id='dist_type')
+# 
+# #Samples around estimate at field 1
+# Nsamp <- 100 #Number of samples
+# samp <- lapply(1:Nsamp,
+#           function(x){
+#             getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat %>% 
+#               bind_rows(.id='dist_type')
+#           }) %>% bind_rows(.id='N')
+# 
+# ggplot()+
+#   geom_line(data=samp,aes(x=dist,y=mean,group=N),alpha=0.3)+
+#   geom_line(data=est,aes(x=dist,y=mean),col='red',size=1)+
+#   facet_wrap(~dist_type)
+
+#Get smoother from each field
+#Takes about 10 seconds
+getFiles <- datSource %>% filter(use,modelComplete2) #Completed models
+allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE)) %>% 
+  set_names(getFiles$filename)
+
+names(allSmooths[[1]]) #Variables to get from allSmooths
+
+#Get df of predictions for each variable
+allEff <- lapply(names(allSmooths[[1]]),function(y){
+  if(class(allSmooths[[1]][[y]])=='data.frame'){
+    lapply(allSmooths,function(x) x[[y]]) %>% 
+      bind_rows(.id='field') 
+  } else {
+    lapply(allSmooths,function(x) x[[y]] %>% bind_rows(.id = 'dist_type')) %>% 
+      bind_rows(.id='field')
+  }
+})
+
+
+tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
+# ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(0,5)) #Y limits
+ylabMean <- 'Mean Yield (bushels/acre)'
+ylabSD <- 'log(SD Yield)'
+
+p1 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  geom_smooth(method='lm',formula=y~log2(x),col='blue',se=FALSE,n=500)+
+  labs(x='Polygon Area',y=ylabMean)+
+  coord_cartesian(xlim = c(0,200))
+p2 <- allEff[[1]] %>% ggplot(aes(x=pArea,y=logSD*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  geom_smooth(method='lm',formula=y~log(x),col='blue',se=FALSE,n=500)+
+  labs(x='Polygon Area',y=ylabSD)+coord_cartesian(xlim = c(0,200))
+
+p3 <- allEff[[2]] %>% ggplot(aes(x=dist,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  facet_wrap(~dist_type)+
+  labs(x='Boundary Distance',y=ylabMean)+
+  geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x,k=10),col='blue',se=TRUE)+
+  coord_cartesian(xlim = c(0,400),ylim=c(-100,100))
+p4 <- allEff[[2]] %>% ggplot(aes(x=dist,y=log(exp(logSD)*tHa2buAc)))+geom_line(aes(group=field),alpha=0.1)+
+  facet_wrap(~dist_type)+
+  labs(x='Boundary Distance',y=ylabSD)+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)+
+  coord_cartesian(xlim = c(0,400),ylim=c(-10,10))
+
+p5 <- allEff[[3]] %>% ggplot(aes(x=r,y=mean*tHa2buAc))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Point Order',y=ylabMean)+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+p6 <- allEff[[3]] %>% ggplot(aes(x=r,y=log(exp(logSD)*tHa2buAc)))+geom_line(aes(group=field),alpha=0.3)+
+  labs(x='Point Order',y=ylabSD)+
+  # geom_hline(yintercept = 0,linetype='dashed',col='red')+
+  geom_smooth(method='gam',formula=y~s(x),col='blue',se=FALSE)
+
