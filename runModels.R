@@ -36,10 +36,20 @@ datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=l
 #   # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
 #   slice_sample(n=10) #Smaller set to experiment with
 
+# #Get summary results from models
+# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
+# 
+# modInfo <- lapply(resultPaths,getModelInfo)
+# 
+# sapply(modInfo,function(x) is.na(x$REML)) %>% summary() #Most model info not recorded
+# 
+# sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary()
+
+
 # Run first set of models - no boundary type --------------------------------------------------------------
 
 a <- Sys.time() #Test
-runModI(1,dS=datSource)
+runModI(91,dS=datSource)
 Sys.time()-a
 beep(1)
 

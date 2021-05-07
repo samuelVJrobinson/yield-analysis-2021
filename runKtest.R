@@ -54,39 +54,62 @@ for(kp in 1:length(kPars)){
 # Get results -------------------------------
 
 #K-test results
-resultPaths <- dir(paste0('./Data/kTestResults'),pattern='*.Rdata',recursive=TRUE,full.names=TRUE)
-resultNames <- sapply(strsplit(resultPaths,'/'),function(x){l <- length(x); paste(x[(l-1):l],collapse='__')}) %>% gsub(' modList.Rdata','',.)
+modListPaths <- dir(paste0('./Data/kTestResults'),pattern='*.Rdata',recursive=TRUE,full.names=TRUE)
+resultNames <- sapply(strsplit(modListPaths,'/'),function(x){l <- length(x); paste(x[(l-1):l],collapse='__')}) %>% gsub(' modList.Rdata','',.)
 
 #"Original" results
-resultPaths2 <- paste0('./Figures/ModelCheck/',unique(sapply(strsplit(resultNames,'__'),function(x) x[2])),' modList.Rdata')
-resultNames2 <- sapply(strsplit(resultPaths2,'/'),function(x){l <- length(x); x[l]}) %>% gsub(' modList.Rdata','',.) %>% paste0('original__',.)
+modListPaths2 <- paste0('./Figures/ModelCheck/',unique(sapply(strsplit(resultNames,'__'),function(x) x[2])),' modList.Rdata')
+resultNames2 <- sapply(strsplit(modListPaths2,'/'),function(x){l <- length(x); x[l]}) %>% 
+  gsub(' modList.Rdata','',.) %>% paste0('original__',.)
 
-resultPaths <- c(resultPaths,resultPaths2); resultNames <- c(resultNames,resultNames2) #Join
-rm(resultPaths2,resultNames2) #Cleanup
-file.exists(resultPaths)
+modListPaths <- c(modListPaths,modListPaths2); resultNames <- c(resultNames,resultNames2) #Join
+rm(modListPaths2,resultNames2) #Cleanup
+file.exists(modListPaths)
 
-
-#MISMATCH BETWEEN ORIGINAL AND KTEST DIST RANGES, ONLY AT TRENT CLARK'S FIELDS
-
-#Trent Clark
-load("./Figures/ModelCheck/Trent Clark 2019 W 34 modList.Rdata") #Original 
-modList$distRange
-load("./Data/kTestResults/lwrSpace/Trent Clark 2019 W 34 modList.Rdata") #Ktest 
-modList$distRange
-
-# #Alvin French
-# load("./Figures/ModelCheck/Alvin French 2020 Al_Jr modList.Rdata") #Original
-# load("./Data/kTestResults/lwrSpace/Alvin French 2020 Al_Jr modList.Rdata") #Ktest
-
-results <- lapply(resultPaths,function(p){
+results <- lapply(modListPaths,function(p){
   load(p)
   getSmooths(smoothLabel='s(dist)',modList,xvals=seq(modList$distRange[1],modList$distRange[2],by=10))}) %>% 
-  set_names(resultNames) %>% bind_rows(.id='name') %>% 
-  separate(name,c('parSet','field'),sep='__') %>% mutate(dist=round(dist))
+  set_names(resultNames) %>% bind_rows(.id='name') %>% separate(name,c('parSet','field'),sep='__') %>% 
+  mutate(dist=round(dist)) 
 
-# temp <- 
-  left_join(filter(results,parSet!='original'),filter(results,parSet=='original'),by=c('field','dist')) %>% 
-    filter(is.na(pred.y))
-    # arrange(dist,field) 
-  
-filter(results,field=='Trent Clark 2019 W 34')  %>% group_by(parSet) %>% slice(1:5) %>% data.frame()
+resultsOrig <- filter(results,parSet=='original')
+resultsNew <- filter(results,parSet!='original')
+# head(resultsOrig)
+# head(resultsNew)
+results <- left_join(resultsNew,resultsOrig,by=c('field','dist'),suffix=c('new','orig')) %>% 
+  select(-parSetorig) %>% mutate(diff=predorig-prednew) %>% 
+  mutate(parSetnew=factor(parSetnew,labels=c('Less k: space','Less k: time','More k: space','More k: time')))
+  # filter(field=='Alvin French 2020 Al_Jr',dist==5)
+
+p1 <- ggplot(results)+geom_point(aes(x=predorig,y=prednew))+
+  facet_wrap(~parSetnew)+
+  labs(x='Original effect',y='Updated effect')+
+  geom_abline(intercept=0,slope=1,col='red',linetype='dashed')
+
+p2 <- ggplot(results)+geom_line(aes(x=dist,y=diff,group=field))+
+  facet_wrap(~parSetnew)+
+  labs(x='Distance from boundary',y='Difference in effects')
+
+p3 <- ggplot(results)+
+  geom_line(aes(x=dist,y=predorig,group=field),col='black',alpha=0.5)+
+  geom_line(aes(x=dist,y=prednew,group=field),col='red',alpha=0.5)+
+  facet_wrap(~parSetnew)+
+  labs(x='Distance from boundary',y='Boundary effect')
+
+(p <- ggarrange(p3,p1,p2,ncol=3))
+ggsave('./Data/kTestResults/kTestResults.png',p,height=4,width=12,dpi=250)  
+
+#How long did models take to run ----------------
+
+resultPaths <- gsub(' modList.Rdata',' results.txt',modListPaths)
+modelInfo <- sapply(resultPaths,getModelInfo)
+
+getModelInfo(resultPaths[50])
+
+
+for(i in 1:length(resultPaths)){
+  getModelInfo(resultPaths[i])
+}
+
+
+'Dean Hubbard 2016 E_21_11_25 results.txt'

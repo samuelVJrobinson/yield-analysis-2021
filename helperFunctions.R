@@ -646,3 +646,102 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   print('Done')
   gc()
 }
+
+#Get model info from saved text file at path
+getModelInfo <- function(path){
+  require(tidyverse)
+  txt <- readLines(path)
+  
+  #Get time taken to run model
+  timeLine <- which(grepl('Time taken',txt))+1
+  if(length(timeLine)==0){
+    timeTaken <- NA
+  } else {
+    timeTaken <- strsplit(txt[timeLine],'\"')[[1]][2] #Time taken
+    timeTaken <- strsplit(timeTaken,' ')[[1]]
+    timeTaken <- as.difftime(as.numeric(timeTaken[1]),units=timeTaken[2])
+  }
+  
+  
+  #Get deviance explained
+  devLine <- which(grepl('Deviance explained =',txt))
+  if(length(devLine)==0){
+    pExpDev <- NA
+  } else {
+    pExpDev <- txt[devLine]
+    pExpDev <- strsplit(pExpDev,c(' '))[[1]]
+    pExpDev <- as.numeric(gsub('%','',pExpDev[length(pExpDev)]))
+  }
+  
+  #Get REML
+  remlLine <- which(grepl('-REML =',txt))
+  if(length(remlLine)==0){
+    reml <- NA
+  } else {
+    reml <- txt[remlLine]
+    reml <- as.numeric(strsplit(reml,' ')[[1]][3])  
+  }
+  
+  #Check Hessian matrix
+  hessLine <- which(grepl('Hessian positive definite, eigenvalue range',txt))
+  hessCheck <- txt[hessLine]
+
+  #Get parametric coefs, SEs, p-vals...
+  # smooth edfs, p-vals
+  # gam.check values
+  
+  #Starting lines
+  parStartLine <- which(grepl('Parametric coefficients:',txt)) 
+  smStartLine <- which(grepl('Approximate significance of smooth terms:',txt))
+  gcStartLine <- which(grepl('Basis dimension \\(k\\) checking results.',txt))
+  threeDash <- which(txt=='---') #Separators
+  #Ending lines
+  parEndLine <- threeDash[threeDash<smStartLine]
+  smEndLine <- threeDash[threeDash>smStartLine&threeDash<gcStartLine] 
+  gcEndLine <- threeDash[threeDash>gcStartLine] 
+  
+  eraseChars <- function(x){
+    x <- gsub('(\\.|\\*|<)','',x) #Erases *** and < characters
+    x <- x[x!=''] #Drops empty vectors
+    return(x)
+  }
+  
+  if(is.na(pExpDev)){
+    parTxt <- NA
+    smTxt <- NA
+  } else {
+    #Linear terms
+    parTxt <- strsplit(txt[(parStartLine+2):(parEndLine-1)],' ') %>% 
+      lapply(.,eraseChars) %>% 
+      do.call('rbind',.) %>% data.frame() %>% 
+      set_names(c('Parameter','Estimate','SE','Chisq','pval')) %>% 
+      mutate(across(Estimate:Chisq,as.numeric))
+    
+    #Smooth terms
+    smTxt <- strsplit(txt[(smStartLine+2):(smEndLine-1)],' ') %>% 
+      lapply(.,eraseChars) %>% 
+      do.call('rbind',.) %>% data.frame() %>% 
+      set_names(c('Smoother','edf','Ref.df','Chisq','pval')) %>% 
+      mutate(across(edf:Chisq,as.numeric))
+  }
+  
+  #GAM check results
+  gcTxt <- strsplit(txt[(gcStartLine+4):(gcEndLine-1)],' ') %>% 
+    lapply(.,eraseChars) %>% 
+    do.call('rbind',.) %>% data.frame() %>% 
+    set_names(c('Smoother','k','edf','index','pval')) %>% 
+    mutate(across(k:index,as.numeric))
+  
+  #List of things to return
+  retList <- list(timeTaken=timeTaken,
+                  percDevianceExplained=pExpDev,
+                  REML=reml,hessian=hessCheck,
+                  params=parTxt,
+                  smooths=smTxt,
+                  gamCheck=gcTxt)
+  
+  return(retList)
+}
+# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Data/kTestResults/uprSpace/Alvin French 2020 Al_Jr results.txt") #Test
+getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck/Alvin French 2020 C41 results.txt")
+debugonce(getModelInfo)
