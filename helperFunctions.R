@@ -136,7 +136,12 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
   if(noIntercept) meanCoefs[1] <- 0
   
   predDF <- data.frame(x=xvals) #Dataframe for holding predictions
-  names(predDF) <- meanSmoothList$term #Name of term
+  names(predDF) <- meanSmoothList$term #Name of terms
+  
+  if(meanSmoothList$by!='NA'){ #If using a by variable
+    predDF$by <- factor(meanSmoothList$by.level)
+    names(predDF)[2] <- meanSmoothList$by
+  }
   
   #Get predictions (coef %*% model matrix)
   predDF$pred <- cbind(rep(1,length(xvals)),PredictMat(meanSmoothList,data=predDF)) %*% meanCoefs
@@ -156,7 +161,7 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
   # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
   # margInt <- c(FALSE,TRUE,TRUE)
   # samp <- FALSE
-  
+  # 
   require(mgcv)
   
   load(path) #Load data
@@ -191,7 +196,7 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
   #Figure out if model has only 1 type of distance (model type 1) or multiple distances (model type 2)
   #If first type, returns dataframe, otherwise a list of dataframes
   
-  type1 <- !any(grepl('dist_',sapply(modList$smooths,function(x) x$label)))
+  type1 <- !any(grepl('(dist_|\\:)',sapply(modList$smooths,function(x) x$label)))
   
   if(type1){
     dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(dist)')]],
@@ -208,8 +213,13 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
     distTypes <- distTypes[grepl('dist',distTypes)]
     
     distDat <- lapply(distTypes,function(dType){
-      meanLab <- paste0('s(',dType,')') #Gets appropriate text labels for smoothers
-      sdLab <- paste0('s.1(',dType,')')
+      if(grepl('\\:',dType)){ #If smoother used "by" (rather than separate distance columns)
+        meanLab <- gsub('dist','s(dist)',dType) #Gets appropriate text labels for smoothers
+        sdLab <- gsub('dist','s.1(dist)',dType) #Gets appropriate text labels for smoothers
+      } else {
+        meanLab <- paste0('s(',dType,')') #Gets appropriate text labels for smoothers
+        sdLab <- paste0('s.1(',dType,')')
+      }
       
       dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)==meanLab)]],
                      range(Xu)+rep(shift,2)) #Get range from smooths
@@ -220,7 +230,6 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
       return(distDat)
     })
     names(distDat) <- distTypes  
-    
   }
   
   #Point order (time of combining) smoothers
@@ -251,3 +260,389 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
 #   geom_line(data=temp2$r,aes(x=r,y=mean),linetype='dashed',col='red')
 
 # (temp <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with second type of model
+
+#Function to run the ith model, using datSource ds, and sampling below nSubSamp points if necessary
+#kPar = basis dimensions for distance, E/N, and time smoothers + basis dimensions for logSD smoothers
+runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck',resultsDir='./Figures/YieldMaps'){ 
+  if(dS$modelComplete[i]) return('Already completed')
+  if(!dS$use[i]) return('Not used')
+  
+  require(tidyverse)
+  theme_set(theme_bw())
+  require(mgcv)
+  require(sf)
+  require(ggpubr)
+  
+  source('helperFunctions.R')
+  
+  csvPath <- dS$dataPath[i]
+  fieldName <- dS$filename[i]
+  boundaryPath <- dS$boundaryPath[i]
+  
+  print('Reading in data')
+  dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
+  
+  cropType <- unique(dat$Product) #Crop types
+  
+  #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
+  
+  if(nrow(dat)>nSubSamp){
+    #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
+  
+  dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
+    rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
+    rename_with(.fn = ~gsub('.km.h.$','_kmh',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.h.$','_th',.x)) %>%
+    rename_with(.fn = ~gsub('.ha.h.','_hah',.x)) %>%
+    rename_with(.fn = ~gsub('.m.','_m',.x)) %>%
+    rename_with(.fn = ~gsub('.deg.','Angle',.x)) %>%
+    rename_with(.fn = ~gsub('\\.','',.x)) %>%
+    rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
+    st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
+    st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
+    makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+    mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
+    st_centroid() %>% #Convert back to point
+    mutate(r=1:n()) %>% #row number
+    mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
+    group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
+    mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
+    mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  print('Calculating distance from boundary')  
+  
+  fieldEdge <- read_sf(boundaryPath) %>% st_cast('MULTILINESTRING') #Read in boundary file
+  # fieldEdge <- dat %>% st_union() %>% st_buffer(dist=10) %>% st_cast('MULTILINESTRING') #Old method
+  
+  dat <- dat %>%  #Distance from boundary
+    mutate(dist=as.numeric(st_distance(.,fieldEdge))[1:nrow(.)]) 
+  
+  print('Fitting model')
+  #Fit non-isotropic GAM:
+  f <- sqrt(DryYield) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) + log(pArea) #Mean model
+  f2 <- ~ s(dist,k=kPar[4]) + s(E,N,k=kPar[5]) + s(r,k=kPar[6]) + log(pArea) #Variance model
+  flist <- list(f,f2) #List of model formulae
+  
+  #Fit Gaussian location-scale  model
+  #NOTE: this model can't be run using bam because of location-scale modeling
+  
+  a <- Sys.time() #Takes about 8 mins for a 50000 point model
+  mod <- gam(flist,data=dat,family=gaulss())
+  fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
+  
+  #Model with dist(10) E,N(60) r(30); s.1dist(6) s.1E,N(60) s.1r(60) - Has a very large amount of temporal/spatial autocorrelation, but only takes 6 mins or so
+  #Trying with dist(12) E,N(80) r(80); s.1dist(12) s.1E,N(80) s.1r(80) - Similar temporal/spatial autocorrelation, but takes 4 times as long, and gives roughly the same answer
+  
+  print('Saving model results')
+  
+  #Plot results - FAILS HERE WHEN ALL.TERMS=TRUE. SOME KIND OF GAM NAMESPACE PROBLEM THAT ONLY OCCURS WITHIN FUNCTIONS
+  #https://stackoverflow.com/questions/45918662/plot-gam-from-mgcv-with-all-terms-true-within-a-function
+  png(paste0(modelCheckDir,'/',fieldName,' Summary.png'),width=12,height=8,units='in',res=200)
+  # plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+  plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
+  dev.off()
+  
+  capture.output({ #Model summary
+    print("Time taken: "); print(fitTime)
+    print(" ")
+    print("SUMMARY---------------------------------")
+    summary(mod) 
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'))
+  
+  capture.output({ #GAM check results
+    print(" ")
+    print("GAM.CHECK-------------------------------")
+    png(paste0(modelCheckDir,'/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
+    par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
+    dev.off()
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'),append=TRUE) 
+  
+  #Actual, Predicted, and SE maps
+  print('Making yield map')
+  yieldMap <- dat %>% filter(DryYield<quantile(DryYield,0.95)) %>% #Chop out upper 5% of data (mainly crazy high numbers)
+    ggplot() + 
+    geom_sf(data=dat,col='grey',size=1)+
+    geom_sf(aes(col=DryYield),alpha=0.3) + 
+    geom_sf(data=fieldEdge,col='magenta')+ #Field boundary
+    labs(title=paste(fieldName,'Data')) + #guides(alpha='none') + 
+    scale_colour_distiller(type='div',palette = "Spectral") +
+    theme(legend.position='bottom')
+  # dat <- dat %>% mutate(yieldPred=mod$fit[,1],yieldVar=mod$fit[,2],resid=resid(mod))
+  
+  #Marginalize across r (point order) and pArea (speed)
+  pred <- dat %>% 
+    mutate(pArea=median(pArea)) %>% #Set pArea to its median value
+    predict(mod,newdata = .,type='response',exclude='s(r)') #Exclude s(r)
+  # mutate(r=1,pArea=median(pArea)) %>% #Sets r to 1, pArea to median
+  # predict(mod,newdata = .,type='response')
+  
+  # pred2 <- dat %>% 
+  #   # mutate(r=1,pArea=mean(pArea)) %>%
+  #   predict(mod,newdata = .,se.fit=TRUE)
+  # 
+  # predVals <- cbind(sapply(pred,function(x) x[,1]),sapply(pred2,function(x) x[,1])) %>% as.data.frame() 
+  # colnames(predVals) <- c('mean1','se1','mean2','se2')
+  # 
+  # predVals %>% pivot_longer(everything()) %>% mutate(par=ifelse(grepl('mean',name),'mean','se')) %>% 
+  #   mutate(name=ifelse(grepl('1',name),'type1','type2')) %>% 
+  #   ggplot()+geom_histogram(aes(x=value))+facet_grid(name~par,scales='free_x')
+  
+  dat <- dat %>% mutate(yieldMean=pred[,1],yieldSD=1/pred[,2],resid=resid(mod))
+  
+  #Predicted yield, marginalizing across pArea and r
+  p1 <- ggplot(dat)+geom_sf(aes(col=yieldMean^2),alpha=0.3)+
+    labs(title='Predicted yield | Combine Speed, Point Order',fill='Yield (T per Ha)',col='Yield (T per Ha)')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  #Predicted SD
+  p2 <- ggplot(dat)+geom_sf(aes(col=yieldSD^2),alpha=0.3)+
+    labs(title='Yield SD | Combine Speed, Point Order',fill='SD Yield ',col='SD Yield')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  p <- ggarrange(yieldMap,p1,p2,ncol=3)
+  ggsave(paste0(resultsDir,'/',fieldName,'.png'),p,height=6,width=15,dpi=100)  
+  
+  #Residual plots/covariance plots
+  p3 <- ggplot(dat)+geom_sf(aes(col=resid),alpha=0.5)+labs(title='Residuals (space)')+
+    scale_colour_distiller(type='div',palette = "Spectral")+theme(legend.position='right')
+  p4 <- ggplot(dat)+geom_point(aes(x=r,y=resid),alpha=0.5)+labs(title='Residuals (sequence)',x='Sequence',y='Residuals')+
+    geom_hline(yintercept=0,col='red',linetype='dashed')
+  
+  #STFDF does ST empirical covariance plots well, but STIDF doesn't work for some reason
+  # Also, there isn't any spatial replication across time, so not sure this matters
+  library(gstat)
+  library(spacetime) 
+  dat_sp <- as_Spatial(select(dat,ID,resid))
+  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=300) #Variogram
+  # vmod <- fit.variogram(v,vgm('Mat'),fit.kappa=TRUE) #Fit Matern covariance model
+  # plot(v,vmod)
+  p5 <- v %>% 
+    ggplot()+geom_point(aes(x=dist,y=gamma))+
+    labs(title='Residual variogram',x='Distance',y='Semivariance')
+  # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
+  #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
+  res_acf <- acf(dat$resid,lag.max=300,type='correlation',plot=FALSE)
+  p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
+    ggplot(aes(x=lag,y=acf))+geom_col()+
+    labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
+  p <- ggarrange(p3,p4,p5,p6,ncol=2,nrow=2)
+  p <- annotate_figure(p,top = text_grob(paste0(fieldName,' Residuals')))
+  ggsave(paste0(modelCheckDir,'/',fieldName,' residuals.png'),p,height=8,width=10,dpi=100)  
+  
+  #Models are huge, so saving only key components (about 25% of the size)
+  modList <- list(cropType=cropType, #Crop type
+                  coefs=coef(mod), #Coefficients
+                  vcv=vcov(mod), #Covariance matrix
+                  smooths=mod$smooth, #Smooth specifications
+                  distRange=range(dat$dist), #Range of distances
+                  pAreaRange=range(dat$pArea), #Range of polygon areas
+                  rRange=range(dat$r)) #Range of r
+  save(modList,file=paste0(modelCheckDir,'/',fieldName,' modList.Rdata'))
+  
+  print('Done')
+  gc()
+  
+  # #Example of reconstructing basis function matrix from new data
+  # data.frame(dist=seq(0,100,5),
+  #              pred=PredictMat(mod$smooth[[1]],data=data.frame(dist=seq(0,100,5))) %*% coef(mod)[c(mod$smooth[[1]]$first.para:mod$smooth[[1]]$last.para)]) %>%
+  #   ggplot()+geom_point(aes(x=dist,y=pred))
+  # 
+  # x <- seq(0,100,5)
+  # betas <- coef(mod)[c(mod$smooth[[1]]$first.para:mod$smooth[[1]]$last.para)] #Coefficients
+  # p <- PredictMat(mod$smooth[[1]],data=data.frame(dist=seq(0,100,5))) #Matrix of basis functions
+  # 
+  # par(mfrow=c(2,1))
+  # plot(0,0,type='n',xlim=range(x),ylim=range(p),xlab='Dist',ylab='y',main='Unscaled basis functions') #Unscaled basis functions
+  # for(i in 1:ncol(p)) lines(x,p[,i],col=i)
+  # #Scaled basis functions
+  # plot(0,0,type='n',xlim=range(x),ylim=range(p*outer(rep(1,nrow(p)),betas)),xlab='Dist',ylab='y',main='Scaled basis functions')
+  # for(i in 1:ncol(p)) lines(x,p[,i]*betas[i],col=i)
+  # lines(x,p%*%betas,lwd=3)
+  # par(mfrow=c(1,1))
+}
+
+#Function to run the ith model, but with boundary type
+#useClosest = use only closest boundary? Otherwise, uses distance from all boundaries
+runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2'){ 
+  # i <- 102 #Debugging
+  # dS <- datSource
+  # nSubSamp <- 50000
+  
+  if(dS$modelComplete2[i]) return('Already completed')
+  if(!dS$use[i]) return('Not used')
+  
+  require(tidyverse)
+  theme_set(theme_bw())
+  require(mgcv)
+  require(sf)
+  require(ggpubr)
+  
+  source('helperFunctions.R')
+  
+  csvPath <- dS$dataPath[i]
+  fieldName <- dS$filename[i]
+  boundaryPath <- dS$boundaryPath2[i]
+  
+  print('Reading in data')
+  dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
+  
+  cropType <- as.character(unique(dat$Product)) #Crop types
+  
+  #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
+  
+  if(nrow(dat)>nSubSamp){
+    #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
+  
+  dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
+    rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
+    rename_with(.fn = ~gsub('.km.h.$','_kmh',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.h.$','_th',.x)) %>%
+    rename_with(.fn = ~gsub('.ha.h.','_hah',.x)) %>%
+    rename_with(.fn = ~gsub('.m.','_m',.x)) %>%
+    rename_with(.fn = ~gsub('.deg.','Angle',.x)) %>%
+    rename_with(.fn = ~gsub('\\.','',.x)) %>%
+    rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
+    st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
+    st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
+    makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+    mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
+    st_centroid() %>% #Convert back to point
+    mutate(r=1:n()) %>% #row number
+    mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
+    group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
+    mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
+    mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  print('Calculating distance from boundary')  
+  
+  fieldEdge <- read_sf(boundaryPath) %>% st_cast('MULTILINESTRING') #Read in boundary file
+  boundaryTypes <- unique(fieldEdge$type) #Get boundary types
+  
+  if(useClosest){
+    #Get distance and type of closest boundary
+    dat <- dat %>% 
+      bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdge),1,function(x) c(dist=min(x),boundaryType=fieldEdge$type[which.min(x)]))))) %>% 
+      mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
+  } else {
+    #Get distance columns for each boundary type
+    dist <- t(apply(st_distance(dat,fieldEdge),1,function(x) tapply(x,fieldEdge$type,min))) %>% 
+      data.frame() %>% rename_with(~paste0('dist_',.x))
+    dat <- dat %>% bind_cols(.,dist) #Bind distance columns to data
+  }
+  
+  print('Fitting model')
+  
+  #Make model formula for non-isotropic gam
+  if(useClosest){
+    f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],') + log(pArea)')
+    f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],') + log(pArea)')
+  } else {
+    f2 <- paste0('~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[1],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],') + log(pArea)')
+    f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[4],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],') + log(pArea)')
+  }
+  
+  flist <- list(as.formula(f),as.formula(f2)) #List of model formulae
+  
+  #Fit Gaussian location-scale  model
+  #NOTE: this model can't be run using bam or gamm because of location-scale modeling
+  
+  a <- Sys.time() #Takes about 20 mins for a 50000 point model
+  mod <- gam(flist,data=dat,family=gaulss())
+  fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
+  
+  print('Saving model results')
+  
+  png(paste0(modelCheckDir,'/',fieldName,' Summary.png'),width=12,height=8,units='in',res=200)
+  # plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+  plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
+  dev.off()
+  
+  capture.output({ #Model summary
+    print("Time taken: "); print(fitTime)
+    print(" ")
+    print("SUMMARY---------------------------------")
+    summary(mod) 
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'))
+  
+  capture.output({ #GAM check results
+    print(" ")
+    print("GAM.CHECK-------------------------------")
+    png(paste0(modelCheckDir,'/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
+    par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
+    dev.off()
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'),append=TRUE) 
+  
+  #Actual, Predicted, and SE maps
+  print('Making yield map')
+  yieldMap <- dat %>% filter(DryYield<quantile(DryYield,0.95)) %>% #Chop out upper 5% of data (mainly crazy high numbers)
+    ggplot() + 
+    geom_sf(data=dat,col='grey',size=1)+
+    geom_sf(aes(col=DryYield),alpha=0.3) + 
+    geom_sf(data=fieldEdge,col='magenta')+ #Field boundary
+    labs(title=paste(fieldName,'Data')) + #guides(alpha='none') + 
+    scale_colour_distiller(type='div',palette = "Spectral") +
+    theme(legend.position='bottom')
+  
+  #Marginalize across r (point order) and pArea (speed)
+  pred <- dat %>% 
+    mutate(pArea=median(pArea)) %>% #Set pArea to its median value
+    predict(mod,newdata = .,type='response',exclude='s(r)') #Exclude s(r)
+  
+  dat <- dat %>% mutate(yieldMean=pred[,1],yieldSD=1/pred[,2],resid=resid(mod))
+  
+  #Predicted yield, marginalizing across pArea and r
+  p1 <- ggplot(dat)+geom_sf(aes(col=yieldMean^2),alpha=0.3)+
+    labs(title='Predicted yield | Combine Speed, Point Order',fill='Yield (T per Ha)',col='Yield (T per Ha)')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  #Predicted SD
+  p2 <- ggplot(dat)+geom_sf(aes(col=yieldSD^2),alpha=0.3)+
+    labs(title='Yield SD | Combine Speed, Point Order',fill='SD Yield ',col='SD Yield')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  p <- ggarrange(yieldMap,p1,p2,ncol=3)
+  ggsave(paste0(resultsDir,'/',fieldName,'.png'),p,height=6,width=15,dpi=100)  
+  
+  #Residual plots/covariance plots
+  p3 <- ggplot(dat)+geom_sf(aes(col=resid),alpha=0.5)+labs(title='Residuals (space)')+
+    scale_colour_distiller(type='div',palette = "Spectral")+theme(legend.position='right')
+  p4 <- ggplot(dat)+geom_point(aes(x=r,y=resid),alpha=0.5)+labs(title='Residuals (sequence)',x='Sequence',y='Residuals')+
+    geom_hline(yintercept=0,col='red',linetype='dashed')
+  
+  #STFDF does ST empirical covariance plots well, but STIDF doesn't work for some reason
+  # Also, there isn't any spatial replication across time, so not sure this matters
+  library(gstat)
+  library(spacetime) 
+  dat_sp <- as_Spatial(select(dat,ID,resid))
+  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=300) #Variogram
+  # vmod <- fit.variogram(v,vgm('Mat'),fit.kappa=TRUE) #Fit Matern covariance model
+  # plot(v,vmod)
+  p5 <- v %>% 
+    ggplot()+geom_point(aes(x=dist,y=gamma))+
+    labs(title='Residual variogram',x='Distance',y='Semivariance')
+  # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
+  #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
+  res_acf <- acf(dat$resid,lag.max=300,type='correlation',plot=FALSE)
+  p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
+    ggplot(aes(x=lag,y=acf))+geom_col()+
+    labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
+  p <- ggarrange(p3,p4,p5,p6,ncol=2,nrow=2)
+  p <- annotate_figure(p,top = text_grob(paste0(fieldName,' Residuals')))
+  ggsave(paste0(modelCheckDir,'/',fieldName,' residuals.png'),p,height=8,width=10,dpi=100)  
+  
+  #Models are huge, so saving only key components (about 25% of the size)
+  modList <- list(cropType=cropType, #Crop type
+                  boundaryTypes=boundaryTypes, #Boundary types
+                  coefs=coef(mod), #Coefficients
+                  vcv=vcov(mod), #Covariance matrix
+                  smooths=mod$smooth, #Smooth specifications
+                  distRange=st_drop_geometry(dat) %>% select(contains('dist_')) %>% summarize(across(everything(),range)) %>% data.frame(), #Range of distances
+                  pAreaRange=range(dat$pArea), #Range of polygon areas
+                  rRange=range(dat$r)) #Range of r
+  save(modList,file=paste0(modelCheckDir,'/',fieldName,' modList.Rdata'))
+  
+  print('Done')
+  gc()
+}
