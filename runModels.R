@@ -14,13 +14,15 @@ source('helperFunctions.R')
 
 # #Generate new dataSource dataframe
 # rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files" #Path to csv files
-# datSource <- data.frame(dataPath=dir(rootPath,pattern=".csv",recursive=TRUE,full.names = TRUE)) %>% 
-#   mutate(path=gsub('/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/','',dataPath)) %>% 
-#   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% select(-path) %>% 
-#   mutate(field=gsub('\\.csv','',field)) %>% 
-#   unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
+# datSource <- data.frame(dataPath=dir(rootPath,pattern=".csv",recursive=TRUE,full.names = TRUE)) %>%
+#   mutate(path=gsub('/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/','',dataPath)) %>%
+#   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% select(-path) %>%
+#   mutate(field=gsub('\\.csv','',field)) %>%
+#   unite(filename,c(grower:field),sep=' ',remove=FALSE) %>%
 #   mutate(boundaryPath=paste0('./Figures/FieldBoundaries/',filename,' boundary.shp')) %>% #Paths to boundary shapefiles
-#   mutate(modelPath=paste0('./Figures/ModelCheck/',filename,' modList.Rdata'))  #Paths to saved model files
+#   mutate(boundaryPath2=paste0('./Figures/FieldBoundarySegments/',filename,' boundary.shp')) %>%
+#   mutate(modelPath=paste0('./Figures/ModelCheck/',filename,' modList.Rdata')) %>% #Paths to saved model files
+#   mutate(modelPath2=paste0('./Figures/ModelCheck2/',filename,' modList.Rdata'))
 # write.csv(datSource,'./Data/datSource_new.csv',row.names = FALSE)
 
 datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
@@ -28,33 +30,33 @@ datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
   mutate(modelComplete=file.exists(modelPath)) %>% #Has model1 already been run?
   mutate(modelComplete2=file.exists(modelPath2)) #Has model2 already been run?
 
+#Get summary results from models
+
 datSource %>% count(grower,year)
 datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=length(unique(year)),n=n()) 
 
-# set.seed(1) # Run subset of models
-# datSource <- datSource %>%
-#   # filter(grower!='Alvin French') %>% #These fields are huge, so leave out for now
-#   slice_sample(n=10) #Smaller set to experiment with
+#First set of models - no boundary types
+resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
+modInfo <- lapply(resultPaths,getModelInfo)
+sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
+sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
 
-# #Get summary results from models
-# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
-# 
-# modInfo <- lapply(resultPaths,getModelInfo)
-# 
-# sapply(modInfo,function(x) is.na(x$REML)) %>% summary() #Most model info not recorded
-# 
-# sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary()
-
+#Second set of models - boundary types included
+resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath2)[datSource$use]
+modInfo <- lapply(resultPaths,getModelInfo)
+sum(!file.exists(datSource$modelPath2[datSource$use])) #24 models not completed
+sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
+sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
 
 # Run first set of models - no boundary type --------------------------------------------------------------
 
-a <- Sys.time() #Test
-runModI(91,dS=datSource)
-Sys.time()-a
-beep(1)
+# a <- Sys.time() #Test
+# runModI(91,dS=datSource)
+# Sys.time()-a
+# beep(1)
 
 library(parallel)
-cluster <- makeCluster(8) #10 procs max - uses about 90% of memory
+cluster <- makeCluster(15) #10 procs max - uses about 90% of memory
 parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource) #Takes about 42 mins for running 10 procs. Some seem to take longer than others (weird shaped fields?)
 beep(1)
 stopCluster(cluster)

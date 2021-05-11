@@ -90,41 +90,63 @@ makeBoundary <- function(i,dS,rP,outerOnly=TRUE,overwrite=FALSE,nSubSamp=50000){
   rm(dat,fieldEdge,fieldEdge2); gc() #Garbage collection
 }
 
-# makeBoundary(58,datSource,rootPath,overwrite=TRUE) #Test
+# makeBoundary(51,datSource,rootPath,overwrite=FALSE) #Test
 # debugonce(makeBoundary)
-
 
 library(parallel)
 library(beepr)
-cluster <- makeCluster(8) #8 procs max
-parLapply(cl=cluster,1:nrow(datSource),makeBoundary,dS=datSource,rP=rootPath,outerOnly=TRUE) 
-beep(1)
-stopCluster(cluster)
+
+datSource %>% filter(!completed) #Do any fields not have a boundary?
+
+useRows <- which(!datSource$completed) #New boundary files to make
+nproc <- 2 #2 procs max
+for(i in 1:ceiling(length(useRows)/nproc)){ #Make files in batches of 2 before killing clusters and running gc
+  r <-((i-1)*8+1):(i*8)
+  r <- r[r<=length(useRows)]
+  cluster <- makeCluster(nproc) 
+  parLapply(cl=cluster,useRows[r],makeBoundary,dS=datSource,rP=rootPath,outerOnly=TRUE) 
+  beep(1)
+  stopCluster(cluster)
+  gc()
+}
 
 # Turn polygons into linestrings ------------------------------------------
+
+#NOTE: do this after cleaning up initial polygons
+
 library(tidyverse)
 library(sf)
 
 setwd("~/Documents/yield-analysis-2021")
 
-rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
+# rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
 # datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
 #   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
 #   mutate(field=gsub('\\.csv','',field)) %>% unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
 #   mutate(completed=filename %in% gsub(' boundary.shp','',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE)))
 
-datSource <- read.csv('./Data/datSource.csv') #Read previous datsource file
-datSource <- datSource %>% mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
+datSource <- read.csv('./Data/datSource.csv') %>%  #Read previous datsource file
+  mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
   mutate(modelComplete=file.exists(modelPath)) #Has model already been run?
 # shpFiles <- paste0('./Figures/FieldBoundaries/',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE)) #Paths to shapefiles
 shpFiles <- unique(datSource$boundaryPath[datSource$use]) #Only unique shapefiles used (some fields use a single year's boundary)
 
-makeLinestring <- function(shp){
-  # shp <-shpFiles[1] 
+#Makes lines out of polygons (FieldBoundary)
+makeLinestring <- function(shp,overwrite=FALSE){
+  # shp <-shpFiles[1] #Debugging
   fieldName <- strsplit(shp,'/')[[1]][length(strsplit(shp,'/')[[1]])]
+  filename <- paste0('./Figures/FieldBoundaryLines/',fieldName)
   #Polygon
   p <- read_sf(shp) %>% st_cast('MULTILINESTRING') %>% mutate(type='STANDARD') %>% st_simplify(dTolerance=0.5)
-  st_write(p,paste0('./Figures/FieldBoundaryLines/',fieldName),append=FALSE,driver='ESRI Shapefile')
+  
+  if(!file.exists(filename)){
+    st_write(p,filename,append=FALSE,driver='ESRI Shapefile')
+  } else if((file.exists(filename)&overwrite)){
+    print('Overwriting existing file')
+    st_write(p,filename,append=FALSE,driver='ESRI Shapefile')
+  } else {
+    print('File already exists.')
+  }
 }
 makeLinestring(shpFiles[1])
 sapply(shpFiles,makeLinestring)

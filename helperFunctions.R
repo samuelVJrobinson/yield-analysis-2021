@@ -649,9 +649,20 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
 
 #Get model info from saved text file at path
 getModelInfo <- function(path){
-  require(tidyverse)
+  if(!file.exists(path)){
+    warning('File does not exist')
+    retList <- list(timeTaken=NA,
+                    percDevianceExplained=NA,
+                    REML=NA,hessian=NA,
+                    params=NA,
+                    smooths=NA,
+                    gamCheck=NA)
+    return(retList)
+  }
+  
   txt <- readLines(path)
   
+  require(tidyverse)
   #Get time taken to run model
   timeLine <- which(grepl('Time taken',txt))+1
   if(length(timeLine)==0){
@@ -678,8 +689,9 @@ getModelInfo <- function(path){
   if(length(remlLine)==0){
     reml <- NA
   } else {
-    reml <- txt[remlLine]
-    reml <- as.numeric(strsplit(reml,' ')[[1]][3])  
+    reml <- strsplit(txt[remlLine],' ')[[1]]
+    reml <- reml[reml!='']
+    reml <- as.numeric(reml[3])  
   }
   
   #Check Hessian matrix
@@ -743,5 +755,6 @@ getModelInfo <- function(path){
   return(retList)
 }
 # getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Data/kTestResults/uprSpace/Alvin French 2020 Al_Jr results.txt") #Test
-getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck/Alvin French 2020 C41 results.txt")
-debugonce(getModelInfo)
+# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck/Alvin French 2020 C41 results.txt")
+# debugonce(getModelInfo)
+# getModelInfo("./Figures/ModelCheck/Dean Hubbard 2018 All_27_11_25 results.txt")
