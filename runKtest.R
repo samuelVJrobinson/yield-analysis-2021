@@ -99,13 +99,12 @@ p3 <- ggplot(results)+
 (p <- ggarrange(p3,p1,p2,ncol=3))
 ggsave('./Data/kTestResults/kTestResults.png',p,height=4,width=12,dpi=250)  
 
-#How long did models take to run ----------------
+#How long did models take to run? ----------------
 
 resultPaths <- gsub(' modList.Rdata',' results.txt',modListPaths)
 modelInfo <- sapply(resultPaths,getModelInfo)
 
 getModelInfo(resultPaths[50])
-
 
 for(i in 1:length(resultPaths)){
   getModelInfo(resultPaths[i])

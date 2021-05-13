@@ -7,8 +7,8 @@ setwd("~/Documents/yield-analysis-2021")
 
 rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files"
 datSource <- data.frame(path=dir(rootPath,pattern=".csv",recursive=TRUE)) %>% 
-  separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% 
-  mutate(field=gsub('\\.csv','',field)) %>% unite(filename,c(grower:field),sep=' ',remove=FALSE) %>% 
+  separate(path,c('grower','field','year'),sep=" ",remove=FALSE) %>% 
+  mutate(year=gsub('\\.csv','',year)) %>% unite(filename,c(grower:year),sep=' ',remove=FALSE) %>% 
   mutate(completed=filename %in% gsub(' boundary.shp','',dir('./Figures/FieldBoundaries',pattern=".shp",recursive=TRUE))) #Have files already been processed?
   # mutate(completed=FALSE)
 
