@@ -12,7 +12,7 @@ source('helperFunctions.R')
 
 # Get paths to data -------------------------------------------------------
 
-# #Generate new dataSource dataframe
+# #Generate new dataSource dataframe - NOTE: NAMING SCHEME HAS CHANGED, SO THIS SHOULD BE UPDATED - MAY 13 2021
 # rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files" #Path to csv files
 # datSource <- data.frame(dataPath=dir(rootPath,pattern=".csv",recursive=TRUE,full.names = TRUE)) %>%
 #   mutate(path=gsub('/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/','',dataPath)) %>%
