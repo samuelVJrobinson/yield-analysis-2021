@@ -31,27 +31,26 @@ datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
   mutate(modelComplete2=file.exists(modelPath2)) #Has model2 already been run?
 
 #Get summary results from models
-
 datSource %>% count(grower,year)
 datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=length(unique(year)),n=n()) 
 
-#First set of models - no boundary types
-resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
-modInfo <- lapply(resultPaths,getModelInfo)
-sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
-sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
+# #First set of models - no boundary types
+# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
+# modInfo <- lapply(resultPaths,getModelInfo)
+# sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
+# sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
 
-#Second set of models - boundary types included
-resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath2)[datSource$use]
-modInfo <- lapply(resultPaths,getModelInfo)
-sum(!file.exists(datSource$modelPath2[datSource$use])) #24 models not completed
-sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
-sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
+# #Second set of models - boundary types included
+# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath2)[datSource$use]
+# modInfo <- lapply(resultPaths,getModelInfo)
+# sum(!file.exists(datSource$modelPath2[datSource$use])) #24 models not completed
+# sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
+# sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
 
 # Run first set of models - no boundary type --------------------------------------------------------------
 
 # a <- Sys.time() #Test
-# runModI(91,dS=datSource)
+# runModI(51,dS=datSource)
 # Sys.time()-a
 # beep(1)
 

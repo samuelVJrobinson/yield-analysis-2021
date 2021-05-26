@@ -139,14 +139,14 @@ makeLinestring <- function(shp,overwrite=FALSE){
   #Polygon
   p <- read_sf(shp) %>% st_cast('MULTILINESTRING') %>% mutate(type='STANDARD') %>% st_simplify(dTolerance=0.5)
   
-  if(!file.exists(filename)){
+  if(!file.exists(filename)){ #If file doesn't exist
     st_write(p,filename,append=FALSE,driver='ESRI Shapefile')
-  } else if((file.exists(filename)&overwrite)){
+  } else if((file.exists(filename)&overwrite)){ #If file exists and overwrite = TRUE
     print('Overwriting existing file')
     st_write(p,filename,append=FALSE,driver='ESRI Shapefile')
-  } else {
-    print('File already exists.')
+  } else { #Otherwise
+    print('File already exists. Skipping.')
   }
 }
 makeLinestring(shpFiles[1])
-sapply(shpFiles,makeLinestring)
+sapply(shpFiles,makeLinestring) #All of them
