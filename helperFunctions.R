@@ -465,9 +465,11 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
 #Function to run the ith model, but with boundary type
 #useClosest = use only closest boundary? Otherwise, uses distance from all boundaries
 runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2'){ 
-  # i <- 102 #Debugging
+  # i <- 295 #Debugging
   # dS <- datSource
   # nSubSamp <- 50000
+  # useClosest <- TRUE
+  # kPar <- c(12,60,60,12,60,60)
   
   if(dS$modelComplete2[i]) return('Already completed')
   if(!dS$use[i]) return('Not used')
@@ -490,7 +492,6 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   cropType <- as.character(unique(dat$Product)) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
-  
   if(nrow(dat)>nSubSamp){
     #Limit to nSubSamp sequential samples
     dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
@@ -525,7 +526,7 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   if(useClosest){
     #Get distance and type of closest boundary
     dat <- dat %>% 
-      bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdge),1,function(x) c(dist=min(x),boundaryType=fieldEdge$type[which.min(x)]))))) %>% 
+      bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdge),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdge$type[which.min(x)]))))) %>% 
       mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
   } else {
     #Get distance columns for each boundary type

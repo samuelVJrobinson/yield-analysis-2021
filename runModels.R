@@ -262,9 +262,9 @@ ggsave(paste0('./Figures/ModelSummary1a.png'),p,height=6,width=12,dpi=300)
 # Run second set of models - boundary type included ---------------------------
 
 # a <- Sys.time()
-# runModII(102,dS=datSource) #Trent Clark Swanny's 2019 (small field)
+# runModII(295,dS=datSource) 
 # Sys.time()-a
-# beep(1)
+# # beep(1)
 # debugonce(runModII)
 
 library(parallel)

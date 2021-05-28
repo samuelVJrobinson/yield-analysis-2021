@@ -113,7 +113,6 @@ for(i in 1:ceiling(length(useRows)/nproc)){ #Make files in batches of 2 before k
 # Turn polygons into linestrings ------------------------------------------
 
 #NOTE: do this after cleaning up initial polygons
-
 library(tidyverse)
 library(sf)
 
