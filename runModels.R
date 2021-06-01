@@ -1,6 +1,6 @@
 #Run non-isotropic GAMs on multiple field years
 
-# Load required libraries ---------------------------------------------------------
+# Load everything ---------------------------------------------------------
 
 library(tidyverse)
 theme_set(theme_bw())
@@ -10,19 +10,34 @@ library(sf)
 library(beepr)
 source('helperFunctions.R')
 
-# Get paths to data -------------------------------------------------------
+# Get paths to data 
 
-# #Generate new dataSource dataframe - NOTE: NAMING SCHEME HAS CHANGED, SO THIS SHOULD BE UPDATED - MAY 13 2021
+# #Generate new dataSource dataframe
 # rootPath <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files" #Path to csv files
 # datSource <- data.frame(dataPath=dir(rootPath,pattern=".csv",recursive=TRUE,full.names = TRUE)) %>%
 #   mutate(path=gsub('/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/','',dataPath)) %>%
-#   separate(path,c('grower','year','field'),sep="/",remove=FALSE) %>% select(-path) %>%
-#   mutate(field=gsub('\\.csv','',field)) %>%
-#   unite(filename,c(grower:field),sep=' ',remove=FALSE) %>%
+#   separate(path,c('grower','field','year'),sep=" ",remove=FALSE) %>% select(-path) %>%
+#   mutate(year=gsub('\\.csv','',year)) %>%
+#   unite(filename,c(grower:year),sep=' ',remove=FALSE) %>%
 #   mutate(boundaryPath=paste0('./Figures/FieldBoundaries/',filename,' boundary.shp')) %>% #Paths to boundary shapefiles
 #   mutate(boundaryPath2=paste0('./Figures/FieldBoundarySegments/',filename,' boundary.shp')) %>%
 #   mutate(modelPath=paste0('./Figures/ModelCheck/',filename,' modList.Rdata')) %>% #Paths to saved model files
 #   mutate(modelPath2=paste0('./Figures/ModelCheck2/',filename,' modList.Rdata'))
+# 
+# #Read 10000 lines from each csv, and get counts of products - takes about 20 seconds
+# cropType <- sapply(datSource$dataPath,function(path){
+#   table(read.csv(path,nrows=10000,fileEncoding='latin1')$Product)}) %>% 
+#   set_names(datSource$filename) %>% 
+#   sapply(.,function(x) names(x)[1])
+# 
+# datSource$crop <- case_when(grepl('(CANOLA|InVigor|Dekalb 74-54|Dekalb 75-42|Brett Young 6056|Dupont D3152|VT 9562)',cropType) ~ 'Canola',
+#                             grepl('(WHEAT|Wheat|CPS AC Foremost|CWRS|CWSW)',cropType) ~ 'Wheat',
+#                             grepl('Peas',cropType) ~ 'Peas',
+#                             grepl('(BARLEY|Barley)',cropType) ~ 'Barley',
+#                             grepl('Beans',cropType) ~ 'Beans',
+#                             grepl('Oats',cropType) ~ 'Oats',
+#                             grepl('Rye',cropType) ~ 'Rye',
+#                             TRUE ~ cropType) 
 # write.csv(datSource,'./Data/datSource_new.csv',row.names = FALSE)
 
 datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
@@ -31,8 +46,10 @@ datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
   mutate(modelComplete2=file.exists(modelPath2)) #Has model2 already been run?
 
 #Get summary results from models
-datSource %>% count(grower,year)
-datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=length(unique(year)),n=n()) 
+datSource %>% pull(use) %>% sum()
+datSource %>% count(grower,year) #How many fields per grower per year
+datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=length(unique(year)),n=n()) #Number of distinct fields 
+datSource %>% count(crop) #Enough to do separate analyses on canola and wheat, maybe peas
 
 # #First set of models - no boundary types
 # resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
@@ -90,21 +107,6 @@ allEff <- lapply(names(allSmooths[[1]]),function(y){
     rownames_to_column('field') %>% 
     mutate(field=gsub('\\.\\d{1,3}','',field))
 })
-
-#Read 10000 lines from each csv, and get counts of products
-cropType <- sapply(datSource$dataPath[datSource$use],function(path){
-  table(read.csv(path,nrows=10000,fileEncoding='latin1')$Product)}) %>% 
-  set_names(datSource$filename[datSource$use]) %>% 
-  sapply(.,function(x) names(x)[1])
-
-case_when(grepl('(CANOLA|InVigor)',cropType) ~ 'Canola',
-          grepl('(WHEAT|Wheat)',cropType) ~ 'Wheat',
-          grepl('Peas',cropType) ~ 'Peas',
-          grepl('(BARLEY|Barley)',cropType) ~ 'Barley',
-          grepl('Beans',cropType) ~ 'Beans',
-          grepl('Oats',cropType) ~ 'Oats',
-          TRUE ~ cropType) %>% 
-  table()
 
 #Plot with individual field-level smoothers
 
@@ -279,41 +281,40 @@ Sys.time()-a #Takes ~ 10 hrs for 50 models at 15 procs
 
 # Get smoother info from second set of models ---------------------------
 
-#Estimate at single field
-est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),
-                margInt=c(FALSE,TRUE,TRUE),
-                samp=FALSE)$distDat %>%
-  bind_rows(.id='dist_type')
-
-#Draw posterior samples at field 1
-Nsamp <- 100 #Number of samples
-# samp <- lapply(1:Nsamp,
-#           function(x){
-#             getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat %>%
-#               bind_rows(.id='dist_type')
-#           }) %>% bind_rows(.id='N')
-library(parallel)
-cluster <- makeCluster(15) #10 procs uses about 30% of memory - could probably max it out
-clusterExport(cluster,c('datSource'))
-samp <- parLapply(cl=cluster,1:Nsamp,fun=function(x){
-  require(tidyverse)
-  source('helperFunctions.R')
-  getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat %>%
-    bind_rows(.id='dist_type')}) %>% bind_rows(.id='N') 
-stopCluster(cluster)
-
-ggplot()+ #Visualize draws
-  geom_line(data=samp,aes(x=dist,y=mean,group=N),alpha=0.3)+
-  geom_line(data=est,aes(x=dist,y=mean),col='blue',size=1)+
-  geom_hline(yintercept=0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type)
-
-est %>% group_by(dist_type) %>% slice(1)
+# #Estimate at single field
+# est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),
+#                 margInt=c(FALSE,TRUE,TRUE),
+#                 samp=FALSE)$distDat %>%
+#   bind_rows(.id='dist_type')
+# 
+# #Draw posterior samples at field 1
+# Nsamp <- 100 #Number of samples
+# # samp <- lapply(1:Nsamp,
+# #           function(x){
+# #             getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat %>%
+# #               bind_rows(.id='dist_type')
+# #           }) %>% bind_rows(.id='N')
+# library(parallel)
+# cluster <- makeCluster(15) #10 procs uses about 30% of memory - could probably max it out
+# clusterExport(cluster,c('datSource'))
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=function(x){
+#   require(tidyverse)
+#   source('helperFunctions.R')
+#   getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=TRUE)$distDat %>%
+#     bind_rows(.id='dist_type')}) %>% bind_rows(.id='N') 
+# stopCluster(cluster)
+# 
+# ggplot()+ #Visualize draws
+#   geom_line(data=samp,aes(x=dist,y=mean,group=N),alpha=0.3)+
+#   geom_line(data=est,aes(x=dist,y=mean),col='blue',size=1)+
+#   geom_hline(yintercept=0,col='red',linetype='dashed')+
+#   facet_wrap(~dist_type)
+# 
+# est %>% group_by(dist_type) %>% slice(1)
 
 #Get smoother from each field
-#Takes about 20 seconds
 getFiles <- datSource %>% filter(use,modelComplete2) #Completed models
-allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE)) %>% 
+allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE)) %>% #Takes about 20 seconds
   set_names(getFiles$filename)
 
 #Get df of predictions for each variable
@@ -470,21 +471,23 @@ samplePreds <- function(a,ds=datSource,nX=c(100,100,100)){ #a ignored, ds = datS
 # stopCluster(cluster)
 # save(samp,file='./Data/postSamples2.Rdata')
 
-## Add to current samples
-Nsamp <- 700 #Number of samples
-library(parallel)
-cluster <- makeCluster(15)
-clusterExport(cluster,c('datSource'))
-a <- Sys.time()
-samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
-#Takes about 10 mins for 100 samples
-Sys.time()-a
-stopCluster(cluster)
-load('./Data/postSamples.Rdata')
-samp <- c(samp,samp2)
-save(samp,file='./Data/postSamples.Rdata')
-rm(samp2)
+# ## Add to current samples
+# Nsamp <- 700 #Number of samples
+# library(parallel)
+# cluster <- makeCluster(15)
+# clusterExport(cluster,c('datSource'))
+# a <- Sys.time()
+# samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
+# #Takes about 10 mins for 100 samples
+# Sys.time()-a
+# stopCluster(cluster)
+# load('./Data/postSamples.Rdata')
+# samp <- c(samp,samp2)
+# save(samp,file='./Data/postSamples.Rdata')
+# rm(samp2)
 
+# Load saved posterior samples
+load('./Data/postSamples.Rdata')
 
 tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
 # ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(0,5)) #Y limits
@@ -498,50 +501,69 @@ p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>%
   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=pArea))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=med))+labs(x='Polygon Area',y=ylabMean)
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabMean)
 
 p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
   group_by(pArea) %>% 
   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=pArea))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=med))+labs(x='Polygon Area',y=ylabSD)
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabSD)
 
-p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'coverClass')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(coverClass,dist) %>% 
+p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predMean) %>% 
-  # filter(dist<=400) %>% 
-  ggplot(aes(x=dist)) + geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  facet_wrap(~coverClass) + geom_line(aes(y=med))+labs(x='Distance',y=ylabMean)
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + 
+  geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
 
-p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'coverClass')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(coverClass,dist) %>% 
+p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  # filter(dist<=400) %>% 
-  ggplot(aes(x=dist)) + geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  facet_wrap(~coverClass) + geom_line(aes(y=med))+labs(x='Distance',y=ylabSD)
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
 
 p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
   group_by(r) %>% 
   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=r))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=med))+labs(x='Point order',y=ylabMean)
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
 
 p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
   group_by(r) %>% 
   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=r))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=med))+labs(x='Point order',y=ylabMean)
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
 
 (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
 ggsave(paste0('./Figures/ModelSummary3.png'),p,height=6,width=12,dpi=300)
