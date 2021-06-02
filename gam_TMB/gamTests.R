@@ -6,7 +6,7 @@ library(tidyverse)
 library(gamair)
 data(engine)
 
-plot(wear~size,data=engine,)
+plot(wear~size,data=engine)
 
 #Cubic splines, as in example ------------------------
 
