@@ -21,8 +21,9 @@ source('helperFunctions.R')
 #   unite(filename,c(grower:year),sep=' ',remove=FALSE) %>%
 #   mutate(boundaryPath=paste0('./Figures/FieldBoundaries/',filename,' boundary.shp')) %>% #Paths to boundary shapefiles
 #   mutate(boundaryPath2=paste0('./Figures/FieldBoundarySegments/',filename,' boundary.shp')) %>%
-#   mutate(modelPath=paste0('./Figures/ModelCheck/',filename,' modList.Rdata')) %>% #Paths to saved model files
-#   mutate(modelPath2=paste0('./Figures/ModelCheck2/',filename,' modList.Rdata'))
+#   mutate(modelPath1=paste0('./Figures/ModelCheck1/',filename,' modList.Rdata')) %>% #Paths to saved model files
+#   mutate(modelPath2=paste0('./Figures/ModelCheck2/',filename,' modList.Rdata')) %>% 
+#   mutate(modelPath0=paste0('./Figures/ModelCheck0/',filename,' modList.Rdata')) 
 # 
 # #Read 10000 lines from each csv, and get counts of products - takes about 20 seconds
 # cropType <- sapply(datSource$dataPath,function(path){
@@ -42,8 +43,9 @@ source('helperFunctions.R')
 
 datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
   mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
-  mutate(modelComplete=file.exists(modelPath)) %>% #Has model1 already been run?
-  mutate(modelComplete2=file.exists(modelPath2)) #Has model2 already been run?
+  mutate(modelComplete1=file.exists(modelPath1)) %>% #Has model1 already been run?
+  mutate(modelComplete2=file.exists(modelPath2)) %>% #Has model2 already been run?
+  mutate(modelComplete0=file.exists(modelPath0)) #Has model0 already been run?
 
 #Get summary results from models
 datSource %>% pull(use) %>% sum()
@@ -52,7 +54,7 @@ datSource %>% group_by(grower) %>% summarize(nLoc=length(unique(field)),nYears=l
 datSource %>% count(crop) #Enough to do separate analyses on canola and wheat, maybe peas
 
 # #First set of models - no boundary types
-# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath)[datSource$use]
+# resultPaths <- gsub(' modList.Rdata',' results.txt',datSource$modelPath1)[datSource$use]
 # modInfo <- lapply(resultPaths,getModelInfo)
 # sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
 # sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
@@ -63,6 +65,22 @@ datSource %>% count(crop) #Enough to do separate analyses on canola and wheat, m
 # sum(!file.exists(datSource$modelPath2[datSource$use])) #24 models not completed
 # sapply(modInfo,function(x) as.numeric(x$timeTaken,units='hours')) %>% summary() #Hours taken
 # sapply(modInfo,function(x) x$percDevianceExplained) %>% summary() #Explained deviance
+
+
+# Run "zero-th" set of models - no boundary -------------------------------
+
+# a <- Sys.time() #Test
+# runMod0(1,dS=datSource)
+# Sys.time()-a
+# beep(1)
+
+library(parallel)
+cluster <- makeCluster(15) #10 procs max - uses about 90% of memory
+a <- Sys.time()
+parLapply(cl=cluster,1:nrow(datSource),runMod0,dS=datSource) 
+stopCluster(cluster)
+Sys.time() - a
+
 
 # Run first set of models - no boundary type --------------------------------------------------------------
 
@@ -77,8 +95,6 @@ parLapply(cl=cluster,1:nrow(datSource),runModI,dS=datSource) #Takes about 42 min
 beep(1)
 stopCluster(cluster)
 Sys.time() #Takes ~ 7 hrs
-
-#Need to identify boundary types at each field
 
 # Get smoother info from first set of models -------------------------------------------
 
@@ -375,11 +391,17 @@ ggsave(paste0('./Figures/ModelSummary2a.png'),p,height=6,width=12,dpi=300)
 
 # Function to sample from posterior of each prediction, amalgamate, fit meta-model, return results of meta-model
 # My way of getting around the problem of random effects
-samplePreds <- function(a,ds=datSource,nX=c(100,100,100)){ #a ignored, ds = datSource csv, nX = number of samples along range of X
+# a = does nothing (argument for parLapply), choose = rows of ds to be used, ds = datSource csv, nX = number of samples along range of X
+samplePreds <- function(a=NULL,choose=NULL,ds=datSource,nX=c(100,100,100)){ 
+  if(is.null(choose)){
+    warning('Rows not specified. Using entire dataset.')
+    choose <- 1:nrow(datSource)
+  } 
+  
   require(tidyverse); require(mgcv)
   source('helperFunctions.R')
   
-  getFiles <- ds %>% filter(use,modelComplete2) #Completed models
+  getFiles <- ds %>% slice(choose) %>% filter(use,modelComplete2) #Completed models
   
   #Sample from posterior, get new lines for each field
   allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE),samp=TRUE) %>% set_names(getFiles$filename)
@@ -569,3 +591,207 @@ p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>%
 ggsave(paste0('./Figures/ModelSummary3.png'),p,height=6,width=12,dpi=300)
 (p <- ggarrange(p3,p4,ncol=1,nrow=2))
 ggsave(paste0('./Figures/ModelSummary3a.png'),p,height=6,width=12,dpi=300)  
+
+# Get crop-specific smoother info from second set of models 
+
+# Add to current samples - canola
+isCanola <- which(datSource$crop=='Canola') #Canola crops only
+Nsamp <- 500 #Number of samples
+library(parallel)
+cluster <- makeCluster(10)
+clusterExport(cluster,c('datSource'))
+a <- Sys.time() #23 mins for 500 reps
+samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,choose=isCanola)
+Sys.time()-a
+stopCluster(cluster)
+load('./Data/postSamples_canola.Rdata')
+samp <- c(samp,samp2)
+save(samp,file='./Data/postSamples_canola.Rdata')
+rm(samp2)
+
+# Add to current samples - wheat
+isWheat <- which(datSource$crop=='Wheat') #Wheat
+Nsamp <- 15 #Number of samples
+library(parallel)
+cluster <- makeCluster(15)
+clusterExport(cluster,c('datSource'))
+a <- Sys.time() #18 mins for 500 reps
+samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,choose=isWheat)
+Sys.time()-a
+stopCluster(cluster)
+load('./Data/postSamples_wheat.Rdata')
+samp <- c(samp,samp2)
+save(samp,file='./Data/postSamples_wheat.Rdata')
+rm(samp2)
+
+load('./Data/postSamples_canola.Rdata')
+
+p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+  group_by(pArea) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabMean)
+
+p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+  group_by(pArea) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabSD)
+
+p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + 
+  geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+
+p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+
+p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+  group_by(r) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
+
+p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+  group_by(r) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
+
+(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
+ggsave(paste0('./Figures/ModelSummary3_canola.png'),p,height=6,width=12,dpi=300)
+(p <- ggarrange(p3+facet_wrap(~dist_type,nrow=1),p4+facet_wrap(~dist_type,nrow=1),ncol=1,nrow=2))
+ggsave(paste0('./Figures/ModelSummary3a_canola.png'),p,height=6,width=12,dpi=300)  
+
+load('./Data/postSamples_wheat.Rdata')
+
+p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+  group_by(pArea) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabMean)
+
+p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+  group_by(pArea) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=pArea))+
+  geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan')+
+  geom_line(aes(y=med),col='cyan',size=1)+
+  labs(x='Polygon Area',y=ylabSD)
+
+p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + 
+  geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+
+p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=dist)) + 
+  geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan') + #Meta-model
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
+  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+
+p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+  group_by(r) %>% 
+  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predMean) %>% 
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
+
+p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+  group_by(r) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+  pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  ggplot(aes(x=r))+
+  geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='cyan') + geom_line(aes(y=med),col='cyan')+
+  geom_hline(yintercept = 0,col='red',linetype='dashed')+
+  labs(x='Point order',y=ylabMean)
+
+(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
+ggsave(paste0('./Figures/ModelSummary3_wheat.png'),p,height=6,width=12,dpi=300)
+(p <- ggarrange(p3+facet_wrap(~dist_type,nrow=1),p4+facet_wrap(~dist_type,nrow=1),ncol=1,nrow=2))
+ggsave(paste0('./Figures/ModelSummary3a_wheat.png'),p,height=6,width=12,dpi=300)
+
+# Compare model types -----------------------------------------------------
+
+# Get model info
+mod0info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath0),getModelInfo)
+mod1info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath1),getModelInfo)
+mod2info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath2),getModelInfo)
+
+datSource %>% mutate(reml0=sapply(mod0info,function(x) x$REML),
+                     reml1=sapply(mod1info,function(x) x$REML),
+                     reml2=sapply(mod2info,function(x) x$REML),
+                     diff1=reml0-reml1,diff2=reml0-reml2)
+
+load(datSource$modelPath0[1])
+
+
+
+
+
+

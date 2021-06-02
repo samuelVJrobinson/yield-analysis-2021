@@ -263,7 +263,7 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
 
 #Function to run the ith model, using datSource ds, and sampling below nSubSamp points if necessary
 #kPar = basis dimensions for distance, E/N, and time smoothers + basis dimensions for logSD smoothers
-runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck',resultsDir='./Figures/YieldMaps'){ 
+runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck1',resultsDir='./Figures/YieldMaps'){ 
   if(dS$modelComplete[i]) return('Already completed')
   if(!dS$use[i]) return('Not used')
   
@@ -648,13 +648,183 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   gc()
 }
 
+#Function to run the ith model, but with no boundary included ("null" model)
+runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck0',resultsDir='./Figures/YieldMaps0',startCoefs=NULL){ 
+  i <- 1 #Debugging
+  dS <- datSource
+  nSubSamp <- 50000
+  useClosest <- TRUE
+  kPar <- c(60,60,60,60)
+  startCoefs <- NULL
+  startCoefs <- modList$coefs
+  
+  if(dS$modelComplete0[i]) return('Already completed')
+  if(!dS$use[i]) return('Not used')
+  
+  require(tidyverse)
+  theme_set(theme_bw())
+  require(mgcv)
+  require(sf)
+  require(ggpubr)
+  
+  source('helperFunctions.R')
+  
+  csvPath <- dS$dataPath[i]
+  fieldName <- dS$filename[i]
+  boundaryPath <- dS$boundaryPath[i]
+  fieldEdge <- read_sf(boundaryPath) %>% st_cast('MULTILINESTRING') #Read in boundary file
+  
+  print('Reading in data')
+  dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
+  
+  cropType <- as.character(unique(dat$Product)) #Crop types
+  
+  #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
+  if(nrow(dat)>nSubSamp){
+    #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
+  
+  dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
+    rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
+    rename_with(.fn = ~gsub('.km.h.$','_kmh',.x)) %>%
+    rename_with(.fn = ~gsub('..tonne.h.$','_th',.x)) %>%
+    rename_with(.fn = ~gsub('.ha.h.','_hah',.x)) %>%
+    rename_with(.fn = ~gsub('.m.','_m',.x)) %>%
+    rename_with(.fn = ~gsub('.deg.','Angle',.x)) %>%
+    rename_with(.fn = ~gsub('\\.','',.x)) %>%
+    rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
+    st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
+    st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
+    makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+    mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
+    st_centroid() %>% #Convert back to point
+    mutate(r=1:n()) %>% #row number
+    mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
+    group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
+    mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
+    mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  print('Fitting model')
+  
+  #Make model formula for non-isotropic gam
+  f2 <- paste0('~ s(E,N,k=',kPar[1],') + s(r,k=',kPar[2],') + log(pArea)')
+  f <- paste0('sqrt(DryYield)~ s(E,N,k=',kPar[3],') + s(r,k=',kPar[4],') + log(pArea)')
+  
+  flist <- list(as.formula(f),as.formula(f2)) #List of model formulae
+  
+  #Fit Gaussian location-scale  model
+  
+  
+  a <- Sys.time() 
+  mod <- gam(flist,data=dat,family=gaulss(),start=startCoefs)
+  fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
+  
+  print('Saving model results')
+  
+  png(paste0(modelCheckDir,'/',fieldName,' Summary.png'),width=12,height=8,units='in',res=200)
+  # plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=TRUE)
+  plot(mod,scheme=2,too.far=0.01,pages=1,all.terms=FALSE)
+  dev.off()
+  
+  capture.output({ #Model summary
+    print("Time taken: "); print(fitTime)
+    print(" ")
+    print("SUMMARY---------------------------------")
+    summary(mod) 
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'))
+  
+  capture.output({ #GAM check results
+    print(" ")
+    print("GAM.CHECK-------------------------------")
+    png(paste0(modelCheckDir,'/',fieldName,' gamCheck.png'),width=8,height=8,units='in',res=200)
+    par(mfrow=c(2,2)); gam.check(mod); abline(0,1,col='red'); par(mfrow=c(1,1))
+    dev.off()
+  },file=paste0(modelCheckDir,'/',fieldName,' results.txt'),append=TRUE) 
+  
+  #Actual, Predicted, and SE maps
+  print('Making yield map')
+  yieldMap <- dat %>% filter(DryYield<quantile(DryYield,0.95)) %>% #Chop out upper 5% of data (mainly crazy high numbers)
+    ggplot() + 
+    geom_sf(data=dat,col='grey',size=1)+
+    geom_sf(aes(col=DryYield),alpha=0.3) + 
+    geom_sf(data=fieldEdge,col='magenta')+ #Field boundary
+    labs(title=paste(fieldName,'Data')) + #guides(alpha='none') + 
+    scale_colour_distiller(type='div',palette = "Spectral") +
+    theme(legend.position='bottom')
+  
+  #Marginalize across r (point order) and pArea (speed)
+  pred <- dat %>% 
+    mutate(pArea=median(pArea)) %>% #Set pArea to its median value
+    predict(mod,newdata = .,type='response',exclude='s(r)') #Exclude s(r)
+  
+  dat <- dat %>% mutate(yieldMean=pred[,1],yieldSD=1/pred[,2],resid=resid(mod))
+  
+  #Predicted yield, marginalizing across pArea and r
+  p1 <- ggplot(dat)+geom_sf(aes(col=yieldMean^2),alpha=0.3)+
+    labs(title='Predicted yield | Combine Speed, Point Order',fill='Yield (T per Ha)',col='Yield (T per Ha)')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  #Predicted SD
+  p2 <- ggplot(dat)+geom_sf(aes(col=yieldSD^2),alpha=0.3)+
+    labs(title='Yield SD | Combine Speed, Point Order',fill='SD Yield ',col='SD Yield')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+  p <- ggarrange(yieldMap,p1,p2,ncol=3)
+  ggsave(paste0(resultsDir,'/',fieldName,'.png'),p,height=6,width=15,dpi=100)  
+  
+  #Residual plots/covariance plots
+  p3 <- ggplot(dat)+geom_sf(aes(col=resid),alpha=0.5)+labs(title='Residuals (space)')+
+    scale_colour_distiller(type='div',palette = "Spectral")+theme(legend.position='right')
+  p4 <- ggplot(dat)+geom_point(aes(x=r,y=resid),alpha=0.5)+labs(title='Residuals (sequence)',x='Sequence',y='Residuals')+
+    geom_hline(yintercept=0,col='red',linetype='dashed')
+  
+  #STFDF does ST empirical covariance plots well, but STIDF doesn't work for some reason
+  # Also, there isn't any spatial replication across time, so not sure this matters
+  library(gstat)
+  library(spacetime) 
+  dat_sp <- as_Spatial(select(dat,ID,resid))
+  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=300) #Variogram
+  # vmod <- fit.variogram(v,vgm('Mat'),fit.kappa=TRUE) #Fit Matern covariance model
+  # plot(v,vmod)
+  p5 <- v %>% 
+    ggplot()+geom_point(aes(x=dist,y=gamma))+
+    labs(title='Residual variogram',x='Distance',y='Semivariance')
+  # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
+  #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
+  res_acf <- acf(dat$resid,lag.max=300,type='correlation',plot=FALSE)
+  p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
+    ggplot(aes(x=lag,y=acf))+geom_col()+
+    labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
+  p <- ggarrange(p3,p4,p5,p6,ncol=2,nrow=2)
+  p <- annotate_figure(p,top = text_grob(paste0(fieldName,' Residuals')))
+  ggsave(paste0(modelCheckDir,'/',fieldName,' residuals.png'),p,height=8,width=10,dpi=100)  
+  
+  #Models are huge, so saving only key components (about 25% of the size)
+  modList <- list(cropType=cropType, #Crop type
+                  coefs=coef(mod), #Coefficients
+                  vcv=vcov(mod), #Covariance matrix
+                  ll=logLik(mod), #Log-likelihood
+                  aic=AIC(mod), #AIC
+                  rmse=sqrt(mean(resid(mod)^2)), #Root mean square error
+                  mae=mean(abs(resid(mod))), #Mean absolute error
+                  smooths=mod$smooth, #Smooth specifications
+                  pAreaRange=range(dat$pArea), #Range of polygon areas (pArea)
+                  rRange=range(dat$r)) #Range of r
+  save(modList,file=paste0(modelCheckDir,'/',fieldName,' modList.Rdata'))
+  
+  print('Done')
+  gc()
+}
+
+
 #Get model info from saved text file at path
 getModelInfo <- function(path){
   if(!file.exists(path)){
     warning('File does not exist')
     retList <- list(timeTaken=NA,
                     percDevianceExplained=NA,
-                    REML=NA,hessian=NA,
+                    REML=NA,AIC=NA,
+                    hessian=NA,
                     params=NA,
                     smooths=NA,
                     gamCheck=NA)
@@ -673,7 +843,6 @@ getModelInfo <- function(path){
     timeTaken <- strsplit(timeTaken,' ')[[1]]
     timeTaken <- as.difftime(as.numeric(timeTaken[1]),units=timeTaken[2])
   }
-  
   
   #Get deviance explained
   devLine <- which(grepl('Deviance explained =',txt))
@@ -714,7 +883,7 @@ getModelInfo <- function(path){
   gcEndLine <- threeDash[threeDash>gcStartLine] 
   
   eraseChars <- function(x){
-    x <- gsub('(\\.|\\*|<)','',x) #Erases *** and < characters
+    x <- gsub('(^\\.$|\\*|<)','',x) #Erases single . , *, and < characters
     x <- x[x!=''] #Drops empty vectors
     return(x)
   }
@@ -745,17 +914,25 @@ getModelInfo <- function(path){
     set_names(c('Smoother','k','edf','index','pval')) %>% 
     mutate(across(k:index,as.numeric))
   
+  #Degrees of freedom (# of linear params + sum(edf) from smooth params)
+  #Can be viewed as "marginal" AIC
+  Ndf <- nrow(parTxt)+sum(smTxt$edf)
+  aic <- (-2*reml)+(2*Ndf)
+  
   #List of things to return
   retList <- list(timeTaken=timeTaken,
                   percDevianceExplained=pExpDev,
-                  REML=reml,hessian=hessCheck,
+                  REML=reml,AIC=aic,
+                  hessian=hessCheck,
                   params=parTxt,
                   smooths=smTxt,
                   gamCheck=gcTxt)
   
   return(retList)
 }
-# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Data/kTestResults/uprSpace/Alvin French 2020 Al_Jr results.txt") #Test
-# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck/Alvin French 2020 C41 results.txt")
-# debugonce(getModelInfo)
+getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck0/Alvin_French Al_Jr 2020 results.txt")
+getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck1/Alvin_French Al_Jr 2020 results.txt")$REML
+getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck2/Alvin_French Al_Jr 2020 results.txt")$REML
+
+debugonce(getModelInfo)
 # getModelInfo("./Figures/ModelCheck/Dean Hubbard 2018 All_27_11_25 results.txt")
