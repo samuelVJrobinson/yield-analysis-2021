@@ -20,7 +20,6 @@ Type objective_function<Type>::operator() (){
   PARAMETER(log_lambda);// Log penalization parameter
   PARAMETER(log_sigma);   // log(SD) of measurement error 
   
-  
   //Transform SD and penalization parameters 
   Type sigma = exp(log_sigma);
   Type lambda = exp(log_lambda);
@@ -29,11 +28,13 @@ Type objective_function<Type>::operator() (){
   Type nll=0;
   
   // Penalization part ------------------------------------
-  SparseMatrix<Type> S = lambda*S1; //Penalty term * Penalty matrix
   
   //logdet requires a matrix type, and GMRF needs a sparse matrix
-  // nll -= 0.5*(logdet(matrix<Type>(S))) - 0.5*(GMRF(S).Quadform(smoothCoefs));
-  nll -= Type(0.5)*S1dim*log_lambda - 0.5*lambda*GMRF(S).Quadform(smoothCoefs); //This approach avoids logdet calculation - results are identical as far as I can tell
+  // SparseMatrix<Type> S = lambda*S1; //Penalty term * Penalty matrix
+  // nll -= 0.5*(logdet(matrix<Type>(S))) - 0.5*(GMRF(S).Quadform(smoothCoefs)); //Returns NaNs. I think this is because logDet(S) is infinite (S = rank deficient?)
+  
+  //This approach avoids logdet calculation - results are identical as far as I can tell
+  nll -= Type(0.5)*S1dim*log_lambda - 0.5*lambda*GMRF(S1).Quadform(smoothCoefs); 
   
   vector<Type> mu = b0 + X*smoothCoefs; //Expected value: mu = Intercept + model matrix %*% coefs
   
@@ -43,10 +44,10 @@ Type objective_function<Type>::operator() (){
   // }
 
   vector<Type> splineForReport = b0 + newX*smoothCoefs; //Generate predictions 
+  ADREPORT(splineForReport); //Predicted smoother values
   
   // ADREPORT(b0); //Intercept
   // ADREPORT(smoothCoefs); //Smoothing coefficients - these seem to be left in the model report no matter what
-  // ADREPORT(splineForReport); //Predicted smoother values
   
   return nll;
 }

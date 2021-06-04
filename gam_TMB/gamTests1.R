@@ -1,4 +1,5 @@
 #GAM testing using TMB
+#Thin plate spline  - single smoother 
 
 setwd("~/Documents/yield-analysis-2021/gam_TMB")
 
@@ -7,15 +8,14 @@ library(TMB)
 library(mgcv)
 library(tidyverse)
 theme_set(theme_classic())
-library(gamair)
 
+library(gamair)
 data(engine)
 
-plot(wear~size,data=engine,pch=19)
+ggplot(data=engine,aes(x=size,y=wear))+geom_point()+
+  geom_smooth(method='gam',formula=y~s(x,k=7))
 
-#Thin plate spline -------------------
-
-s0 <- gam(wear~s(size,k=7,bs='tp'),data=engine,fit=FALSE) #Problems start to occur if k<=6; Hessian non-positive definite because lambda gradient = 0
+s0 <- gam(wear~s(size,k=8,bs='tp'),data=engine,fit=FALSE) #Problems start to occur if k<=6; Hessian non-positive definite because lambda gradient = 0
 
 #Input
 modMat <- s0$X[,-1] #Model matrix (no intercept)
@@ -32,7 +32,6 @@ datList <- list(Y=engine$wear, X=modMat, S1=penMat, S1dim=penDim, newX=predModMa
 parList <- list(b0=0, smoothCoefs=rep(0,datList$S1dim), log_lambda=0, log_sigma=0) #Parameters
 
 compile("gam1.cpp")
-dyn.unload(dynlib("gam1"))
 dyn.load(dynlib("gam1"))
 obj <- MakeADFun(data = datList, parameters = parList, random=c('b0','smoothCoefs'), DLL = "gam1")
 
@@ -41,18 +40,13 @@ obj$fn() #Works
 opt <- nlminb(obj$par,obj$fn,obj$gr)
 rep <- sdreport(obj) #Estimates and SEs
 rep #Looks OK
-names(rep$value)
+rep$value
 
 data.frame(name=names(obj$par), Est=opt$par, final_gradient=as.vector(obj$gr(opt$par)))
 
 #Get coefs from model
 m1Tmb <- rbind(with(rep,data.frame(coef=names(par.fixed),est=par.fixed,sd=sqrt(diag(cov.fixed)),row.names=NULL)),
-      with(rep,data.frame(coef=names(value),est=value,sd=sd)))
-
-#Compare coefs from ADREPORT to coefs within par.random
-with(rep,data.frame(coef=names(value),est=value,sd=sd)[grepl('smooth',names(value)),])
-data.frame(est=rep$par.random,se=sqrt(rep$diag.cov.random))[grepl('smooth',names(rep$par.random)),]
-
+      with(rep,data.frame(coef=names(par.random),est=par.random,sd=sqrt(diag.cov.random))))
 
 #Compare to GAM fit
 s1 <- gam(G=s0,method='REML') #Get s0 and actually fit it this time
@@ -68,7 +62,7 @@ data.frame(gamCoefs=coef(s1),tmbCoefs=m1Tmb$est[grepl('(b0|smoothCoefs)',m1Tmb$c
 
 gamPred <- predict(s1,newdata=data.frame(size=predSize),se.fit=TRUE) %>% bind_cols() %>% 
   mutate(upr=fit+1.96*se.fit,lwr=fit-1.96*se.fit)
-tmbPred <- m1Tmb[grepl('spline',m1Tmb$coef),c('est','sd')] %>% rename(fit=est,se.fit=sd) %>% 
+tmbPred <- data.frame(fit=rep$value,se.fit=rep$sd) %>% 
   mutate(upr=fit+1.96*se.fit,lwr=fit-1.96*se.fit)
 
 bind_rows(gamPred,tmbPred) %>% mutate(mod=rep(c('GAM','TMB'),c(nrow(gamPred),nrow(tmbPred)))) %>% 
