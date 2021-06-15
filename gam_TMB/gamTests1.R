@@ -1,7 +1,5 @@
 #GAM testing using TMB
 
-
-
 setwd("~/Documents/yield-analysis-2021/gam_TMB")
 
 library(Matrix) #Use sparse matrices

@@ -51,31 +51,37 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-- Preserving SNL around fields is important for agriculture and conservation
-  - Ecosystem services
-  - Act as reservoirs for beneficial insects
-  - Microclimate zones
-  - Poorly studied in North America
-  - Studies tend to be limited in scope (e.g. only certain organisms/crops) and applicability
+- Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth
+  - This has allows increases in human population and increased (global) stability in production
+  - However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms
+  - Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios
+  - Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems
+
+- SNL in and around crops is important for both agricultural production and conservation
+  - They are habitat for mobile organisms, and can therefore act as sources of ecosystem services such as pollination or pest control
+  - They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed
+  - Unfortunately, most of the research is concentrated in Europe, and they tend to be less-studied on other continents
+  - In particular, North American agroecosystems have larger fields, and different varieties and agronomic practices, all of which could negate effects of SNL
   
-- Ecosystem services can influence both the mean and variability of yield in agroecosystems
-  - Typically only averages (means) are considered, but higher stability (lower variance) in yield is also valuable
-  
-- Field size and field boundaries are directly related to the conservation of SNL in agroecosystems
+<!-- - SNL has conflicting effects on crop yield because of ecosystem service provision as well as negative edge effects -->
+- SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate
+  - Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds
+  - At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges
+  - For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance
+  - Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects 
+  - This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
+ 
+<!-- - Less-considered are ecosystem ``disservices", where weeds and pests  -->
+
+<!-- - In North America, there are financial incentives to make fields large, homogeneous, and with simple geometry -->
+    
+- Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (but see wheat study)
+  - For this reason, large-scale precision yield data holds enormous promise for agronomy, as it allows 
+  - However, its use is limited for several reasons: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) unfamiliarity with spatial statistics
+  - Ecosystem services can influence both the mean and variability of yield in agroecosystems
+  - Typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable
   - Size examples: wheat study from the UK
-  - Boundary examples: flower strip studies, hedgerows
-  - In North America, there are financial incentives to make fields large and homogeneous, especially with large agricultural equipment
-  - Crop edge effects cause low yields at the margins of fields because of late emergence, poor microclimate, and competition with weeds
-  - At the same time, ecosystem services should decay with distance from edge, so crops at the centre of a large field will not benefit from ecosystem services
-  - This suggests that yield may be maximized at distances between the edge and centre of the field, where ecosystem services cancel out negative edge effects 
-  
-  <!-- - This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services -->
-  
-- Precision yield data holds enormous promise for agronomy
-  - Limited because of:
-  - Lack of standardized formats
-  - Yearly calibration data
-  - Clear statistical protocols 
+  - There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield
   
 - In this paper we ask:
   1. How does crop yield change with distance from the edge of field?
@@ -138,31 +144,30 @@ knitr::opts_chunk$set(echo = TRUE)
   \end{equation}
   
   - where:
-  1. Polygon Size = distance traveled x width of header bar ($m^2$)
+  1. Polygon Size = distance traveled $\times$ width of header bar ($m^2$)
   2. Distance from Edge = distance from field edge type _i_ (m)
   3. Easting, Northing = distance from centroid of field (m)
   4. Harvest Sequence = order of harvest within field (1--N points)
   5. f(x,b) = penalized thin-plate regression spline, where x is the predictor and b is the number of basis dimensions
   
-- This model accounts for a) combine speed differences, b) edge effects, c) within-field spatial variation not related to edges, and d) temporal differences in harvest 
-  - Spatial or temporal variation is typically modelled using a Gaussian Process Model (e.g. Kriging), but this was computationally infeasible with 50,000 data points per field
-  - Penalized regression splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but with substantially reduced computation time
+- In addition to modeling edge effects (our variable of interest), this model also accounts for a) differences in combine speed, b) within-field spatial variation not related to edges, and d) shifts in combine accuracy during harvest
+  - Spatial or temporal variation is typically modelled using a Gaussian Process Model (e.g. Kriging) or Stochastic Partial Differential Equations (e.g. INLA), but this was computationally infeasible with 50,000 data points per field
+  - Penalized splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but with substantially reduced computation time
   - The number of basis dimensions was checked with the _gam.check_ function from _mgcv_
   - A smoother was not used for polygon size because the relationship was easily approximated with a log-linear relationship using a single slope term
   - All models were fit in _R_ using the _mgcv_ library, and figures were created with _ggplot2_ and _ggpubr_
   
 - Most models still had a large amount of spatio-temporal autocorrelation in residuals
-  - We basically just ignored this
+  - We have 50000 data points per field, so we ignored it
 
-- To combine results from all field-level models while also accounting for field-level uncertainty, we used an approach similar to bootstrapping of hierarchical mixed effects models
+- To consider results from all field-level models while also accounting for field-level uncertainty, we used an approach similar to bootstrapping of hierarchical mixed effects models
   - The approach was as follows
-  1. Extract posterior samples of smoother parameters from each field-level model
-  2. Fit meta-model of all smoothers, and save parameters
-  3. Repeat 1000 times, and calculate credible intervals (10-90th percentiles of draws)
-  
-- We compared this 
-  
-  
+  1. Extract single posterior sample (_rnorm_ in R) of smoother parameters from each field-level model using coefficient estimates and standard error
+  2. Use posterior sample to create new simulated smoother from each field
+  3. Fit model of all simulated smoothers, and save this meta-smoother
+  4. Repeat 1000 times, and calculate coverage intervals (5-95% percentiles) on saved meta-smoothers
+  - This gives credible intervals for the "average" smoother while accounting for field-level variability
+
 # Results
 
 Results here
