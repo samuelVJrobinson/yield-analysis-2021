@@ -98,12 +98,12 @@ knitr::opts_chunk$set(echo = TRUE)
   - File formats vary depending on the brand of combine, so we converted data to a standard format (csv) using Ag Leader SMS
   - In total, we analyzed yield data from X field-years of data, containing a total of X million data points
   
-- Yield data was collected in rectangles of the same length as the data interval (distance = speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m)
+- Yield data is collected in rectangles of the same length as the data interval (distance = combine ground speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m)
   - We extracted the size of each polygon (m$^2$), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
   - Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data
   - Seeding and application rates were constant across fields, so we did not consider inputs in our analysis
   - We used dry yield (tonnes of seed/hectare after accounting for crop moisture) as our measure of crop yield
-  - Due to the high number of samples at each field, we sub-sampled to 50,000 data points per field to reduce computation time
+  - Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time
 
 - Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC 
   - Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g. flooding during some years)

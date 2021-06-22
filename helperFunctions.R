@@ -1,5 +1,8 @@
 # Helper functions
 
+#Scales x between 0 and 1
+range01 <- function(x) (x-min(x))/(max(x)-min(x))
+
 seqGroup <- function(x,singles=TRUE){ #Turns sequential IDs into numbered groups.
   #Singles = TRUE, sequential values must be exactly 1 greater (gaps matter)
   #Singles = FALSE, sequential values must be greater (gaps don't matter)
@@ -930,9 +933,9 @@ getModelInfo <- function(path){
   
   return(retList)
 }
-getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck0/Alvin_French Al_Jr 2020 results.txt")
-getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck1/Alvin_French Al_Jr 2020 results.txt")$REML
-getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck2/Alvin_French Al_Jr 2020 results.txt")$REML
-
-debugonce(getModelInfo)
+# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck0/Alvin_French Al_Jr 2020 results.txt")
+# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck1/Alvin_French Al_Jr 2020 results.txt")$REML
+# getModelInfo("/home/rsamuel/Documents/yield-analysis-2021/Figures/ModelCheck2/Alvin_French Al_Jr 2020 results.txt")$REML
+# 
+# debugonce(getModelInfo)
 # getModelInfo("./Figures/ModelCheck/Dean Hubbard 2018 All_27_11_25 results.txt")
