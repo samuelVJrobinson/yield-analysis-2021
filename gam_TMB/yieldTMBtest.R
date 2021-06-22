@@ -3,7 +3,7 @@
 #Models to try:
 # 0A. Yield ~ s(dist) - done
 # 0B. Yield ~ SPDE(E,N)
-# 0C. Yield ~ SPDE(Time)
+# 0C. Yield ~ AR1(Time)
 # 1A Yield ~ s(dist) + SPDE(E,N) + SPDE(Time)
 # 1B Yield ~ s(dist) + SPDE(E,N) + SPDE(Time), Var ~ s(dist) + SPDE(E,N) + SPDE(Time)
 # 1C. Yield ~ s(dist,by=Type) + SPDE(E,N) + SPDE(Time), Var ~ s(dist,by=Type) + SPDE(E,N) + SPDE(Time)
@@ -144,14 +144,18 @@ parList <- list(b0 = 1.9, spdeCoefs = rep(0.0, nrow(datList$spdeMatrices$M0)), l
 dyn.unload(dynlib("mod0B"))
 compile("mod0B.cpp")
 dyn.load(dynlib("mod0B"))
-obj <- MakeADFun(data = datList, parameters = parList, random=c('spdeCoefs'), DLL = "mod0B") #Takes about 5 mins to run if nSubSamp == 10000, crashes if 20000
 
-obj$par
-obj$fn() #Works
-a <- Sys.time()
-opt <- nlminb(obj$par,obj$fn,obj$gr) 
-Sys.time()-a #Takes 13 mins with 20000 samples
-report <- sdreport(obj) #Estimates and SEs - takes 3 mins
+# obj <- MakeADFun(data = datList, parameters = parList, random=c('spdeCoefs'), DLL = "mod0B") #Takes about 5 mins to run if nSubSamp == 10000, crashes if 20000
+# obj$par
+# obj$fn() #Works
+# opt <- nlminb(obj$par,obj$fn,obj$gr)  #Takes 13 mins with 20000 samples
+# report <- sdreport(obj) #Estimates and SEs - takes 3 mins
+# save(obj,opt,report,file = 'mod0B.Rdata')
+
+load('mod0B.Rdata')
+names(modList) <- c('obj','opt','report')
+attach(modList)
+dyn.load(dynlib("mod0B"))
 
 report #Looks OK
 report$value #Correlation drops below 0.1 at ~50 meters
@@ -160,18 +164,53 @@ report$par.random
 
 #Residuals are still horrible
 qqnorm(obj$report()$residuals); abline(0,1)
+acf(obj$report()$residuals) #Temporal autocorrelation in residuals still evident
 
-report$par.random
+dat %>% mutate(resid=obj$report()$residuals) %>% #Still some spatial autocorrelation, but not as bad as before
+  select(.,ID,resid) %>% 
+  slice(round(seq(1,nrow(.),length.out=3000))) %>% 
+  as_Spatial(.) %>% 
+  gstat::variogram(resid~1, data=.,width=2,cutoff=300) %>% #Variogram
+  ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
+  labs(title='Residual variogram',x='Distance',y='Semivariance')
 
-
+#Look at spatial field
 projMesh  <- inla.mesh.projector(mesh)
-latentFieldMAP  <- report$par.random/exp(report$par.fixed[which(names(report$par.fixed)=="log_tau")])
-fields::image.plot(projMesh$x,projMesh$y, inla.mesh.project(projMesh, latentFieldMAP),col =  colorRampPalette(c("red","purple", "blue"))(12),
+
+par(mfrow=c(1,2))
+latentFieldMAP  <- (report$par.random/exp(report$par.fixed[which(names(report$par.fixed)=="log_tau")])+report$par.fixed[which(names(report$par.fixed)=="b0")])^2
+fields::image.plot(projMesh$x,projMesh$y, inla.mesh.project(projMesh, latentFieldMAP),col =  colorRampPalette(c("red","blue","yellow"))(12),
            xlab = 'Easting', ylab = 'Northing',
            main = "MAP estimate of the spatial latent field",
            cex.lab = 1.1,cex.axis = 1.1, cex.main=1, cex.sub= 1.1)
 # contour(projMesh$x, projMesh$y,inla.mesh.project(projMesh, latentFieldMAP) ,add = T,labcex  = 1,cex = 1)
+with(outerBoundaries, for(i in 1:nrow(loc)) lines(loc[idx[i,],],col='white'))
 
-with(outerBoundaries,{
-  for(i in 1:nrow(loc)) lines(loc[idx[i,],],col='black')   
-})
+latentFieldSD <- sqrt(report$diag.cov.random)/exp(report$par.fixed[which(names(report$par.fixed)=="log_tau")])
+fields::image.plot(projMesh$x,projMesh$y, inla.mesh.project(projMesh, latentFieldSD),col =  colorRampPalette(c("red","blue", "yellow"))(12),
+           xlab = 'Easting', ylab = 'Northing',
+           main = "Standard deviation of the estimated spatial latent field",
+           cex.lab = 1.1,cex.axis = 1.1, cex.main=1, cex.sub= 1.1)
+with(outerBoundaries, for(i in 1:nrow(loc)) lines(loc[idx[i,],],col='white'))
+
+# Model 0C. Yield ~ SPDE(Time) --------------------------------------------
+
+#Input for model
+datList <- list(yield=sqrt(dat$DryYield)) #Data
+parList <- list(b0=0, u=rep(0,nrow(dat)), atanh_phi=0, log_sigmaU = 0, log_sigma = 0) #Parameters
+
+dyn.unload(dynlib("mod0C"))
+compile("mod0C.cpp")
+dyn.load(dynlib("mod0C"))
+obj <- MakeADFun(data = datList, parameters = parList, random=c('u'), DLL = "mod0C")
+
+obj$par
+obj$fn() #Works
+opt <- nlminb(obj$par,obj$fn,obj$gr) #Takes a few seconds
+report <- sdreport(obj) #Estimates and SEs - this takes wayy to long
+
+
+
+
+
+

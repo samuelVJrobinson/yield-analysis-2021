@@ -129,9 +129,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Analysis
 
 - At each field, we fit an additive model of the effect of boundary distance on crop yield while accounting for within-field spatial variation and temporal variation in the combine yield monitor
-  - Ground speed is known to be extremely important to yield monitor accuracy [@arslan2002], with low ground speed registering higher yields 
   - Crop yield can vary within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices 
     <!-- - such as strip farming -->
+  - Ground speed is extremely important to yield monitor accuracy [@arslan2002], with low ground speed registering higher yields 
   - While sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields across fields), this does not address sensor drift that occurs over time  within fields
   - This may be caused by sensors accumulating debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time
   
