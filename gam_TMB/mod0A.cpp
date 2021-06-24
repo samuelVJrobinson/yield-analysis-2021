@@ -8,6 +8,8 @@ Type objective_function<Type>::operator() (){
   
   //Read data from R------------------
   DATA_VECTOR(yield);                 //Response
+  DATA_VECTOR(logArea);               //log-Area 
+  DATA_SCALAR(meanLogArea);           //Mean of log(area)
   DATA_MATRIX(smoothMat);             //Design matrix (no intercept)
   DATA_SPARSE_MATRIX(penaltyMat);     //Penalty matrix - must be sparse for GMRF to work
   DATA_INTEGER(penaltyDim);           //Dimensions of penaltyMat
@@ -15,6 +17,7 @@ Type objective_function<Type>::operator() (){
 
   //Read parameters from R------------
   PARAMETER(b0);       //Intercept
+  PARAMETER(b_area);       //Area (combine speed)
   PARAMETER_VECTOR(smoothCoefs); //Smooth coefficients
   PARAMETER(log_lambda);// Log penalization parameter
   PARAMETER(log_sigma);   // log(SD) of measurement error 
@@ -34,14 +37,13 @@ Type objective_function<Type>::operator() (){
   nll -= 0.5*penaltyDim*log_lambda - 0.5*GMRF(S).Quadform(smoothCoefs);  
 
   // Main model -------------------------------------------
-  vector<Type> mu = b0 + smoothMat*smoothCoefs; //Expected value: mu = Intercept + model matrix %*% coefs
+  vector<Type> mu = b0 + logArea*b_area + smoothMat*smoothCoefs; //Expected value: mu = Intercept + model matrix %*% coefs
   
   nll -= sum(dnorm(yield, mu, sigma, true)); //Decrement logLik
   
-  
   // Other things to report -------------------------------
   
-  vector<Type> splineForReport = b0 + newSmoothMat*smoothCoefs; //Generate predictions
+  vector<Type> splineForReport = b0 + meanLogArea*b_area + newSmoothMat*smoothCoefs; //Generate predictions at mean combine speed
   vector<Type> residuals = yield - mu; //Residuals 
   
   REPORT(residuals); //Residuals
