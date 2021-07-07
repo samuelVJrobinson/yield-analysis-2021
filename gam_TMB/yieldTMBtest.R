@@ -16,6 +16,8 @@ library(sf)
 library(mgcv)
 library(INLA)
 library(TMB)
+library(beepr)
+library(ggpubr)
 setwd("~/Documents/yield-analysis-2021/gam_TMB")
 source('../helperFunctions.R')
 
@@ -112,47 +114,109 @@ data.frame(dist=predDist,fit=report$value,se.fit=report$sd) %>%
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
   geom_line(aes(y=fit))+labs(x='Distance from edge (m)', y='Dry Yield (t/ha)')
 
-#Compare to GAM model
-m1 <- gam(sqrt(DryYield)~log(pArea) + s(dist,bs='cr',k=12) + s(E,N,k=60) + s(r,k=60) ,data=dat)
-summary(m1)
-res <- residuals(m1,type='response')
-qqnorm(res); qqline(res)
-acf(res) #Autocorrelation in residuals 
-dat %>% mutate(resid=res) %>% #Weird semivariance plot
-  select(.,ID,resid) %>% as_Spatial(.) %>% 
-  gstat::variogram(resid~1, data=.,width=5,cutoff=100) %>% #Variogram
+# #Compare to GAM model
+# m1 <- gam(sqrt(DryYield)~log(pArea) + s(dist,bs='cr',k=12) + s(E,N,k=60) + s(r,k=60) ,data=dat)
+# summary(m1)
+# res <- residuals(m1,type='response')
+# qqnorm(res); qqline(res)
+# acf(res) #Autocorrelation in residuals 
+# dat %>% mutate(resid=res) %>% #Weird semivariance plot
+#   select(.,ID,resid) %>% as_Spatial(.) %>% 
+#   gstat::variogram(resid~1, data=.,width=5,cutoff=100) %>% #Variogram
+#   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
+#   labs(title='Residual variogram',x='Distance',y='Semivariance')
+# 
+# #Fit non-isotropic GAM as test
+# kPar <- c(12,60,60,12,60,60)
+# f <- sqrt(DryYield) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) + log(pArea) #Mean model
+# f2 <- ~ s(dist,k=kPar[4]) + s(E,N,k=kPar[5]) + s(r,k=kPar[6]) + log(pArea) #Variance model
+# flist <- list(f,f2) #List of model formulae
+# 
+# a <- Sys.time() #Takes about 8 mins for a 50000 point model
+# mod <- gam(flist,data=dat,family=gaulss())
+# fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
+# 
+# debugonce(residuals)
+# res <- residuals(mod,type='response')
+# # res <- (mod$fitted.values[,1]-mod$y)*mod$fitted.values[,2]
+# qqnorm(res); qqline(res)
+# acf(res) #Autocorrelation in residuals 
+# p1 <- dat %>% mutate(resid=res) %>% 
+#   select(.,ID,resid) %>% as_Spatial(.) %>% 
+#   gstat::variogram(resid~1, data=.,width=10,cutoff=200) %>% #Variogram
+#   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
+#   labs(title='Response residuals',x='Distance',y='Semivariance')
+# 
+# res <- residuals(mod)
+# p2 <- dat %>% mutate(resid=res) %>% 
+#   select(.,ID,resid) %>% as_Spatial(.) %>% 
+#   gstat::variogram(resid~1, data=.,width=10,cutoff=200) %>% #Variogram
+#   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
+#   labs(title='Deviance residuals',x='Distance',y='Semivariance')
+# ggarrange(p1,p2)
+
+#Try TMB model with s(E,N) instead of s(Dist)
+
+#Get smoother specifications
+s0 <- gam(DryYield ~ s(E,N,bs='ts',k=60), data = dat, fit = FALSE)
+
+#Input
+modMat <- s0$X[,-1] #Model matrix (no intercept)
+penMat <- s0$smooth[[1]]$S[[1]] #Penalty matrix (sparse)
+penMat <- as(penMat,'sparseMatrix')
+penDim <- nrow(penMat) #Dimensions of penalty matrix
+
+predDF_spatial <- st_sample(read_sf(boundaryPath),type='hexagonal',500) %>% #Locations to predict at
+  data.frame(st_coordinates(.)) %>% rename(E=X,N=Y) %>% 
+  mutate(E=E-mean(E),N=N-mean(N)) #Centers coordinates
+ggplot(predDF_spatial)+geom_sf(aes(geometry=geometry))
+predModMat <- PredictMat(s0$smooth[[1]],data = predDF_spatial) #New smoothing model matrix
+
+#Input for model
+datList <- list(yield=sqrt(dat$DryYield), logArea=log(dat$pArea), meanLogArea = mean(log(dat$pArea)),
+                smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim, newSmoothMat=predModMat) #Data
+parList <- list(b0=0, b_area = 0, smoothCoefs=rep(0,ncol(modMat)), log_lambda=0, log_sigma=0) #Parameters
+
+dyn.unload(dynlib("mod0A"))
+compile("mod0A.cpp")
+dyn.load(dynlib("mod0A"))
+obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs'), DLL = "mod0A")
+
+obj$par
+obj$fn() #Memory usages spikes from 3.5 to about 16 gigs on initial run - too many basis dimensions?
+opt <- nlminb(obj$par,obj$fn,obj$gr) #Runs
+report <- sdreport(obj) #Estimates and SEs
+report
+beep(1)
+
+#Check residuals - very non-normal, even with sqrt-transformation
+qqnorm(obj$report()$residuals); abline(0,1)
+acf(obj$report()$residuals) #Autocorrelation in residuals 
+dat %>% mutate(resid=obj$report()$residuals) %>% #Weird variogram
+  select(.,ID,resid) %>% 
+  # slice(round(seq(1,nrow(.),length.out=3000))) %>% 
+  as_Spatial(.) %>% 
+  gstat::variogram(resid~1, data=.,width=2,cutoff=100) %>% #Variogram
   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
   labs(title='Residual variogram',x='Distance',y='Semivariance')
 
-#Fit non-isotropic GAM as test
-kPar <- c(12,60,60,12,60,60)
-f <- sqrt(DryYield) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) + log(pArea) #Mean model
-f2 <- ~ s(dist,k=kPar[4]) + s(E,N,k=kPar[5]) + s(r,k=kPar[6]) + log(pArea) #Variance model
-flist <- list(f,f2) #List of model formulae
-
-a <- Sys.time() #Takes about 8 mins for a 50000 point model
-mod <- gam(flist,data=dat,family=gaulss())
-fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
-
-debugonce(residuals)
-res <- residuals(mod,type='response')
-# res <- (mod$fitted.values[,1]-mod$y)*mod$fitted.values[,2]
-qqnorm(res); qqline(res)
-acf(res) #Autocorrelation in residuals 
-p1 <- dat %>% mutate(resid=res) %>% 
-  select(.,ID,resid) %>% as_Spatial(.) %>% 
-  gstat::variogram(resid~1, data=.,width=10,cutoff=200) %>% #Variogram
+dat %>% mutate(yield=sqrt(DryYield)-mean(sqrt(DryYield))) %>% 
+  select(.,ID,yield) %>% as_Spatial(.) %>% 
+  gstat::variogram(yield~1, data=.,width=10,cutoff=150) %>% #Variogram
   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
-  labs(title='Response residuals',x='Distance',y='Semivariance')
+  labs(title='Residual variogram',x='Distance',y='Semivariance')
 
-res <- residuals(mod)
-p2 <- dat %>% mutate(resid=res) %>% 
-  select(.,ID,resid) %>% as_Spatial(.) %>% 
-  gstat::variogram(resid~1, data=.,width=10,cutoff=200) %>% #Variogram
-  ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
-  labs(title='Deviance residuals',x='Distance',y='Semivariance')
-library(ggpubr)
-ggarrange(p1,p2)
+
+
+
+#Predictions
+data.frame(dist=predDist,fit=report$value,se.fit=report$sd) %>% 
+  mutate(upr=fit+1.96*se.fit,lwr=fit-1.96*se.fit) %>% 
+  mutate(across(c(fit,upr,lwr),~.x^2)) %>% 
+  ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))+labs(x='Distance from edge (m)', y='Dry Yield (t/ha)')
+
+
 
 # Model 0AA: Yield ~ s(Dist,by='type') -----------------------------------------
 
@@ -425,7 +489,7 @@ dyn.load(dynlib("mod1A"))
 
 obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs','spdeCoefs_spatial','spdeCoefs_temporal'), DLL = "mod1A") 
 obj$par
-# obj$fn() #Works
+obj$fn() #Works
 a <- Sys.time()
 opt <- nlminb(obj$par,obj$fn,obj$gr)  #Takes about 9 mins
 b <- Sys.time()
@@ -466,3 +530,94 @@ fields::image.plot(projMesh$x,projMesh$y, inla.mesh.project(projMesh, latentFiel
 # contour(projMesh$x, projMesh$y,inla.mesh.project(projMesh, latentFieldMAP) ,add = T,labcex  = 1,cex = 1)
 with(outerBoundaries, for(i in 1:nrow(loc)) lines(loc[idx[i,],],col='white'))
 
+# Model 1B: Yield ~ logArea + s(dist) + s(E,N) + s(Time) + SPDE(E,N) + AR1(Time), Var ~ logArea + s(dist) + s(E,N) + s(Time) --------------------------
+
+basisFun <- 'ts'
+kPar <- c(12,60,60)
+
+#Get smoother parameters:
+s0 <- gam(DryYield ~ log(pArea) + s(dist,bs=basisFun,k=kPar[1]) + s(E,N,bs=basisFun,k=kPar[2]) + s(r,bs=basisFun,k=kPar[3]), data = dat, fit = FALSE)
+modMat <- s0$X[,-1] #Model matrix (no intercept)
+penMat <- .bdiag(lapply(s0$smooth,function(x) x$S[[1]])) #Overall Penalty matrix (sparse)
+penDim <- sapply(s0$smooth,function(x) nrow(x$S[[1]])) #Dimensions of penalty sub-matrices
+
+#Model matrices for prediction
+predDF_dist <- data.frame(dist=with(dat,seq(min(dist),max(dist),length.out=50))) #Distances to predict (50 from minimum to maximum)
+predDF_spatial <- st_sample(read_sf(boundaryPath),type='hexagonal',1000) %>% 
+  data.frame(st_coordinates(.)) %>% rename(E=X,N=Y) %>% 
+  mutate(E=E-mean(E),N=N-mean(N)) #Centers coordinates
+predDF_temporal <- with(dat,data.frame(r=seq(min(r),max(r),length.out=1000)))
+
+#Turn into matrices
+predModMat_dist <- PredictMat(s0$smooth[[1]],data = predDF_dist) #Distance smoothing matrix
+predModMat_spatial <- PredictMat(s0$smooth[[2]],data = predDF_spatial) #Spatial smoothing model matrix
+predModMat_temporal <- PredictMat(s0$smooth[[3]],data = predDF_temporal) #Temporal smoothing model matrix
+
+#Get spatial SPDE parameters:
+fieldEdgePoly <- read_sf(boundaryPath) #Polygon version of boundary
+outerBoundaries <- fieldEdgePoly %>% st_union() #Get outermost boundaries
+outerBoundaries2 <- outerBoundaries %>% st_buffer(dist = 300) #300m buffer around outermost boundaries
+#Interior polygons
+innerPoly <- sapply(st_covered_by(fieldEdgePoly,outerBoundaries),function(x) length(x)==1)&!sapply(st_equals(fieldEdgePoly,outerBoundaries),function(x) length(x)==1)
+if(any(innerPoly)){
+  innerBoundaries <- fieldEdgePoly[innerPoly,] %>% st_union()
+  outerBoundaries <- st_difference(outerBoundaries,innerBoundaries)
+} 
+#Convert to SpatialPolygons, then inla mesh segments
+outerBoundaries <- as(outerBoundaries,'Spatial') %>% as.inla.mesh.segment()
+outerBoundaries2 <- as(outerBoundaries2,'Spatial') %>% as.inla.mesh.segment()
+#Construct triangulated spatial Mesh
+spatialMesh  <- inla.mesh.2d(boundary = list(outerBoundaries,outerBoundaries2),
+                             max.edge=c(30,100), cutoff=c(20,50), min.angle = c(21))
+plot(spatialMesh) #Looks OK
+spatialA <- inla.spde.make.A(spatialMesh,loc=as(dat,'Spatial')) #Spatial interpolation matrix (match data to spatialMesh)
+spatialSPDE <- inla.spde2.matern(spatialMesh, alpha=2) #Create Matern SPDE model from spatialMesh
+spatialSPDEMatrices <- spatialSPDE$param.inla[c("M0","M1","M2")] #Matrices needed within TMB
+dim(spatialA) #Roughly 3300 vertices
+
+#Get temporal SPDE parameters:
+bLocs <- seq(1,nrow(dat),length.out=5000) #Locations of basis splines
+temporalMesh  <- inla.mesh.1d(bLocs,degree=2)
+temporalA <- inla.spde.make.A(temporalMesh,loc=1:nrow(dat)) #Interpolation matrix (match data to mesh)
+temporalSPDE <- inla.spde2.matern(temporalMesh, alpha=2) #Create Matern SPDE model from mesh
+temporalSPDEMatrices <- temporalSPDE$param.inla[c("M0","M1","M2")] #Matrices needed within TMB
+dim(temporalA) #4999 vertices
+
+#Input for model:
+#Data
+datList <- list(yield=sqrt(dat$DryYield), #Transformed Data
+                logArea=log(dat$pArea), meanLogArea = mean(log(dat$pArea)), #log(area) and mean(log(area))
+                smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim) #Smoother input
+                # predModMat_dist=predModMat_dist, #New smoother matrices to predict on
+                # predModMat_spatial=predModMat_spatial,
+                # predModMat_temporal=predModMat_temporal,
+                # spatialSPDEMatrices=spatialSPDEMatrices, spatialA = spatialA, #Spatial SPDE input
+                # temporalSPDEMatrices = temporalSPDEMatrices, temporalA = temporalA) #Temporal SPDE input
+#Parameters
+parList <- list(b0=0, #Intercept
+                b_areaMean=0,
+                smoothCoefsMean=rep(0,ncol(modMat)), log_lambdasMean=rep(0,length(penDim)), #Smooth coefficients and penalization parameter for means
+                b0SD=0 #log-SD intercept
+                # b_areaSD=0
+                # smoothCoefsSD=rep(0,ncol(modMat)), log_lambdasSD=rep(0,length(penDim) #Smooth coefficients and penalization parameter for logSD
+                # spdeCoefs_spatial = rep(0.0, nrow(datList$spatialSPDEMatrices$M0)), log_tau_spatial = 0, log_kappa_spatial = 0, #SPDE parameters
+                # spdeCoefs_temporal = rep(0.0, nrow(datList$temporalSPDEMatrices$M0)), log_tau_temporal = 0, log_kappa_temporal = 0
+) 
+
+dyn.unload(dynlib("mod1B")) 
+compile("mod1B.cpp")
+dyn.load(dynlib("mod1B"))
+
+obj <- MakeADFun(data = datList, parameters = parList, 
+                 # random=c('smoothCoefsMean','smoothCoefsSD','spdeCoefs_spatial','spdeCoefs_temporal'),
+                 random=c('smoothCoefsMean'), 
+                 DLL = "mod1B") 
+obj$par
+obj$fn()
+
+a <- Sys.time()
+opt <- nlminb(obj$par,obj$fn,obj$gr)  
+b <- Sys.time()
+report <- sdreport(obj)
+b-a
+Sys.time()-b
