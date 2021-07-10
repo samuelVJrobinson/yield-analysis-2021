@@ -1,5 +1,5 @@
 ---
-title: "Edge effects and optimal field sizes in Alberta"
+title: "Edge effects in Alberta"
 author:
   - name: Samuel V. J. Robinson
     email: samuel.robinson@ucalgary.ca
@@ -43,6 +43,12 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+datSource <- read.csv('../Data/datSource.csv') #Get data source
+datSourceFinal <- datSource %>% filter(use) %>% filter(grepl('Wheat|Canola',crop))
+yearsPerField <- datSourceFinal %>% count(field) %>% pull(n) #How many years of data at each unique location?
 
 ```
 
@@ -93,10 +99,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Data collection
 
 - Precision yield data were collected directly from farmers across Alberta
-  - Farmers were solicited for yield data through local agronomists, and we received data from a total of X growers across a total of X years
-  - Most fields represented only a single year of data, but we did sometimes receive multiple years of data from the same field
-  - File formats vary depending on the brand of combine, so we converted data to a standard format (csv) using Ag Leader SMS
-  - In total, we analyzed yield data from X field-years of data, containing a total of X million data points
+  - Farmers were solicited for yield data through local agronomists, and we received `r nrow(datSource)` field-years of data from `r length(unique(datSource$grower))` growers across a total of `r length(unique(datSource$year))` years (`r min(unique(datSource$year))`-`r max(unique(datSource$year))`)
+  - We converted data to a standard csv format using Ag Leader SMS
+  - `r round(100*sum(grepl('(Wheat|Canola)',datSource$crop))/nrow(datSource))`% of the crop types where either wheat (_Triticum aestivum_) or canola (_Brassica napus_), two of the most common crops in rotation in Alberta
+  - The remaining crop types were poorly replicated in our sample, so we constrained our analysis to only field-years containing wheat (`r sum(datSourceFinal$crop=='Wheat')`) or canola (`r sum(datSourceFinal$crop=='Canola')`)
+  - Individual fields contained between `r min(yearsPerField)` to `r max(yearsPerField)` years of data (mean: `r round(mean(yearsPerField),1)`)
+  - Containing a total of `r round(sum(datSource$npoints)/1e6,1)` million data points
   
 - Yield data is collected in rectangles of the same length as the data interval (distance = combine ground speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m)
   - We extracted the size of each polygon (m$^2$), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
@@ -135,42 +143,46 @@ knitr::opts_chunk$set(echo = TRUE)
   - While sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields across fields), this does not address sensor drift that occurs over time  within fields
   - This may be caused by sensors accumulating debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time
   
-  - To model this, we fit the following model:
+  - To model this, we fit the following model to each field-year of data:
   
   \begin{equation}
-  sqrt(yield) ~ Normal (\mu, \sigma)
-  \mu = Intercept + log(Polygon Size) + f(Distance from Edge_i, b=12)_i + f(Easting, Northing, b=60) + f(Harvest Sequence, b=60)
-  log(\sigma) = Intercept + log(Polygon Size) + f(Distance from Edge, b=12) + f(Easting, Northing, b=60) + f(Harvest Sequence, b=60)
+  \begin{split}
+  sqrt(yield) \sim & Normal (\mu, \sigma)\\
+  \mu = & Intercept + log(Polygon Size) + f(Distance from Edge_i, b=12)_i + \\
+   & f(Easting, Northing, b=60) + f(Sequence, b=60) \\
+  log(\sigma) = & Intercept + log(Polygon Size) + f(Distance from Edge, b=12) + \\
+   & f(Easting, Northing, b=60) + f(Sequence, b=60)
+  \end{split}
   \end{equation}
   
   - where:
   1. Polygon Size = distance traveled $\times$ width of header bar ($m^2$)
   2. Distance from Edge = distance from field edge type _i_ (m)
-  3. Easting, Northing = distance from centroid of field (m)
-  4. Harvest Sequence = order of harvest within field (1--N points)
+  3. Easting, Northing = distance from centre of field (m)
+  4. Sequence = order of harvest within field (1--N points)
   5. f(x,b) = penalized thin-plate regression spline, where x is the predictor and b is the number of basis dimensions
   
 - In addition to modeling edge effects (our variable of interest), this model also accounts for a) differences in combine speed, b) within-field spatial variation not related to edges, and d) shifts in combine accuracy during harvest
-  - Spatial or temporal variation is typically modelled using a Gaussian Process Model (e.g. Kriging) or Stochastic Partial Differential Equations (e.g. INLA), but this was computationally infeasible with 50,000 data points per field
-  - Penalized splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but with substantially reduced computation time
+  - Spatial or temporal variation is typically modelled using a Gaussian Process Model (Kriging) or approximations such as Stochastic Partial Differential Equations (e.g. INLA), but this was computationally infeasible with 50,000 data points per field
+  - Penalized splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but with reduced dimensionality and computation time
   - The number of basis dimensions was checked with the _gam.check_ function from _mgcv_
-  - A smoother was not used for polygon size because the relationship was easily approximated with a log-linear relationship using a single slope term
-  - All models were fit in _R_ using the _mgcv_ library, and figures were created with _ggplot2_ and _ggpubr_
-  
-- Most models still had a large amount of spatio-temporal autocorrelation in residuals
-  - We have 50000 data points per field, so we ignored it
+  - The relationship between polygon size (i.e. ground speed) and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions
+  - All models were fit in _R_ using the _mgcv_ library [version `r packageVersion('mgcv')`, @wood2017], and figures were created with _ggplot2_ and _ggpubr_ [versions `r packageVersion('ggplot2')`, @wickham2016; and `r packageVersion('ggpubr')`, @kassambara2020].
 
-- To consider results from all field-level models while also accounting for field-level uncertainty, we used an approach similar to bootstrapping of hierarchical mixed effects models
-  - The approach was as follows
+- To consider results from all field-level models, we fit models independent of each other, and "overall" smoothers were taken as averages of the field-level smoothers
+  - However, this does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping of hierarchical mixed effects models
   1. Extract single posterior sample (_rnorm_ in R) of smoother parameters from each field-level model using coefficient estimates and standard error
   2. Use posterior sample to create new simulated smoother from each field
-  3. Fit model of all simulated smoothers, and save this meta-smoother
+  3. Fit new model of simulated smoothers from all fields, and save this "meta-smoother"
   4. Repeat 1000 times, and calculate coverage intervals (5-95% percentiles) on saved meta-smoothers
-  - This gives credible intervals for the "average" smoother while accounting for field-level variability
+  - This gives coverage intervals (CIs) for the "average" smoother while accounting for field-level variability
 
 # Results
 
-Results here
+```{r , echo=FALSE, fig.cap='Fig1', out.width='100%'}  
+  include_graphics('../figures/frExample.png',dpi=NA)
+```
+
 
 # Discussion
 

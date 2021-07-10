@@ -156,6 +156,7 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
 # l = number of replicates in each smooth prediction (length.out)
 # margInt = marginalize across intercepts
 # samp = sample from posterior distribution of coefficients rather than using the mean
+
 getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
   
   # #Debugging
@@ -164,7 +165,6 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
   # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
   # margInt <- c(FALSE,TRUE,TRUE)
   # samp <- FALSE
-  # 
   require(mgcv)
   
   load(path) #Load data
@@ -261,9 +261,58 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
 # 
 # ggplot()+geom_line(data=temp$r,aes(x=r,y=mean))+ #Works for this
 #   geom_line(data=temp2$r,aes(x=r,y=mean),linetype='dashed',col='red')
-
 # (temp <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with second type of model
 
+
+#Shorter version that only gets estimates of log(pArea) relationship and turns them into speed measurements
+# Combine ground speed is talked about a lot, so this is more appropriate for growers/agronomists
+
+getPredsSpeed <- function(path,l=30,margInt=FALSE,samp=FALSE, minSpeed = NA, maxSpeed = NA, width = NA, speed2Distance = NA){
+  
+  # #Debugging
+  # l <- 30
+  # # path <- paste0('./Figures/ModelCheck1/',datSource$filename[2],' modList.Rdata') #Model type 1
+  # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
+  # minSpeed <- 0.1
+  # maxSpeed <- 15 
+  # margInt <- FALSE
+  # samp <- FALSE
+  # width <- 10.21
+  # speed2Distance <- 1/18.043
+  
+  if(any(is.na(c(minSpeed,maxSpeed,width,speed2Distance)))) stop('Missing term')
+  load(path) #Load data
+  
+  #Converts speed to area term for use with original coefficients (holding width at max value)
+  logSpeed <- seq(log(minSpeed),log(maxSpeed),length.out=l)
+  speed <- exp(logSpeed)
+  WAS <- width*speed2Distance*speed #Width * alpha * speed = proxy for pArea
+  logWAS <- log(WAS) #proxy for log(pArea)
+  
+  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
+  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
+  
+  #Coefficients (intercept and slope) for mean and logSD relationship
+  if(samp){ #Sample from posterior
+    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
+  } else {
+    meanCoefs <- modList$coefs[meanVars] 
+    sdCoefs <- modList$coefs[sdVars]
+  }
+  
+  if(margInt){ #Marginalize across intercept (set intercept coef to 0)
+    meanCoefs[1] <- 0 
+    sdCoefs[1] <- 0  
+  }
+  
+  speedDat <- data.frame(speed, 
+                         mean=cbind(rep(1,length(logSpeed)),logWAS) %*% meanCoefs,
+                         logSD=cbind(rep(1,length(logSpeed)),logWAS) %*% sdCoefs)
+  
+  return(speedDat)
+}
+  
 #Function to run the ith model, using datSource ds, and sampling below nSubSamp points if necessary
 #kPar = basis dimensions for distance, E/N, and time smoothers + basis dimensions for logSD smoothers
 runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck1',resultsDir='./Figures/YieldMaps'){ 

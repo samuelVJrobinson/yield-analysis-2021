@@ -34,7 +34,16 @@ Type objective_function<Type>::operator() (){
   //GMRF needs a sparse matrix - This approach avoids logdet calculation
   SparseMatrix<Type> S = lambda*penaltyMat; //Penalty term * Penalty matrix
   // Penalty that works with bs = 'ts'/'cs': extra shrinkage
-  nll -= 0.5*penaltyDim*log_lambda - 0.5*GMRF(S).Quadform(smoothCoefs);  
+  nll -= 0.5*penaltyDim*log_lambda - 0.5*GMRF(S).Quadform(smoothCoefs);
+  
+  // //Second approach using 
+  // //2nd approach using precision matrix and GMFR - taken from spatialALK example
+  // // SparseMatrix<Type> sparseLambdaDiag = lambdaDiag.sparseView(); //Turn into sparse diagonal matrix of lambdas
+  // SparseMatrix<Type> lambdaS = penaltyMat*lambda; //Penalty matrices %*% lambda matrix = precision matrix: lambdaS
+  // 
+  // //NOTE: GMRF returns negative log-likelihood, so must be added to objective function
+  // nll += GMRF(lambdaS,false)(smoothCoefs); //Likelihood of beta, given precision matrix lambdaS
+  // 
 
   // Main model -------------------------------------------
   vector<Type> mu = b0 + logArea*b_area + smoothMat*smoothCoefs; //Expected value: mu = Intercept + model matrix %*% coefs

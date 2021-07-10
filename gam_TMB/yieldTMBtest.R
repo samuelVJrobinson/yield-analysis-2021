@@ -1,5 +1,7 @@
 #Tests of R-INLA models for yield, using SPDE approx of Matern covariance
 
+#Jul 8, 2021: Tried getting thin-plate splines to run, but memory usage spikes during Optimizing Tape routine. Only real option is SPDE at this point, and I'm not sure how to get "slowly changing" variance estimates to work using SPDE
+
 #Models to try:
 # 0A. Yield ~ s(dist) - done
 # 0B. Yield ~ SPDE(E,N)
@@ -156,7 +158,6 @@ data.frame(dist=predDist,fit=report$value,se.fit=report$sd) %>%
 # ggarrange(p1,p2)
 
 #Try TMB model with s(E,N) instead of s(Dist)
-
 #Get smoother specifications
 s0 <- gam(DryYield ~ s(E,N,bs='ts',k=60), data = dat, fit = FALSE)
 
@@ -200,23 +201,61 @@ dat %>% mutate(resid=obj$report()$residuals) %>% #Weird variogram
   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
   labs(title='Residual variogram',x='Distance',y='Semivariance')
 
-dat %>% mutate(yield=sqrt(DryYield)-mean(sqrt(DryYield))) %>% 
-  select(.,ID,yield) %>% as_Spatial(.) %>% 
-  gstat::variogram(yield~1, data=.,width=10,cutoff=150) %>% #Variogram
+#Predictions
+data.frame(dist=predDF_spatial,fit=report$value) %>% 
+  mutate(across(c(fit),~.x^2)) %>% 
+  ggplot()+geom_sf(aes(geometry=dist.geometry,col=fit),size=3)
+
+#Try TMB model with s(r) instead of s(Dist)
+#Get smoother specifications
+s0 <- gam(DryYield ~ s(r,bs='ts',k=60), data = dat, fit = FALSE)
+
+#Input
+modMat <- s0$X[,-1] #Model matrix (no intercept)
+penMat <- s0$smooth[[1]]$S[[1]] #Penalty matrix (sparse)
+penMat <- as(penMat,'sparseMatrix')
+penDim <- nrow(penMat) #Dimensions of penalty matrix
+
+predDF_temporal <- with(dat,data.frame(r=seq(min(r),max(r),length.out=1000)))
+predModMat <- PredictMat(s0$smooth[[1]],data = predDF_temporal) #Temporal smoothing model matrix
+
+#Input for model
+datList <- list(yield=sqrt(dat$DryYield), logArea=log(dat$pArea), meanLogArea = mean(log(dat$pArea)),
+                smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim, newSmoothMat=predModMat) #Data
+parList <- list(b0=0, b_area = 0, smoothCoefs=rep(0,ncol(modMat)), log_lambda=0, log_sigma=0) #Parameters
+
+dyn.unload(dynlib("mod0A"))
+compile("mod0A.cpp")
+dyn.load(dynlib("mod0A"))
+obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs'), DLL = "mod0A")
+
+obj$par
+# obj$fn() #Memory usages spikes
+opt <- nlminb(obj$par,obj$fn,obj$gr) #Runs
+report <- sdreport(obj) #Estimates and SEs
+report
+beep(1)
+
+#Check residuals - very non-normal, even with sqrt-transformation
+qqnorm(obj$report()$residuals); abline(0,1)
+acf(obj$report()$residuals) #Autocorrelation in residuals 
+dat %>% mutate(resid=obj$report()$residuals) %>% #Weird variogram
+  select(.,ID,resid) %>% 
+  # slice(round(seq(1,nrow(.),length.out=3000))) %>% 
+  as_Spatial(.) %>% 
+  gstat::variogram(resid~1, data=.,width=2,cutoff=100) %>% #Variogram
   ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
   labs(title='Residual variogram',x='Distance',y='Semivariance')
 
-
-
-
 #Predictions
+predDF_temporal %>% mutate(fit=report$value,se.fit=report$sd) %>% 
+  mutate(upr=fit+1.96*se.fit,lwr=fit-1.96*se.fit) %>% 
+  ggplot(aes(x=r))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
+  geom_line(aes(y=fit))
+
 data.frame(dist=predDist,fit=report$value,se.fit=report$sd) %>% 
   mutate(upr=fit+1.96*se.fit,lwr=fit-1.96*se.fit) %>% 
   mutate(across(c(fit,upr,lwr),~.x^2)) %>% 
-  ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+
-  geom_line(aes(y=fit))+labs(x='Distance from edge (m)', y='Dry Yield (t/ha)')
-
-
 
 # Model 0AA: Yield ~ s(Dist,by='type') -----------------------------------------
 
@@ -491,7 +530,7 @@ obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs','s
 obj$par
 obj$fn() #Works
 a <- Sys.time()
-opt <- nlminb(obj$par,obj$fn,obj$gr)  #Takes about 9 mins
+opt <- nlminb(obj$par,obj$fn,obj$gr)  #Takes about 8.5 mins
 b <- Sys.time()
 report <- sdreport(obj) #Estimates and SEs - takes about 2 mins
 b-a
@@ -499,20 +538,20 @@ Sys.time()-b
 
 opt$convergence==0 #Did model converge?
 report #Looks OK
-report$value #Spatial autocorr drops at about 125m, temporal at 11 points
+report$value #Spatial autocorr drops at about 152m, temporal at 11 points
 report$par.fixed
 report$par.random
 
 #Residuals are still horrible
 res <- obj$report()$residuals#/exp(report$par.fixed[names(report$par.fixed)=='log_sigma'])
 qqnorm(res); qqline(res)
-acf(res) #Negative autocorrelation
-dat %>% mutate(resid=res) %>% #Still some spatial autocorrelation, but not as bad as before
+acf(res) #I think this has largely fixed the temporal AC problems
+dat %>% mutate(resid=res) %>% 
   select(.,ID,resid) %>% 
-  slice(round(seq(1,nrow(.),length.out=3000))) %>% 
+  slice(round(seq(1,nrow(.),length.out=15000))) %>% 
   as_Spatial(.) %>% 
-  gstat::variogram(resid~1, data=.,width=2,cutoff=300) %>% #Variogram
-  ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+
+  gstat::variogram(resid~1, data=.,width=2,cutoff=50,alpha=c(0,45,90,135)) %>% #Variogram
+  ggplot(aes(x=dist,y=gamma))+geom_point()+geom_line()+facet_wrap(~dir.hor)+
   labs(title='Residual variogram',x='Distance',y='Semivariance')
 
 #Look at spatial field
@@ -529,6 +568,22 @@ fields::image.plot(projMesh$x,projMesh$y, inla.mesh.project(projMesh, latentFiel
                    cex.lab = 1.1,cex.axis = 1.1, cex.main=1, cex.sub= 1.1)
 # contour(projMesh$x, projMesh$y,inla.mesh.project(projMesh, latentFieldMAP) ,add = T,labcex  = 1,cex = 1)
 with(outerBoundaries, for(i in 1:nrow(loc)) lines(loc[idx[i,],],col='white'))
+
+#Look at temporal field
+projMesh  <- inla.mesh.projector(temporalMesh)
+parFixEff <- report$par.fixed
+fixedNames <- names(parFixEff)
+parRanEff <- report$par.random
+randomNames <- names(parRanEff)
+
+#Predictions from latent field map
+latentFieldMAP  <- ((parRanEff[randomNames=='spdeCoefs_temporal']/exp(parFixEff[fixedNames=='log_tau_temporal']))+parFixEff[fixedNames=='b0'])^2
+latentFieldSD <- sqrt(report$diag.cov.random)[randomNames=='spdeCoefs_temporal']/exp(report$par.fixed[which(names(report$par.fixed)=="log_tau_temporal")])
+par(mfrow=c(2,1))
+plot(projMesh$x,inla.mesh.project(projMesh, latentFieldMAP),type='l',xlab='Index',ylab='Temporal Effect')
+plot(projMesh$x,inla.mesh.project(projMesh, latentFieldSD),type='l',xlab='Index',ylab='SD Temporal Effect')
+plot(latentFieldMAP,latentFieldSD) #Not sure why this occurs
+
 
 # Model 1B: Yield ~ logArea + s(dist) + s(E,N) + s(Time) + SPDE(E,N) + AR1(Time), Var ~ logArea + s(dist) + s(E,N) + s(Time) --------------------------
 
@@ -621,3 +676,4 @@ b <- Sys.time()
 report <- sdreport(obj)
 b-a
 Sys.time()-b
+

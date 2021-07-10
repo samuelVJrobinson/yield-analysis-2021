@@ -44,7 +44,7 @@
 \hypersetup{breaklinks=true,
             bookmarks=true,
             pdfauthor={},
-            pdftitle={Edge effects and optimal field sizes in Alberta},
+            pdftitle={Edge effects in Alberta},
             colorlinks=false,
             urlcolor=blue,
             linkcolor=magenta,
@@ -89,7 +89,7 @@
 \begin{document}
 \begin{frontmatter}
 
-  \title{Edge effects and optimal field sizes in Alberta}
+  \title{Edge effects in Alberta}
     \author[University of Calgary]{Samuel V. J. Robinson\corref{1}}
    \ead{samuel.robinson@ucalgary.ca} 
     \author[University of Calgary]{Lan H. Nguyen}
@@ -114,61 +114,88 @@
 \begin{itemize}
 \tightlist
 \item
-  Preserving SNL around fields is important for agriculture and conservation
+  Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth
 
   \begin{itemize}
   \tightlist
   \item
-    Ecosystem services
+    This has allows increases in human population and increased (global) stability in production
   \item
-    Act as reservoirs for beneficial insects
+    However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms
   \item
-    Microclimate zones
+    Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios
   \item
-    Poorly studied in North America
-  \item
-    Studies tend to be limited in scope (e.g.~only certain organisms/crops) and applicability
+    Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems
   \end{itemize}
 \item
-  Ecosystem services can influence both the mean and variability of yield in agroecosystems
+  SNL in and around crops is important for both agricultural production and conservation
 
   \begin{itemize}
   \tightlist
   \item
-    Typically only averages (means) are considered, but higher stability (lower variance) in yield is also valuable
+    They are habitat for mobile organisms, and can therefore act as sources of ecosystem services such as pollination or pest control
+  \item
+    They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed
+  \item
+    Unfortunately, most of the research is concentrated in Europe, and they tend to be less-studied on other continents
+  \item
+    In particular, North American agroecosystems have larger fields, and different varieties and agronomic practices, all of which could negate effects of SNL
   \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+\tightlist
 \item
-  Field size and field boundaries are directly related to the conservation of SNL in agroecosystems
+  SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate
 
   \begin{itemize}
   \tightlist
+  \item
+    Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds
+  \item
+    At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges
+  \item
+    For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance
+  \item
+    Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects
+  \item
+    This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
+  \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+\tightlist
+\item
+  Studies of SNL effects on crop yield also suffer from limited scope (e.g.~few crop types) and small sample sizes, limiting inference and reducing generality (but see wheat study)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    For this reason, large-scale precision yield data holds enormous promise for agronomy, as it allows
+  \item
+    However, its use is limited for several reasons: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) unfamiliarity with spatial statistics
+  \item
+    Ecosystem services can influence both the mean and variability of yield in agroecosystems
+  \item
+    Typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable
   \item
     Size examples: wheat study from the UK
   \item
-    Boundary examples: flower strip studies, hedgerows
-  \item
-    In North America, large financial incentives to make fields large and homogeneous, especially with large harvesting and planting equipment
-  \item
-    Crop edge effects cause low yields at the margins of fields because of late emergence, poor microclimate, and competition with weeds
-  \item
-    Ecosystem services should decay with distance from edge, so crops at the centre of a large field will not benefit from ecosystem services
-  \item
-    Therefore, there should be a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
+    There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield
   \end{itemize}
 \item
-  Precision yield data holds enormous promise for agronomy
+  In this paper we ask:
 
-  \begin{itemize}
+  \begin{enumerate}
+  \def\labelenumi{\arabic{enumi}.}
   \tightlist
   \item
-    Limited because of:
+    How does crop yield change with distance from the edge of field?
   \item
-    Lack of standardized formats
+    Does this depend on type of field edge?
   \item
-    Yearly calibration data
-  \item
-    Clear statistical protocols
-  \end{itemize}
+    Is there an intermediate distance where yield is maximized or variance is minimized?
+  \end{enumerate}
 \end{itemize}
 
 \hypertarget{methods}{%
@@ -185,35 +212,43 @@
   \begin{itemize}
   \tightlist
   \item
-    Farmers were solicited for yield data through local agronomists, and we received data from a total of X growers across a total of X years
+    Farmers were solicited for yield data through local agronomists, and we received 298 field-years of data from 5 growers across a total of 7 years (2014-2020)
   \item
-    Most fields represented only a single year of data, but we did sometimes receive multiple years of data from the same field
+    We converted data to a standard csv format using Ag Leader SMS
   \item
-    File formats vary depending on the brand of combine, so we converted data to a standard format (csv) using Ag Leader SMS
+    72\% of the crop types where either wheat (\emph{Triticum aestivum}) or canola (\emph{Brassica napus}), two of the most common crops in rotation in Alberta
   \item
-    In total, we analyzed yield data from X field-years of data, containing a total of X million data points
+    The remaining crop types were poorly replicated in our sample, so we constrained our analysis to only field-years containing wheat (94) or canola (119)
+  \item
+    Individual fields contained between 1 to 5 years of data (mean: 2.7)
+  \item
+    Containing a total of 18.4 million data points
   \end{itemize}
 \item
-  Yield data was collected in discrete rectangles of the same length as the data interval (distance = speed \(\times\) interval, typically 1 second) and the same width as the combine header (5-7 m)
+  Yield data is collected in rectangles of the same length as the data interval (distance = combine ground speed \(\times\) interval, typically 1 second) and the same width as the combine header (5-7 m)
 
   \begin{itemize}
   \tightlist
   \item
     We extracted the size of each polygon (m\(^2\)), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
   \item
-    Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location
+    Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data
   \item
-    Seeding and application rates were constant with each field, so we did not consider inputs in our analysis
+    Seeding and application rates were constant across fields, so we did not consider inputs in our analysis
+  \item
+    We used dry yield (tonnes of seed/hectare after accounting for crop moisture) as our measure of crop yield
+  \item
+    Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time
   \end{itemize}
 \item
-  Field boundaries were automatically digitized, then manually checked using satellite imagery and classified land cover data
+  Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC
 
   \begin{itemize}
   \tightlist
   \item
-    Crop boundaries are flexible, and often change from year to year depending on planting and emergence conditions (e.g.~flooding during some years)
+    Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g.~flooding during some years)
   \item
-    Additionally, seminatural features often change from year to year
+    Additionally, seminatural features often change yearly
 
     \begin{itemize}
     \tightlist
@@ -223,25 +258,25 @@
       Grass boundaries can change if fields are used for as haying or pasture during crop rotation
     \end{itemize}
   \item
-    This makes accurate and consistent classification of field boundaries very difficult
+    This makes accurate and consistent classification of field boundaries difficult
   \item
-    Because of this, we used the following general categories for field boundaries:
+    We defined the following general categories for field boundaries:
 
     \begin{enumerate}
     \def\labelenumi{\arabic{enumi}.}
     \tightlist
     \item
-      Standard: thin (\(<10\) m wide) grassy field boundary, often grassy road right-of-ways
+      Standard: grassy field edge, staging yard, or road right-of-way (grassy strip typically 5-10m wide)
     \item
-      Wetland: permanent wetland, whose borders are largely unchanged from year-to-year
+      Wetland: permanent wetland; borders are largely unchanged from year-to-year
     \item
-      Forest/shrub: permanent windbreaks or remnant forests
+      Shelterbelt: permanent windbreaks, shelterbelts, remnant forests, or shrublands
     \item
-      Grass: larger grassy area (pasture or permanent seminatural grassland)
+      Other crop: annual crop or pasture with little or no visible boundary between planted areas
     \item
-      Other crop: different crop with little or no visible boundary between planted areas
+      Bare: unplanted, fallow, flooded area, temporary wetland (only present for a single season), staging yard, oil and gas equipment, or road without a planted boundary
     \item
-      Bare: unplanted (fallow), flooded area, or unpaved roads
+      Grassland: permanent seminatural grassland or pasture (not in rotation)
     \end{enumerate}
   \end{itemize}
 \end{itemize}
@@ -250,27 +285,95 @@
 \subsection{Analysis}\label{analysis}}
 
 \begin{itemize}
-\tightlist
 \item
   At each field, we fit an additive model of the effect of boundary distance on crop yield while accounting for within-field spatial variation and temporal variation in the combine yield monitor
 
   \begin{itemize}
-  \tightlist
   \item
-    Crop yield varies within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices such as strip farming
+    Crop yield can vary within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices
   \item
-    While sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields), this does not address sensor drift over time that occurs within fields
+    Ground speed is extremely important to yield monitor accuracy (Arslan \& Colvin 2002), with low ground speed registering higher yields
   \item
-    The yield monitors may record lower yields as sensors accumulate debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time
+    While sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields across fields), this does not address sensor drift that occurs over time within fields
   \item
-    Additionally, ground speed is known to be extremely important to yield monitor accuracy (Arslan \& Colvin 2002)
+    This may be caused by sensors accumulating debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time
   \item
-    To address this, we fit the following model:
+    To model this, we fit the following model to each field-year of data:
   \end{itemize}
 
   \begin{equation}
-  ln(yield) 
+  \begin{split}
+  sqrt(yield) \sim & Normal (\mu, \sigma)\\
+  \mu = & Intercept + log(Polygon Size) + f(Distance from Edge_i, b=12)_i + \\
+   & f(Easting, Northing, b=60) + f(Sequence, b=60) \\
+  log(\sigma) = & Intercept + log(Polygon Size) + f(Distance from Edge, b=12) + \\
+   & f(Easting, Northing, b=60) + f(Sequence, b=60)
+  \end{split}
   \end{equation}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    where:
+  \end{itemize}
+
+  \begin{enumerate}
+  \def\labelenumi{\arabic{enumi}.}
+  \tightlist
+  \item
+    Polygon Size = distance traveled \(\times\) width of header bar (\(m^2\))
+  \item
+    Distance from Edge = distance from field edge type \emph{i} (m)
+  \item
+    Easting, Northing = distance from centre of field (m)
+  \item
+    Sequence = order of harvest within field (1--N points)
+  \item
+    f(x,b) = penalized thin-plate regression spline, where x is the predictor and b is the number of basis dimensions
+  \end{enumerate}
+\item
+  In addition to modeling edge effects (our variable of interest), this model also accounts for a) differences in combine speed, b) within-field spatial variation not related to edges, and d) shifts in combine accuracy during harvest
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Spatial or temporal variation is typically modelled using a Gaussian Process Model (Kriging) or approximations such as Stochastic Partial Differential Equations (e.g.~INLA), but this was computationally infeasible with 50,000 data points per field
+  \item
+    Penalized splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but with substantially reduced computation time
+  \item
+    The number of basis dimensions was checked with the \emph{gam.check} function from \emph{mgcv}
+  \item
+    The relationship between polygon size (i.e.~ground speed) and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions
+  \item
+    All models were fit in \emph{R} using the \emph{mgcv} library (version 1.8.36, Wood 2017), and figures were created with \emph{ggplot2} and \emph{ggpubr} (versions 3.3.3, Wickham 2016; and 0.4.0, Kassambara 2020).
+  \end{itemize}
+\item
+  To consider results from all field-level models, we fit models independent of each other, and ``overall'' smoothers were taken as averages of the field-level smoothers
+
+  \begin{itemize}
+  \tightlist
+  \item
+    However, this does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping of hierarchical mixed effects models
+  \end{itemize}
+
+  \begin{enumerate}
+  \def\labelenumi{\arabic{enumi}.}
+  \tightlist
+  \item
+    Extract single posterior sample (\emph{rnorm} in R) of smoother parameters from each field-level model using coefficient estimates and standard error
+  \item
+    Use posterior sample to create new simulated smoother from each field
+  \item
+    Fit new model of simulated smoothers from all fields, and save this ``meta-smoother''
+  \item
+    Repeat 1000 times, and calculate coverage intervals (5-95\% percentiles) on saved meta-smoothers
+  \end{enumerate}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    This gives coverage intervals (CIs) for the ``average'' smoother while accounting for field-level variability
+  \end{itemize}
 \end{itemize}
 
 \hypertarget{results}{%
@@ -301,6 +404,15 @@ Funding for this research was provided by Ducks Unlimited Canada's Institute for
 \begin{CSLReferences}{1}{0}
 \leavevmode\hypertarget{ref-arslan2002}{}%
 Arslan, S. \& Colvin, T.S. (2002). An evaluation of the response of yield monitors and combines to varying yields. \emph{Precision Agriculture}, 3, 107--122.
+
+\leavevmode\hypertarget{ref-kassambara2020}{}%
+Kassambara, A. (2020). \emph{{ggpubr}: 'ggplot2' based publication ready plots}.
+
+\leavevmode\hypertarget{ref-wickham2016}{}%
+Wickham, H. (2016). \emph{{ggplot2}: Elegant graphics for data analysis}. Springer-Verlag New York.
+
+\leavevmode\hypertarget{ref-wood2017}{}%
+Wood, S.N. (2017). \emph{Generalized additive models: An introduction with {R}}. CRC press.
 
 \end{CSLReferences}
 
