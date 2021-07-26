@@ -2,7 +2,6 @@ library(mgcv)
 library(TMB)
 library(ggplot2)
 library(ggpubr)
-
 set.seed(1)
 
 #Make 20000 sampling locations
@@ -31,19 +30,25 @@ ggplot(dat)+geom_point(aes(x=E,y=N,col=field)) #Plot spatial field (no noise)
 ggplot(dat)+geom_point(aes(x=E,y=N,col=y)) #Plot data
 
 #Input for model
-datList <- list(y=dat$y, smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim,flag=1) #Data
+
+#Do matrix multiplication in 5 "batches"
+nbatches <- 5
+batches <- rep(1:nbatches,each=nrow(dat)/nbatches)
+bStart <- sapply(1:nbatches,function(x) min(which(batches==x)))-1 #Minus one because of c++ indexing
+bLength <- nrow(dat)/nbatches #How long is each batch?
+datList <- list(y=dat$y, smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim,bStart=bStart,bLength=bLength,nbatches=nbatches) #Data
 parList <- list(b0=0, smoothCoefs=rep(0,ncol(modMat)), log_lambda=0, log_sigma=1) #Parameters
 
-compile("gam_tmb_tp.cpp")
-dyn.load(dynlib("gam_tmb_tp"))
-obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs'), DLL = "gam_tmb_tp")
+compile("gam_tmb_batches.cpp")
+dyn.load(dynlib("gam_tmb_batches"))
+obj <- MakeADFun(data = datList, parameters = parList, random=c('smoothCoefs'), DLL = "gam_tmb_batches")
 
 #Memory usage spikes from 4.5GB to 16GB during Optimizing Tape stage
 opt <- nlminb(obj$par,obj$fn,obj$gr) #Run model
 report <- sdreport(obj)
 
 opt$convergence==0 #Did model converge?
-report #Looks OK. b0 and sigma are very close to actual values (1 and 2)
+report #Looks OK. b0 and logsigma are very close to actual values (1 and 0.693)
 
 #Estimates smoothing coefficients fairly well
 
@@ -57,5 +62,3 @@ p2 <- ggplot(data.frame(predicted=report$par.random,actual=smoothCoefs))+
   labs(title='Smoothing coefficients')
 
 (p <- ggarrange(p1,p2,ncol=2))
-ggsave(filename = "/home/rsamuel/Desktop/penalty1.png",plot = p,width=12,height=6)
-

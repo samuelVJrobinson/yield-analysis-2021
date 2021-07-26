@@ -7,18 +7,17 @@ Type objective_function<Type>::operator() (){
   //2D thin-plate regression spline from mgcv
   
   //Read data from R------------------
-  DATA_VECTOR(y);                     // Response
-  DATA_MATRIX(smoothMat);             // Design matrix (no intercept)
-  DATA_SPARSE_MATRIX(penaltyMat);     // Penalty matrix
-  DATA_INTEGER(penaltyDim);           // Dimensions of penalty matrix
-  DATA_INTEGER(flag);                 // Which penalty type should be used?
+  DATA_VECTOR(y); DATA_UPDATE(y);                     // Response
+  DATA_MATRIX(smoothMat); DATA_UPDATE(smoothMat);     // Design matrix (no intercept)
+  DATA_SPARSE_MATRIX(penaltyMat);                     // Penalty matrix
+  DATA_INTEGER(penaltyDim);                           // Dimensions of penalty matrix (ie number of smoothing coefficients)
+  DATA_SCALAR(usePenalty); DATA_UPDATE(usePenalty);  // Should penalty be calculated?
   
   //Read parameters from R------------
   PARAMETER(b0);                      // Intercept
   PARAMETER_VECTOR(smoothCoefs);      // Smooth coefficients
   PARAMETER(log_lambda);              // Log penalization parameter
   PARAMETER(log_sigma);               // Log(SD) of measurement error 
-  
   
   //Transform SD and penalization parameters 
   Type sigma = exp(log_sigma);
@@ -28,17 +27,12 @@ Type objective_function<Type>::operator() (){
   Type nll=0;
   
   // Penalization ------------------------------------
-  
   SparseMatrix<Type> S = lambda*penaltyMat; //Penalty term * Penalty matrix
-  if(flag==1){
-    nll -= 0.5*penaltyDim*log_lambda - 0.5*GMRF(S).Quadform(smoothCoefs);
-  } else {
-    nll += 0.5*(smoothCoefs * (S * smoothCoefs.matrix()).array()).sum();
-  }
+  nll -= (0.5*penaltyDim*log_lambda - 0.5*GMRF(S).Quadform(smoothCoefs))*usePenalty;  
   
   // Main model -------------------------------------------
-  vector<Type> mu = b0 + smoothMat*smoothCoefs; //Expected value
   
+  vector<Type> mu = b0 + smoothMat*smoothCoefs; //Expected value
   nll -= sum(dnorm(y, mu, sigma, true)); //Decrement logLik
   
   return nll; //Return likelihood

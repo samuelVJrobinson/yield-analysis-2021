@@ -639,36 +639,43 @@ temporalSPDEMatrices <- temporalSPDE$param.inla[c("M0","M1","M2")] #Matrices nee
 dim(temporalA) #4999 vertices
 
 #Input for model:
+
+#Divide data into 10 batches
+nbatches <- 10
+batches <- rep(1:nbatches,each=nrow(dat)/nbatches)
+use <- batches==1
+
 #Data
-datList <- list(yield=sqrt(dat$DryYield), #Transformed Data
-                logArea=log(dat$pArea), meanLogArea = mean(log(dat$pArea)), #log(area) and mean(log(area))
-                smoothMat=modMat, penaltyMat=penMat, penaltyDim=penDim) #Smoother input
-                # predModMat_dist=predModMat_dist, #New smoother matrices to predict on
-                # predModMat_spatial=predModMat_spatial,
-                # predModMat_temporal=predModMat_temporal,
-                # spatialSPDEMatrices=spatialSPDEMatrices, spatialA = spatialA, #Spatial SPDE input
-                # temporalSPDEMatrices = temporalSPDEMatrices, temporalA = temporalA) #Temporal SPDE input
+datList <- list(yield=sqrt(dat$DryYield)[use], #Transformed Data
+                logArea=log(dat$pArea)[use], meanLogArea = mean(log(dat$pArea)), #log(area) and mean(log(area))
+                smoothMat=modMat[use,], penaltyMat=penMat, penaltyDim=penDim, #Smoother input
+                predModMat_dist=predModMat_dist, #New smoother matrices to predict on
+                predModMat_spatial=predModMat_spatial,
+                predModMat_temporal=predModMat_temporal,
+                spatialSPDEMatrices=spatialSPDEMatrices, spatialA = as.matrix(spatialA[use,]), #Spatial SPDE input
+                temporalSPDEMatrices = temporalSPDEMatrices, temporalA = as.matrix(temporalA[use,]),
+                usePenalty=1.0) #Temporal SPDE input
 #Parameters
 parList <- list(b0=0, #Intercept
                 b_areaMean=0,
                 smoothCoefsMean=rep(0,ncol(modMat)), log_lambdasMean=rep(0,length(penDim)), #Smooth coefficients and penalization parameter for means
-                b0SD=0 #log-SD intercept
-                # b_areaSD=0
-                # smoothCoefsSD=rep(0,ncol(modMat)), log_lambdasSD=rep(0,length(penDim) #Smooth coefficients and penalization parameter for logSD
-                # spdeCoefs_spatial = rep(0.0, nrow(datList$spatialSPDEMatrices$M0)), log_tau_spatial = 0, log_kappa_spatial = 0, #SPDE parameters
-                # spdeCoefs_temporal = rep(0.0, nrow(datList$temporalSPDEMatrices$M0)), log_tau_temporal = 0, log_kappa_temporal = 0
+                b0SD=0, #log-SD intercept
+                b_areaSD=0,
+                smoothCoefsSD=rep(0,ncol(modMat)), log_lambdasSD=rep(0,length(penDim)), #Smooth coefficients and penalization parameter for logSD
+                spdeCoefs_spatial = rep(0.0, nrow(datList$spatialSPDEMatrices$M0)), log_tau_spatial = 0, log_kappa_spatial = 0, #SPDE parameters
+                spdeCoefs_temporal = rep(0.0, nrow(datList$temporalSPDEMatrices$M0)), log_tau_temporal = 0, log_kappa_temporal = 0
 ) 
 
 dyn.unload(dynlib("mod1B")) 
 compile("mod1B.cpp")
 dyn.load(dynlib("mod1B"))
 
+#Memory spikes to 20GB, but runs
 obj <- MakeADFun(data = datList, parameters = parList, 
-                 # random=c('smoothCoefsMean','smoothCoefsSD','spdeCoefs_spatial','spdeCoefs_temporal'),
-                 random=c('smoothCoefsMean'), 
+                 random=c('smoothCoefsMean','smoothCoefsSD','spdeCoefs_spatial','spdeCoefs_temporal'),
                  DLL = "mod1B") 
 obj$par
-obj$fn()
+obj$fn() #This never finishes
 
 a <- Sys.time()
 opt <- nlminb(obj$par,obj$fn,obj$gr)  
