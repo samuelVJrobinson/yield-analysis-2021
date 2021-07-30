@@ -264,58 +264,9 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
 # (temp <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with second type of model
 
 
-#Shorter version that only gets estimates of log(pArea) relationship and turns them into speed measurements
-# Combine ground speed is talked about a lot, so this is more appropriate for growers/agronomists
-
-getPredsSpeed <- function(path,l=30,margInt=FALSE,samp=FALSE, minSpeed = NA, maxSpeed = NA, width = NA, speed2Distance = NA){
-  
-  # #Debugging
-  # l <- 30
-  # # path <- paste0('./Figures/ModelCheck1/',datSource$filename[2],' modList.Rdata') #Model type 1
-  # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
-  # minSpeed <- 0.1
-  # maxSpeed <- 15 
-  # margInt <- FALSE
-  # samp <- FALSE
-  # width <- 10.21
-  # speed2Distance <- 1/18.043
-  
-  if(any(is.na(c(minSpeed,maxSpeed,width,speed2Distance)))) stop('Missing term')
-  load(path) #Load data
-  
-  #Converts speed to area term for use with original coefficients (holding width at max value)
-  logSpeed <- seq(log(minSpeed),log(maxSpeed),length.out=l)
-  speed <- exp(logSpeed)
-  WAS <- width*speed2Distance*speed #Width * alpha * speed = proxy for pArea
-  logWAS <- log(WAS) #proxy for log(pArea)
-  
-  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
-  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
-  
-  #Coefficients (intercept and slope) for mean and logSD relationship
-  if(samp){ #Sample from posterior
-    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
-    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
-  } else {
-    meanCoefs <- modList$coefs[meanVars] 
-    sdCoefs <- modList$coefs[sdVars]
-  }
-  
-  if(margInt){ #Marginalize across intercept (set intercept coef to 0)
-    meanCoefs[1] <- 0 
-    sdCoefs[1] <- 0  
-  }
-  
-  speedDat <- data.frame(speed, 
-                         mean=cbind(rep(1,length(logSpeed)),logWAS) %*% meanCoefs,
-                         logSD=cbind(rep(1,length(logSpeed)),logWAS) %*% sdCoefs)
-  
-  return(speedDat)
-}
-  
 #Function to run the ith model, using datSource ds, and sampling below nSubSamp points if necessary
 #kPar = basis dimensions for distance, E/N, and time smoothers + basis dimensions for logSD smoothers
-runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck1',resultsDir='./Figures/YieldMaps'){ 
+runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir='./Figures/ModelCheck1',resultsDir='./Figures/YieldMaps',filterData=TRUE){ 
   if(dS$modelComplete[i]) return('Already completed')
   if(!dS$use[i]) return('Not used')
   
@@ -337,12 +288,6 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
   cropType <- unique(dat$Product) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
-  
-  if(nrow(dat)>nSubSamp){
-    #Limit to nSubSamp sequential samples
-    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
-  }
-  
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
     rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
     rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
@@ -363,6 +308,19 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
     group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  if(filterData){
+    #Remove extreme values
+    dat <- dat %>% 
+      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
+             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
+             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
+      )
+  }
+  
+  if(nrow(dat)>nSubSamp){ #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
   
   print('Calculating distance from boundary')  
   
@@ -516,7 +474,7 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
 
 #Function to run the ith model, but with boundary type
 #useClosest = use only closest boundary? Otherwise, uses distance from all boundaries
-runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2'){ 
+runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2',filterData=TRUE){ 
   # i <- 295 #Debugging
   # dS <- datSource
   # nSubSamp <- 50000
@@ -544,11 +502,6 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   cropType <- as.character(unique(dat$Product)) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
-  if(nrow(dat)>nSubSamp){
-    #Limit to nSubSamp sequential samples
-    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
-  }
-  
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
     rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
     rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
@@ -569,6 +522,20 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
     group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  if(filterData){
+    #Remove extreme values
+    dat <- dat %>% 
+      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
+             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
+             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
+      )
+  }
+  
+  if(nrow(dat)>nSubSamp){
+    #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
   
   print('Calculating distance from boundary')  
   
@@ -701,7 +668,7 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
 }
 
 #Function to run the ith model, but with no boundary included ("null" model)
-runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck0',resultsDir='./Figures/YieldMaps0',startCoefs=NULL){ 
+runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck0',resultsDir='./Figures/YieldMaps0',startCoefs=NULL,filterData=TRUE){ 
   i <- 1 #Debugging
   dS <- datSource
   nSubSamp <- 50000
@@ -732,11 +699,6 @@ runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,mode
   cropType <- as.character(unique(dat$Product)) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
-  if(nrow(dat)>nSubSamp){
-    #Limit to nSubSamp sequential samples
-    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
-  }
-  
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
     rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
     rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
@@ -757,6 +719,20 @@ runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,mode
     group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
+  
+  if(filterData){
+    #Remove extreme values
+    dat <- dat %>% 
+      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
+             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
+             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
+      )
+  }
+  
+  if(nrow(dat)>nSubSamp){
+    #Limit to nSubSamp sequential samples
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+  }
   
   print('Fitting model')
   
