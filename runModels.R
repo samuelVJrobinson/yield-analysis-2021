@@ -615,14 +615,17 @@ samplePreds() #Test
 # save(samp,file='./Data/postSamples_wheat.Rdata')
 # rm(samp2)
 
-load('./Data/postSamples_canola.Rdata')
-load('./Data/postSamples_wheat.Rdata')
+# croptype <- 'canola'
+croptype <- 'wheat'
 
+load(paste0('./Data/postSamples_',croptype,'.Rdata'))
 
 ylabMean <- 'Mean Yield (T/ha)'
-ylabSD <- 'SD Yield'
+ylabSD <- 'log SD Yield'
 alphaVal <- 0.1
 qs <- c(0.1,0.5,0.9) #Quantiles
+colshade <- 'black'
+fillshade <- 'black'
 
 p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
   group_by(pArea) %>% 
@@ -631,8 +634,8 @@ p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>%
   pivot_wider(names_from=q,values_from=predMean) %>% 
   ggplot(aes(x=pArea))+
   # geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade)+
+  geom_line(aes(y=med),col=colshade,size=1)+
   labs(x='Polygon Area',y=ylabMean)
 
 p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
@@ -642,8 +645,8 @@ p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>%
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
   ggplot(aes(x=pArea))+
   # geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade)+
+  geom_line(aes(y=med),col=colshade,size=1)+
   labs(x='Polygon Area',y=ylabSD)
 
 p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
@@ -653,11 +656,11 @@ p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>%
   pivot_wider(names_from=q,values_from=predMean) %>% 
   ggplot(aes(x=dist)) + 
   # geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + 
-  geom_line(aes(y=med),col='blue') + #Meta-model
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + 
+  geom_line(aes(y=med),col=colshade) + #Meta-model
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
   facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+  coord_cartesian(xlim=c(0,200),ylim=c(-5,5))
 
 p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
   bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
@@ -666,10 +669,10 @@ p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>%
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
   ggplot(aes(x=dist)) + 
   # geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue') + #Meta-model
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade) + #Meta-model
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
   facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+  coord_cartesian(xlim=c(0,200),ylim=c(-5,5))
 
 p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
   group_by(r) %>% 
@@ -678,9 +681,9 @@ p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>%
   pivot_wider(names_from=q,values_from=predMean) %>% 
   ggplot(aes(x=r))+
   # geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade)+
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
+  labs(x='Harvest order',y=ylabMean)
 
 p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
   group_by(r) %>% 
@@ -689,93 +692,16 @@ p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>%
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
   ggplot(aes(x=r))+
   # geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
+  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade)+
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
+  labs(x='Harvest order',y=ylabSD)
 
 (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3_canola.png'),p,height=6,width=12,dpi=300)
-
-p <- ggarrange(p1,p5,p2,p6,ncol=2,nrow=2)
-
+ggsave(paste0('./Figures/ModelSummary3_',croptype,'.png'),p,height=6,width=16,dpi=350)
+# p <- ggarrange(p1,p5,p2,p6,ncol=2,nrow=2) #Area and order smoothers
 (p <- ggarrange(p3+facet_wrap(~dist_type,nrow=1),p4+facet_wrap(~dist_type,nrow=1),ncol=1,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3a_canola.png'),p,height=6,width=12,dpi=300)  
+ggsave(paste0('./Figures/ModelSummary3a_',croptype,'.png'),p,height=6,width=12,dpi=350)  
 
-load('./Data/postSamples_wheat.Rdata')
-
-p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
-  group_by(pArea) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=pArea))+
-  geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
-  labs(x='Polygon Area',y=ylabMean)
-
-p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
-  group_by(pArea) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=pArea))+
-  geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
-  labs(x='Polygon Area',y=ylabSD)
-
-p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=dist)) + 
-  geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + 
-  geom_line(aes(y=med),col='blue') + #Meta-model
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
-
-p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=dist)) + 
-  geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue') + #Meta-model
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
-
-p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
-  group_by(r) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=r))+
-  geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
-
-p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
-  group_by(r) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=r))+
-  geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
-
-(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3_wheat.png'),p,height=6,width=12,dpi=300)
-(p <- ggarrange(p3+facet_wrap(~dist_type,nrow=1),p4+facet_wrap(~dist_type,nrow=1),ncol=1,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3a_wheat.png'),p,height=6,width=12,dpi=300)
 
 # Compare model types -----------------------------------------------------
 
