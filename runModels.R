@@ -396,8 +396,9 @@ ggsave(paste0('./Figures/ModelSummary2a.png'),p,height=6,width=12,dpi=300)
 
 # Function to sample from posterior of each prediction, amalgamate, fit meta-model, return results of meta-model
 # My way of getting around the problem of random effects
-# a = does nothing (argument for parLapply), useRows = rows of ds to be used, ds = datSource csv, nX = number of samples along range of X
-samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(100,100,100)){ 
+# a = does nothing (mandatory argument for parLapply), useRows = rows of ds to be used, ds = datSource csv, nX = number of samples along range of X
+# rCutoff = restrict point number (some fields have hundreds of thousands of points, but all data uses approximately the same size yield rectangles, so cuts off meta-smoother at "about" the maximum field size - i.e. the most common number of points per field)
+samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutoff=50000){ 
   if(is.null(useRows)){
     warning('Rows not specified. Using entire dataset.')
     useRows <- 1:nrow(datSource)
@@ -407,7 +408,7 @@ samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(100,100,100)){
   getFiles <- ds %>% slice(useRows) %>% filter(use,modelComplete2) #Completed models
   
   #Sample from posterior, get new lines for each field
-  allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE),samp=TRUE) %>% set_names(getFiles$filename)
+  allSmooths <- lapply(getFiles$modelPath2,getPreds,l=nX,margInt=c(FALSE,TRUE,TRUE),samp=TRUE) %>% set_names(getFiles$filename)
   
   #log(Area) meta-models
   pAreaDf <- lapply(allSmooths,function(x) x$pAreaDat) %>% bind_rows(.id = 'field')
@@ -435,7 +436,9 @@ samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(100,100,100)){
   }
   
   #r (point order) meta-models
-  rDatDf <- lapply(allSmooths,function(x) x$rDat) %>% bind_rows(.id = 'field')
+  rDatDf <- lapply(allSmooths,function(x) x$rDat) %>% 
+    bind_rows(.id = 'field') %>% 
+    filter(r<=rCutoff) #Filters out point values above cutoff
   
   r1 <- gam(mean~s(r,k=50),data=rDatDf)
   r2 <- gam(logSD~s(r,k=50),data=rDatDf)
@@ -468,125 +471,125 @@ samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(100,100,100)){
 debugonce(samplePreds)
 samplePreds() #Test
 
-## Create samples from scratch
-# Nsamp <- 100 #Number of samples
-# library(parallel)
-# cluster <- makeCluster(15) 
-# clusterExport(cluster,c('datSource'))
-# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
-# #Takes about 10 mins for 100 samples
-# Sys.time()
-# stopCluster(cluster)
-# save(samp,file='./Data/postSamples2.Rdata')
-
-# ## Add to current samples
-# Nsamp <- 700 #Number of samples
-# library(parallel)
-# cluster <- makeCluster(15)
-# clusterExport(cluster,c('datSource'))
-# a <- Sys.time()
-# samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
-# #Takes about 10 mins for 100 samples
-# Sys.time()-a
-# stopCluster(cluster)
+# ## Create samples from scratch - crop type not specified
+# # Nsamp <- 100 #Number of samples
+# # library(parallel)
+# # cluster <- makeCluster(15)
+# # clusterExport(cluster,c('datSource'))
+# # samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
+# # #Takes about 10 mins for 100 samples
+# # Sys.time()
+# # stopCluster(cluster)
+# # save(samp,file='./Data/postSamples2.Rdata')
+# 
+# # ## Add to current samples
+# # Nsamp <- 700 #Number of samples
+# # library(parallel)
+# # cluster <- makeCluster(15)
+# # clusterExport(cluster,c('datSource'))
+# # a <- Sys.time()
+# # samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds)
+# # #Takes about 10 mins for 100 samples
+# # Sys.time()-a
+# # stopCluster(cluster)
+# # load('./Data/postSamples.Rdata')
+# # samp <- c(samp,samp2)
+# # save(samp,file='./Data/postSamples.Rdata')
+# # rm(samp2)
+# 
+# # Load saved posterior samples
 # load('./Data/postSamples.Rdata')
-# samp <- c(samp,samp2)
-# save(samp,file='./Data/postSamples.Rdata')
-# rm(samp2)
-
-# Load saved posterior samples
-load('./Data/postSamples.Rdata')
-
-# tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
-# ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(0,5)) #Y limits
-ylabMean <- 'Mean Yield (T/ha)'
-ylabSD <- 'log(SD Yield)'
-alphaVal <- 0.1
-qs <- c(0.1,0.5,0.9) #Quantiles
-
-p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
-  group_by(pArea) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=pArea))+
-  geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
-  labs(x='Polygon Area',y=ylabMean)
-
-p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
-  group_by(pArea) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=pArea))+
-  geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
-  geom_line(aes(y=med),col='blue',size=1)+
-  labs(x='Polygon Area',y=ylabSD)
-
-p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=dist)) + 
-  geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + 
-  geom_line(aes(y=med),col='blue') + #Meta-model
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
-
-p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
-  bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=dist)) + 
-  geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue') + #Meta-model
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
-  coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
-
-p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
-  group_by(r) %>% 
-  summarise(predMean = quantile(predMean, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predMean) %>% 
-  ggplot(aes(x=r))+
-  geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
-
-p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
-  group_by(r) %>% 
-  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
-  ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
-  pivot_wider(names_from=q,values_from=predLogSD) %>% 
-  ggplot(aes(x=r))+
-  geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
-  geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
-  geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  labs(x='Point order',y=ylabMean)
-
-(p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3.png'),p,height=6,width=12,dpi=300)
-(p <- ggarrange(p3,p4,ncol=1,nrow=2))
-ggsave(paste0('./Figures/ModelSummary3a.png'),p,height=6,width=12,dpi=300)  
+# 
+# # tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
+# # ylimVals <- list(mean=c(-1.2,1.2)*tHa2buAc,sd=c(0,5)) #Y limits
+# ylabMean <- 'Mean Yield (T/ha)'
+# ylabSD <- 'log(SD Yield)'
+# alphaVal <- 0.1
+# qs <- c(0.1,0.5,0.9) #Quantiles
+# 
+# p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+#   group_by(pArea) %>% 
+#   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predMean) %>% 
+#   ggplot(aes(x=pArea))+
+#   geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
+#   geom_line(aes(y=med),col='blue',size=1)+
+#   labs(x='Polygon Area',y=ylabMean)
+# 
+# p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
+#   group_by(pArea) %>% 
+#   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predLogSD) %>% 
+#   ggplot(aes(x=pArea))+
+#   geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue')+
+#   geom_line(aes(y=med),col='blue',size=1)+
+#   labs(x='Polygon Area',y=ylabSD)
+# 
+# p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+#   bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+#   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predMean) %>% 
+#   ggplot(aes(x=dist)) + 
+#   geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + 
+#   geom_line(aes(y=med),col='blue') + #Meta-model
+#   geom_hline(yintercept = 0,col='red',linetype='dashed')+
+#   facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
+#   coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+# 
+# p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
+#   bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
+#   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predLogSD) %>% 
+#   ggplot(aes(x=dist)) + 
+#   geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue') + #Meta-model
+#   geom_hline(yintercept = 0,col='red',linetype='dashed')+
+#   facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
+#   coord_cartesian(xlim=c(0,400),ylim=c(-5,5))
+# 
+# p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+#   group_by(r) %>% 
+#   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predMean) %>% 
+#   ggplot(aes(x=r))+
+#   geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
+#   geom_hline(yintercept = 0,col='red',linetype='dashed')+
+#   labs(x='Point order',y=ylabMean)
+# 
+# p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
+#   group_by(r) %>% 
+#   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
+#   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
+#   pivot_wider(names_from=q,values_from=predLogSD) %>% 
+#   ggplot(aes(x=r))+
+#   geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
+#   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill='blue') + geom_line(aes(y=med),col='blue')+
+#   geom_hline(yintercept = 0,col='red',linetype='dashed')+
+#   labs(x='Point order',y=ylabMean)
+# 
+# (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2))
+# ggsave(paste0('./Figures/ModelSummary3.png'),p,height=6,width=12,dpi=300)
+# (p <- ggarrange(p3,p4,ncol=1,nrow=2))
+# ggsave(paste0('./Figures/ModelSummary3a.png'),p,height=6,width=12,dpi=300)  
 
 # Get crop-specific smoother info from second set of models 
 
 # # Add to current samples - canola
 # isCanola <- which(datSource$crop=='Canola') #Canola crops only
-# Nsamp <- 500 #Number of samples
+# Nsamp <- 985 #Number of samples
 # library(parallel)
-# cluster <- makeCluster(10)
+# cluster <- makeCluster(15) #Memory usage is OK, so could probably max it out
 # clusterExport(cluster,c('datSource'))
-# a <- Sys.time() #23 mins for 500 reps
+# a <- Sys.time() #53 seconds for 15 reps, using 15 cores - 45 mins for 1000 samples
 # samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isCanola)
 # Sys.time()-a
 # stopCluster(cluster)
@@ -595,13 +598,15 @@ ggsave(paste0('./Figures/ModelSummary3a.png'),p,height=6,width=12,dpi=300)
 # save(samp,file='./Data/postSamples_canola.Rdata')
 # rm(samp2)
 # 
+# gc()
+# 
 # # Add to current samples - wheat
 # isWheat <- which(datSource$crop=='Wheat') #Wheat
-# Nsamp <- 15 #Number of samples
+# Nsamp <- 985 #Number of samples
 # library(parallel)
 # cluster <- makeCluster(15)
 # clusterExport(cluster,c('datSource'))
-# a <- Sys.time() #18 mins for 500 reps
+# a <- Sys.time() #37 mins for 1000 reps
 # samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isWheat)
 # Sys.time()-a
 # stopCluster(cluster)
@@ -611,6 +616,8 @@ ggsave(paste0('./Figures/ModelSummary3a.png'),p,height=6,width=12,dpi=300)
 # rm(samp2)
 
 load('./Data/postSamples_canola.Rdata')
+load('./Data/postSamples_wheat.Rdata')
+
 
 ylabMean <- 'Mean Yield (T/ha)'
 ylabSD <- 'SD Yield'
