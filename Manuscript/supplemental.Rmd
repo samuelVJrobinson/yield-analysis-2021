@@ -2,4 +2,10 @@
 
 # Appendix A: Supplementary Material {-}
 
-Supplemental materials here 
+```{r , echo=FALSE, fig.cap='Effect of polygon area and harvest sequence on canola yield. Polygon area is equivalent to ground ', out.width='100%'}  
+  include_graphics('../Figures/ModelSummary3b_canola.png',dpi=NA)
+```
+
+```{r , echo=FALSE, fig.cap='Temp', out.width='100%'}  
+  include_graphics('../Figures/ModelSummary3b_wheat.png',dpi=NA)
+```
