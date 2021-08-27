@@ -32,7 +32,7 @@ source('helperFunctions.R')
 #   sapply(.,function(x) names(x)[1])
 # 
 # 
-# 
+# #Get crop types
 # datSource$crop <- case_when(grepl('(CANOLA|InVigor|Dekalb 74-54|Dekalb 75-42|Brett Young 6056|Dupont D3152|VT 9562)',cropType) ~ 'Canola',
 #                             grepl('(WHEAT|Wheat|CPS AC Foremost|CWRS|CWSW)',cropType) ~ 'Wheat',
 #                             grepl('Peas',cropType) ~ 'Peas',
@@ -43,6 +43,24 @@ source('helperFunctions.R')
 #                             TRUE ~ cropType) 
 # datSource$npoints <- sapply(datSource$dataPath,function(x) length(readLines(x)))
 # write.csv(datSource,'./Data/datSource_new.csv',row.names = FALSE)
+
+# #Get length of boundary features at each field
+# bLengths <- lapply(datSource$boundaryPath2,function(x){
+#   bTypes <- c('BARE','GRASSLAND','OTHERCROP','SHELTERBELT','STANDARD','WETLAND')
+#   if(!file.exists(x)){
+#     return(data.frame(type=bTypes,len=NA))
+#   }
+#   st_read(x,quiet=TRUE) %>%
+#     mutate(len=as.numeric(st_length(.))) %>%
+#     filter(len>0) %>%
+#     mutate(type=factor(type,levels=bTypes)) %>%
+#     st_drop_geometry() %>% group_by(type,.drop=FALSE) %>%
+#     summarize(len=sum(len))}) %>%
+#   set_names(nm = datSource$filename) %>%
+#   bind_rows(.id='filename') %>% group_by(filename) %>% mutate(prop=len/sum(len)) %>%
+#   pivot_wider(names_from=type,values_from=c(len,prop)) %>%
+#   data.frame()
+# write.csv(bLengths,file = './Data/boundaryLengths.csv')
 
 datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
   mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
@@ -468,8 +486,8 @@ samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutof
   return(retList) 
 }
 
-debugonce(samplePreds)
-samplePreds() #Test
+# debugonce(samplePreds)
+# samplePreds() #Test
 
 # ## Create samples from scratch - crop type not specified
 # # Nsamp <- 100 #Number of samples
@@ -590,7 +608,7 @@ samplePreds() #Test
 # cluster <- makeCluster(15) #Memory usage is OK, so could probably max it out
 # clusterExport(cluster,c('datSource'))
 # a <- Sys.time() #53 seconds for 15 reps, using 15 cores - 45 mins for 1000 samples
-# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isCanola,margInt=c(TRUE,TRUE,TRUE))
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isCanola,margInt=c(FALSE,TRUE,TRUE))
 # Sys.time()-a
 # stopCluster(cluster)
 # # load('./Data/postSamples_canola.Rdata')
@@ -619,7 +637,7 @@ load(paste0('./Data/postSamples_',croptype,'.Rdata'))
 
 ylabMean <- 'Mean Yield (T/ha)'
 ylabSD <- 'log SD Yield'
-ylims <- c(-2.5,2.5)
+ylims <- c(-1.5,1.5)
 distLims <- c(0,200)
 alphaVal <- 0.1
 qs <- c(0.1,0.5,0.9) #Quantiles
@@ -635,30 +653,31 @@ p1 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>%
   # geom_line(data=allEff[[1]],aes(x=pArea,y=mean,group=field),alpha=0.3)+
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade)+
   geom_line(aes(y=med),col=colshade,size=1)+
-  labs(x='Polygon Area',y=ylabMean)
+  labs(x='Polygon Area (m^2)',y=ylabMean)
 
 p2 <- lapply(samp,function(x) x$pArea) %>% bind_rows(.id = 'sample') %>% 
   group_by(pArea) %>% 
-  summarise(predLogSD = exp(quantile(predLogSD, qs)), q = qs) %>% 
+  summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
   ggplot(aes(x=pArea))+
   # geom_line(data=allEff[[1]],aes(x=pArea,y=logSD,group=field),alpha=0.3)+
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade)+
   geom_line(aes(y=med),col=colshade,size=1)+
-  labs(x='Polygon Area',y=ylabSD)
+  labs(x='Polygon Area (m^2)',y=ylabSD)
 
 p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
   bind_rows(.id = 'sample') %>% group_by(dist_type,dist) %>% 
   summarise(predMean = quantile(predMean, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predMean) %>% 
+  filter(dist>=distLims[1],dist<=distLims[2]) %>% 
   ggplot(aes(x=dist)) + 
   # geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + 
   geom_line(aes(y=med),col=colshade) + #Meta-model
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabMean) +
+  facet_wrap(~dist_type,scales='free') + labs(x='Distance (m)',y=ylabMean)+ 
   coord_cartesian(xlim=distLims,ylim=ylims)
 
 p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>% 
@@ -666,11 +685,12 @@ p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>%
   summarise(predLogSD = quantile(predLogSD, qs), q = qs) %>% 
   ungroup() %>% mutate(q=factor(q,labels=c('lwr','med','upr'))) %>% 
   pivot_wider(names_from=q,values_from=predLogSD) %>% 
+  filter(dist>=distLims[1],dist<=distLims[2]) %>% 
   ggplot(aes(x=dist)) + 
   # geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade) + #Meta-model
   geom_hline(yintercept = 0,col='red',linetype='dashed')+
-  facet_wrap(~dist_type) + labs(x='Distance',y=ylabSD) +
+  facet_wrap(~dist_type) + labs(x='Distance (m)',y=ylabSD) +
   coord_cartesian(xlim=distLims,ylim=ylims)
 
 p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
@@ -704,31 +724,17 @@ ggsave(paste0('./Figures/ModelSummary3a_',croptype,'.png'),p,height=6,width=12,d
 (p <- ggarrange(p1,p5,p2,p6,ncol=2,nrow=2)) #Polygon area and harvest order only
 ggsave(paste0('./Figures/ModelSummary3b_',croptype,'.png'),p,height=6,width=8,dpi=350)  
 
-
-# Compare model types -----------------------------------------------------
-
-# Get model info
-mod0info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath0),getModelInfo)
-mod1info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath1),getModelInfo)
-mod2info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath2),getModelInfo)
-
-datSource %>% mutate(reml0=sapply(mod0info,function(x) x$REML),
-                     reml1=sapply(mod1info,function(x) x$REML),
-                     reml2=sapply(mod2info,function(x) x$REML),
-                     diff1=reml0-reml1,diff2=reml0-reml2)
-
-load(datSource$modelPath0[1])
-
-# Other bits --------------------------------------------------------------
+# Smoother info from 2nd set of models, using combine ground speed rather than polygon area --------------------------------------------------------------
 
 #Get coefs for converting pArea (width x distance) to ground speed - takes about 1 minute
-f <- function(path){
+convertArea <- lapply(datSource$dataPath, function(path){
   d <- read.csv(path,nrows=10000,fileEncoding='latin1')
   #Get statistics on swath width and speed
   minSwathWidth <- min(d$Swth.Wdth.m.,na.rm=TRUE)
   maxSwathWidth <- max(d$Swth.Wdth.m.,na.rm=TRUE)
-  minSpeed <- min(d$Speed.km.h.[d$Speed.km.h.>0])
-  maxSpeed <- max(d$Speed.km.h.)
+  # minSpeed <- min(d$Speed.km.h.[d$Speed.km.h.>0])
+  minSpeed <- unname(quantile(d$Speed.km.h.[d$Speed.km.h.>0],0.1)) #10th percentile instead of min
+  maxSpeed <- unname(quantile(d$Speed.km.h.,0.9)) #90th percentile of speed instead of max
   d <- subset(d,d$Swth.Wdth.m.==maxSwathWidth) #Retain measurements at max swath width
   if(nrow(d)==0) return(list(maxSwathWidth=NA,dist2Speed=NA,r2=NA))
   m <- lm(Speed.km.h.~Distance.m.-1,data=d) #Predict speed (km/hr) using distance (m)
@@ -740,8 +746,7 @@ f <- function(path){
   rm(list=ls()[!ls() %in% 'retList']) #Remove everything except retList
   gc()
   return(retList)
-}
-convertArea <- lapply(datSource$dataPath, f)
+})
 
 #Shorter version that only gets estimates of log(pArea) relationship and turns them into speed measurements
 # Combine ground speed is talked about a lot, so this is more appropriate for growers/agronomists
@@ -797,7 +802,7 @@ getPredsSpeed <- function(path,l=30,margInt=FALSE,samp=FALSE, minSpeed = NA, max
 
 # Same function as samplePreds, but only gets ground speed measurements (after converting to pArea)
 # a = does nothing (argument for parLapply), ds = datSource csv, nX = number of samples along range of X
-samplePredsSpeed <- function(a=NULL,ds=datSource,nX=100,minSpeeds=NA,maxSpeeds=NA,maxWidth=NA,s2d=NA){ 
+samplePredsSpeed <- function(a=NULL,ds=datSource,nX=100,minSpeeds=NA,maxSpeeds=NA,maxWidth=NA,s2d=NA,margInt=FALSE,useLmer=TRUE){ 
   
   # #Debugging
   # ds <- datSource; nX <- 100
@@ -809,34 +814,44 @@ samplePredsSpeed <- function(a=NULL,ds=datSource,nX=100,minSpeeds=NA,maxSpeeds=N
   # ds <- ds %>% filter(useThese) #Completed models
   # # rm(ds,nX,useThese,minSpeeds,maxSpeeds,maxWidth,s2d,ds,allSmooths,speedDf)
 
-  require(tidyverse); require(mgcv)
+  require(tidyverse)
   source('helperFunctions.R')
   
   #Sample from posterior, get new lines for each field
   allSmooths <- mapply(FUN = getPredsSpeed,path=ds$modelPath2,minSpeed=minSpeeds,maxSpeed=maxSpeeds,
-                       width=maxWidth,speed2Distance=s2d,MoreArgs=list(l=30,margInt=FALSE,samp=TRUE),
+                       width=maxWidth,speed2Distance=s2d,MoreArgs=list(l=30,margInt=margInt,samp=TRUE),
                        SIMPLIFY=FALSE) %>% set_names(nm=ds$filename)
   
   #log(Speed) meta-models
   speedDf <- allSmooths %>% bind_rows(.id = 'field')
   
-  speedDf %>% filter(speed<15) %>% #Look at field-level estimates
-    pivot_longer(cols=mean:logSD) %>% 
-    ggplot(aes(x=speed,y=value,group=field))+geom_line(size=0.1)+
-    facet_wrap(~name,scales='free',ncol=1)
-  
-  m1 <- lm(mean~log(speed),data=speedDf) 
-  m2 <- lm(logSD~log(speed),data=speedDf)
-  
-  #Assemble predictions
-  speedPred <- data.frame(speed=exp(seq(log(min(speedDf$speed)),log(max(speedDf$speed)),length.out=nX))) %>% 
-    mutate(predMean=predict(m1,newdata=.),predLogSD=predict(m2,newdata=.))
-  
+  # speedDf %>% filter(speed<15) %>% #Plot of field-level estimates
+  #   pivot_longer(cols=mean:logSD) %>% 
+  #   ggplot(aes(x=speed,y=value,group=field))+geom_line(size=0.1)+
+  #   facet_wrap(~name,scales='free',ncol=1)
+  if(useLmer){
+    library(lme4)
+    m1 <- speedDf %>% mutate(mean=mean+rnorm(length(logSD),0,(max(mean)-min(mean))*0.01)) %>% 
+      lmer(mean~log(speed)+(log(speed)|field),data=.) 
+    m2 <- speedDf %>% mutate(logSD=logSD+rnorm(length(logSD),0,(max(logSD)-min(logSD))*0.01)) %>% 
+      lmer(logSD~log(speed)+(log(speed)|field),data=.)
+    
+    #Assemble predictions
+    speedPred <- data.frame(speed=exp(seq(log(min(speedDf$speed)),log(max(speedDf$speed)),length.out=nX))) %>% 
+      mutate(predMean=predict(m1,newdata=.,re.form=~0),predLogSD=predict(m2,newdata=.,re.form=~0))
+    
+  } else {
+    m1 <- lm(mean~log(speed),data=speedDf) 
+    m2 <- lm(logSD~log(speed),data=speedDf)
+    
+    #Assemble predictions
+    speedPred <- data.frame(speed=exp(seq(log(min(speedDf$speed)),log(max(speedDf$speed)),length.out=nX))) %>% 
+      mutate(predMean=predict(m1,newdata=.),predLogSD=predict(m2,newdata=.))
+  }
   rm(list=ls()[!ls() %in% 'speedPred']) #Remove everything except speedPred
   gc()
   return(speedPred) 
 }
-
 
 # library(parallel)
 # cluster <- makeCluster(15)
@@ -846,9 +861,8 @@ samplePredsSpeed <- function(a=NULL,ds=datSource,nX=100,minSpeeds=NA,maxSpeeds=N
 # stopCluster(cluster)
 # save(samp,file='./Data/postSamplesSpeed.Rdata')
 
-
 # Add to current samples - canola
-Nsamp <- 50 #Number of samples
+Nsamp <- 30 #Number of samples
 useThese <- with(datSource,use&modelComplete2&crop=='Canola')
 tempDat <- datSource %>% filter(useThese)
 minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
@@ -858,14 +872,25 @@ s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
 library(parallel)
 cluster <- makeCluster(15)
 clusterExport(cluster,c('getPredsSpeed'))
-samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d)
+samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
 stopCluster(cluster)
-load('./Data/postSamplesSpeed_canola.Rdata')
-samp <- c(samp,samp2)
+# load('./Data/postSamplesSpeed_canola.Rdata')
+# samp <- c(samp,samp2)
 save(samp,file='./Data/postSamplesSpeed_canola.Rdata')
+ 
+# #TEST - negative relationship b/w speed and mean/SD, but only shows up if margInt = FALSE. Think a bit about how to deal with this/
+# #Solution: use lmer to deal with this
+# useThese <- with(datSource,use&modelComplete2&crop=='Canola')
+# tempDat <- datSource %>% filter(useThese)
+# minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
+# maxSpeeds <- sapply(convertArea,function(x) x$maxSpeed)[useThese]
+# maxWidth <- sapply(convertArea,function(x) x$maxSwathWidth)[useThese]
+# s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
+# debugonce(samplePredsSpeed)
+# test <- samplePredsSpeed(1,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
 
 # Make samples - wheat
-Nsamp <- 50 #Number of samples
+Nsamp <- 30 #Number of samples
 useThese <- with(datSource,use&modelComplete2&crop=='Wheat')
 tempDat <- datSource %>% filter(useThese)
 minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
@@ -875,12 +900,13 @@ s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
 library(parallel)
 cluster <- makeCluster(15)
 clusterExport(cluster,c('getPredsSpeed'))
-samp2 <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d)
+samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
 stopCluster(cluster)
-load('./Data/postSamplesSpeed_wheat.Rdata')
-samp <- c(samp,samp2)
+# load('./Data/postSamplesSpeed_wheat.Rdata')
+# samp <- c(samp,samp2)
 save(samp,file='./Data/postSamplesSpeed_wheat.Rdata')
 rm(samp,samp2)
+
 
 #Make ground speed:yield plots
 croptype <- 'canola'
@@ -905,9 +931,24 @@ p2 <- samp %>% bind_rows(.id = 'sample') %>% group_by(speed) %>%
   geom_line(aes(y=med),size=1)+
   labs(x='Ground Speed (km/hr)',y='log SD yield')
 
-ggarrange(p1,p2,ncol=1)
+(p <- ggarrange(p1,p2,ncol=1))
+ggsave(paste0('./Figures/groundSpeed_',croptype,'.png'),p,height=8,width=4,dpi=350)  
 
 
 # 
 # #Function to map f(pArea) to f(speed|width,alpha); b0 = intercept, b1=slope of y~log(pArea), alpha=convert from distance to speed
 # function(b0,b1,width,alpha,speed) b0 + b1*log(width*alpha*speed)
+
+# Compare model types -----------------------------------------------------
+
+# Get model info
+mod0info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath0),getModelInfo)
+mod1info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath1),getModelInfo)
+mod2info <- lapply(gsub('modList.Rdata','results.txt',datSource$modelPath2),getModelInfo)
+
+datSource %>% mutate(reml0=sapply(mod0info,function(x) x$REML),
+                     reml1=sapply(mod1info,function(x) x$REML),
+                     reml2=sapply(mod2info,function(x) x$REML),
+                     diff1=reml0-reml1,diff2=reml0-reml2)
+
+load(datSource$modelPath0[1])

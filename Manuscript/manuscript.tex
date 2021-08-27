@@ -83,6 +83,20 @@
 
 % Pandoc header
 \makeatletter \def\ps@pprintTitle{  \let\@oddhead\@empty  \let\@evenhead\@empty  \def\@oddfoot{\centerline{\thepage}} \let\@evenfoot\@oddfoot} \makeatother \usepackage{float} \floatplacement{figure}{H} \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}} \usepackage{setspace} \linenumbers
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
 
 
 
@@ -165,8 +179,7 @@ Therefore, we filtered data that lay outside the 95th percentiles of yield withi
 Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time.
 
 Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC.
-Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g.~flooding during some years)
-Additionally, seminatural features often change yearly.
+Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g.~flooding during some years).
 Ephemeral wetlands are flooded during some years, but consist mainly of grasses during dry years, and grass boundaries can change if fields are used for as haying or pasture during crop rotation.
 This makes accurate and consistent classification of field boundaries difficult.
 We defined the following general categories for field boundaries:
@@ -235,7 +248,8 @@ The number of basis dimensions was checked with the \emph{gam.check} function fr
 The relationship between polygon size (i.e.~ground speed) and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions.
 All models were fit in \emph{R} using the \emph{mgcv} library (version 1.8.36, Wood 2017), and figures were created with \emph{ggplot2} and \emph{ggpubr} (versions 3.3.3, Wickham 2016; and 0.4.0, Kassambara 2020).
 
-Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation
+Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation.
+\emph{Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e.~we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points).}
 
 To consider results from all field-level models together, we fit models independent of each other and fit an ``overall'' smoother as averages of the field-level smoothers.
 However, this does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping of hierarchical mixed effects models:
@@ -243,23 +257,59 @@ However, this does not account for uncertainty in the field-level smoothers, so 
 2. Use posterior sample to create a new smoother from each field
 3. Fit new model of new smoothers from all fields, and save this ``meta-smoother''
 4. Repeat 1000 times, and calculate coverage intervals (5-95\% percentiles) on saved meta-smoothers
-This gives coverage intervals (CIs) for the ``average'' smoother while accounting for field-level variability.
+This gives coverage intervals (CIs) for the ``average'' smoother while accounting for field-level variability, and is conceptually similar to a meta-analysis.
 
 \hypertarget{results}{%
 \section{Results}\label{results}}
 
+\hypertarget{field-boundaries}{%
+\subsection{Field boundaries}\label{field-boundaries}}
+
+``Standard'' (grassy border) was the most common boundary type, followed by ``Shelterbelt'' and ``Other Crop'' (Table \ref{tab:boundaryTypes}).
+
+\begin{table}
+
+\caption{\label{tab:boundaryTypes}Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.}
+\centering
+\begin{tabular}[t]{l|r|r|r}
+\hline
+Type & Mean & SD & Number of Fields\\
+\hline
+Bare & 0.0419 & 0.0618 & 126\\
+\hline
+Grassland & 0.0506 & 0.1254 & 84\\
+\hline
+Other Crop & 0.1515 & 0.2187 & 143\\
+\hline
+Shelterbelt & 0.3180 & 0.2236 & 274\\
+\hline
+Standard & 0.3870 & 0.2041 & 283\\
+\hline
+Wetland & 0.0509 & 0.0836 & 120\\
+\hline
+\end{tabular}
+\end{table}
+
 \hypertarget{canola}{%
 \subsection{Canola}\label{canola}}
 
+Average canola yield tended to increase with distance from Standard and Other Crop boundaries, leveling off at about 25 m (Figure \ref{fig:canolaPlot} top row, Other crop and Standard panels); yield was approximately 0.1 T/ha (1.5 bu/ac) lower at the edge for both of these boundary types.
+Interestingly, Shelterbelts were well-represented in the data (Table \ref{tab:boundaryTypes}) but the negative edge effect was not strong (Figure \ref{fig:canolaPlot} top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
+Other boundary types were less common in the data and had correspondingly weaker effects on mean yield, but all showed a small negative edge effect.
+
+Yield variability (SD of yield) also varied with distance from the edge of the field, but this
+
 \begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_canola} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:unnamed-chunk-1}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_canola} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:canolaPlot}
 \end{figure}
 
 \hypertarget{wheat}{%
 \subsection{Wheat}\label{wheat}}
 
+Average wheat yield (Figure \ref{fig:wheatPlot}
+
 \begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:unnamed-chunk-2}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:wheatPlot}
 \end{figure}
 
 \hypertarget{discussion}{%
@@ -267,14 +317,17 @@ This gives coverage intervals (CIs) for the ``average'' smoother while accountin
 
 Discussion here
 
-\hypertarget{authors-contributions}{%
-\section{Authors' contributions}\label{authors-contributions}}
+\hypertarget{author-contributions}{%
+\section{Author Contributions}\label{author-contributions}}
 
-Author's contribution
+SVJR and PG conceived of the project.
+SVJR collected data, conducted analysis, and wrote the manuscript.
 
 \hypertarget{acknowledgements}{%
 \section{Acknowledgements}\label{acknowledgements}}
 
+We thank Trent Clark, Dean Hubbard, Alvin French, and Kristina Polziehn for providing yield data for us, and providing insight on their yield data.
+We also thank Autumn Barnes and Keith Gabert of the Canola Council of Canada, and Laurel Thompson and JP Pettyjohn of Lakeland College for connecting us with farmers and agronomists.
 Funding for this research was provided by Ducks Unlimited Canada's Institute for Wetland and Waterfowl Research, the Alberta Canola Producers Commission, Manitoba Canola Growers Association, SaskCanola, the Alberta Biodiversity Monitoring Institute, and the Alberta Conservation Association.
 
 \hypertarget{references}{%
@@ -321,7 +374,13 @@ Wood, S.N. (2017). \emph{Generalized additive models: An introduction with {R}}.
 \section*{Appendix A: Supplementary Material}\label{appendix-a-supplementary-material}}
 \addcontentsline{toc}{section}{Appendix A: Supplementary Material}
 
-Supplemental materials here
+\begin{figure}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3b_canola} \caption{Effect of polygon area and harvest sequence on canola yield. Polygon area is equivalent to ground }\label{fig:unnamed-chunk-2}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3b_wheat} \caption{Temp}\label{fig:unnamed-chunk-3}
+\end{figure}
 
 
 \end{document}

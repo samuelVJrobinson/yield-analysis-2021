@@ -17,13 +17,13 @@ address:
 footnote:
   - code: 1
     text: "Corresponding Author"
-date: "Spring 2021"
+date: "Fall 2021"
 abstract: "`r paste(readLines('abstract.Rmd'), collapse = ' ')`"
 keep_tex: true
 keywords:
-  - beetles;
-  - spiders;
-  - harvestmen;
+  - precision yield;
+  - spillover;
+  - landscape;
   
 bibliography: yieldRefs.bib
 geometry: "left=3cm,right=3cm,top=3cm,bottom=3cm"
@@ -46,10 +46,47 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(knitr)
+library(kableExtra)
 
 datSource <- read.csv('../Data/datSource.csv') #Get data source
 datSourceFinal <- datSource %>% filter(use) %>% filter(grepl('Wheat|Canola',crop))
 yearsPerField <- datSourceFinal %>% count(field) %>% pull(n) #How many years of data at each unique location?
+
+#Boundary lengths
+bLengths <- read.csv('../Data/boundaryLengths.csv')
+bNames <- c('Bare','Grassland','Other Crop','Shelterbelt','Standard','Wetland')
+
+bLengthSummary <- bLengths %>% select(filename,contains('prop_')) %>% pivot_longer(contains('prop_')) %>% 
+  mutate(name=gsub('prop_','',name)) %>% na.omit() %>% 
+  group_by(name) %>% summarize(mean=mean(value),sd=sd(value),Nfields=sum(value>0)) %>% 
+  mutate(name=bNames)
+
+#Model smoother summaries
+use <- with(datSource,use&modelComplete2&crop=='Canola')
+paths <- paste0('.',gsub('modList.Rdata','results.txt',datSource$modelPath2))
+
+canolaMods <- lapply(paths[use],function(x) getModelInfo(x)$smooths) %>% 
+  set_names(nm=datSource$filename[use]) %>% 
+  bind_rows(.id='field') %>% 
+  mutate(pval=as.numeric(pval)) %>% 
+  group_by(Smoother) %>% 
+  summarize(meanP=mean(pval),maxP=max(pval),propSig=sum(pval<0.05)/n(),meanEDF=mean(edf),meanRef=mean(Ref.df))
+
+use <- with(datSource,use&modelComplete2&crop=='Wheat')
+wheatMods <- lapply(paths[use],function(x) getModelInfo(x)$smooths) %>% 
+  set_names(nm=datSource$filename[use]) %>% 
+  bind_rows(.id='field') %>% 
+  mutate(pval=as.numeric(pval)) %>% 
+  group_by(Smoother) %>% 
+  summarize(meanP=mean(pval),maxP=max(pval),propSig=sum(pval<0.05)/n(),meanEDF=mean(edf),meanRef=mean(Ref.df))
+rm(use,paths)
+
+# #Average model parameters (mean/sd slopes with pArea)
+# lapply(paths[use],function(x) getModelInfo(x)$params) %>% 
+#   set_names(nm=datSource$filename[use]) %>% 
+#   bind_rows(.id='field') %>% group_by(Parameter) %>% 
+#   summarize(meanEst=mean(Estimate),Z=mean(Estimate/SE))
+
 
 ```
 
@@ -115,8 +152,7 @@ Therefore, we filtered data that lay outside the 95th percentiles of yield withi
 Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time.
 
 Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC. 
-Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g. flooding during some years)
-Additionally, seminatural features often change yearly. 
+Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g. flooding during some years).
 Ephemeral wetlands are flooded during some years, but consist mainly of grasses during dry years, and grass boundaries can change if fields are used for as haying or pasture during crop rotation.
 This makes accurate and consistent classification of field boundaries difficult.
 We defined the following general categories for field boundaries:
@@ -161,15 +197,17 @@ To model this, we fit the following model to each field-year of data:
   4. Sequence = order of harvest within field (1--N points)
   5. f(x,b) = penalized thin-plate regression spline, where _x_ is the predictor and _b_ is the number of basis dimensions
   
-In addition to modeling edge effects (our variable of interest), this model also accounts for a) differences in combine speed, b) within-field spatial variation not related to edges, and d) shifts in combine accuracy during harvest.
+In addition to modeling edge effects (our variable of interest), this model also accounts for a) differences in harvested area, b) within-field spatial variation not related to edges, and d) shifts in combine accuracy during harvest.
 Spatial or temporal variation can be modelled using a Gaussian Process Model (e.g. Kriging, SPDE Approximations) but this was computationally unfeasible with 50,000 data points per field.
 Penalized splines offer a compromise, as they account for nonlinear ``wiggly" relationships in the same way as Gaussian processes but using a reduced number of dimensions and computation time.
 The number of basis dimensions was checked with the _gam.check_ function from _mgcv_.
-The relationship between polygon size (i.e. ground speed) and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions.
+The relationship between polygon size and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions.
+Because polygon size is not intuitive, we converted it into ground speed by regressing speed on distance traveled per polygon, then using this to back-calculate the ground speed for a given polygon size (given a fixed width of header). 
 All models were fit in _R_ using the _mgcv_ library [version `r packageVersion('mgcv')`, @wood2017], and figures were created with _ggplot2_ and _ggpubr_ [versions `r packageVersion('ggplot2')`, @wickham2016; and `r packageVersion('ggpubr')`, @kassambara2020].
   
-Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation
-   <!-- - This is extremely common in precision yield data, but  -->
+Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation.
+_Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e. we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points)._
+<!-- - This is extremely common in precision yield data, but  -->
 
 To consider results from all field-level models together, we fit models independent of each other and fit an "overall" smoother as averages of the field-level smoothers.
 However, this does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping of hierarchical mixed effects models:
@@ -177,19 +215,44 @@ However, this does not account for uncertainty in the field-level smoothers, so 
   2. Use posterior sample to create a new smoother from each field
   3. Fit new model of new smoothers from all fields, and save this "meta-smoother"
   4. Repeat 1000 times, and calculate coverage intervals (5-95% percentiles) on saved meta-smoothers
-This gives coverage intervals (CIs) for the "average" smoother while accounting for field-level variability.
+This gives coverage intervals (CIs) for the "average" smoother while accounting for field-level variability, and is conceptually similar to a meta-analysis.
+Spatial variability was not averaged between fields because differences in field geometry make it impossible to compare fields.
 
 # Results
 
+## Field boundaries 
+
+"Standard" (grassy border) was the most common boundary type, followed by "Shelterbelt" and "Other Crop" (Table \@ref(tab:boundaryTypes)).
+
+```{r boundaryTypes, echo=FALSE, out.width='100%'}  
+bLengthSummary %>% 
+  kable(.,format='latex',caption='Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.',col.names = c('Type','Mean','SD','Number of Fields'),digits = c(1,4,4,1),escape = FALSE)
+```
+
 ## Canola
 
-```{r , echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
+There was a strong negative effect combine ground speed on both the average and variability of canola yield.
+At the field level, both yield average and yield variability (SD of yield) of yield were extremely spatially (average p-values: `r canolaMods$meanP[canolaMods$Smoother=='s(E,N)']`, `r canolaMods$meanP[canolaMods$Smoother=='s.1(E,N)']`) and temporally dependent (`r canolaMods$meanP[canolaMods$Smoother=='s(r)']`, `r canolaMods$meanP[canolaMods$Smoother=='s.1(r)']`), meaning that average and variablity changed with location in the field, as well as sequentially during the harvest.
+However, there was no difference in average or variability with harvest sequence when all fields were considered, meaning that combines did not appear to distort yield data from start to finish in any systematic way.
+
+Average canola yield tended to increase with distance from Standard and Other Crop boundaries, leveling off at about 25 m (Figure \@ref(fig:canolaPlot) top row, Other crop and Standard panels); yield was approximately 0.1 T/ha (1.5 bu/ac) lower at the edge for both of these boundary types.
+Interestingly, Shelterbelts were well-represented in the data (Table \@ref(tab:boundaryTypes)) but the negative edge effect was not strong (Figure \@ref(fig:canolaPlot) top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
+Other boundary types were less common in the data and had correspondingly weaker effects on mean yield, but all showed a small negative edge effect.
+Yield variability tended to decrease with distance from the edge of the field, indicating that edge effects contribute to yield "patchiness" as well as averages.
+At Standard, Bare, and Wetland field boundaries, variability decreased until about 100 m, after which variablity was constant, while the pattern was less consistent in Grassland, Other Crop, and Shelterbelt. 
+
+```{r canolaPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
   include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
 ```
 
 ## Wheat 
 
-```{r , echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
+Similar to canola, there was a strong negative effect of ground speed on both yield and variability of wheat yield.
+
+
+Average wheat yield (Figure \@ref(fig:wheatPlot)
+
+```{r wheatPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
   include_graphics('../Figures/ModelSummary3a_wheat.png',dpi=NA)
 ```
 
