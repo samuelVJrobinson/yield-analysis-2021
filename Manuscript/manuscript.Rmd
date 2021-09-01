@@ -48,8 +48,12 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 
-datSource <- read.csv('../Data/datSource.csv') #Get data source
-datSourceFinal <- datSource %>% filter(use) %>% filter(grepl('Wheat|Canola',crop))
+source('../helperFunctions.R')
+
+datSource <- read.csv('../Data/datSource.csv') %>% #Get data source
+    mutate(modelComplete2=file.exists(paste0('.',modelPath2)))  #Has model2 already been run?
+
+datSourceFinal <- datSource %>% filter(use) %>% filter(grepl('Wheat|Canola',crop)) 
 yearsPerField <- datSourceFinal %>% count(field) %>% pull(n) #How many years of data at each unique location?
 
 #Boundary lengths
@@ -220,7 +224,23 @@ Spatial variability was not averaged between fields because differences in field
 
 # Results
 
-## Field boundaries 
+## Field-level exanoke
+
+The filtered data from each field still contained a large amount of variation, but the non-stationary additive models were able to reveal underlying yield patterns.
+Figure \@ref(fig:examplePlot1)b shows the results from a single field to illustrate this, where areas of higher yield are clearly visible within the field.
+Additionally, Figure \@ref(fig:examplePlot1)c shows that yield "patchiness" (standard deviation, SD) also varies within fields, with areas of higher and lower patchiness also clearly visible within fields.
+
+
+
+
+```{r examplePlot1, echo=FALSE, fig.cap='Example output from a single field.', out.width='100%'}  
+  include_graphics('../Figures/ExamplePlots/Trent_Clark JOHNSON 2014.png',dpi=NA)
+```
+```{r examplePlot1, echo=FALSE, fig.cap='Distance smoothers from a single field.', out.width='100%'}  
+  include_graphics('../Figures/ExamplePlots/Trent_Clark JOHNSON 2014 Summary.png',dpi=NA)
+```
+
+## All canola fields
 
 "Standard" (grassy border) was the most common boundary type, followed by "Shelterbelt" and "Other Crop" (Table \@ref(tab:boundaryTypes)).
 
@@ -229,10 +249,8 @@ bLengthSummary %>%
   kable(.,format='latex',caption='Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.',col.names = c('Type','Mean','SD','Number of Fields'),digits = c(1,4,4,1),escape = FALSE)
 ```
 
-## Canola
-
 There was a strong negative effect combine ground speed on both the average and variability of canola yield.
-At the field level, both yield average and yield variability (SD of yield) of yield were extremely spatially (average p-values: `r canolaMods$meanP[canolaMods$Smoother=='s(E,N)']`, `r canolaMods$meanP[canolaMods$Smoother=='s.1(E,N)']`) and temporally dependent (`r canolaMods$meanP[canolaMods$Smoother=='s(r)']`, `r canolaMods$meanP[canolaMods$Smoother=='s.1(r)']`), meaning that average and variablity changed with location in the field, as well as sequentially during the harvest.
+At the field level, both yield average and yield variability (SD of yield) of yield were extremely spatially (average p-values: `r with(canolaMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(canolaMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`) and temporally dependent (`r with(canolaMods,formatC(meanP[Smoother=='s(r)'],3))`, `r with(canolaMods,formatC(meanP[Smoother=='s.1(r)'],3))`), meaning that average and variability changed with location in the field, as well as sequentially during the harvest.
 However, there was no difference in average or variability with harvest sequence when all fields were considered, meaning that combines did not appear to distort yield data from start to finish in any systematic way.
 
 Average canola yield tended to increase with distance from Standard and Other Crop boundaries, leveling off at about 25 m (Figure \@ref(fig:canolaPlot) top row, Other crop and Standard panels); yield was approximately 0.1 T/ha (1.5 bu/ac) lower at the edge for both of these boundary types.
@@ -245,7 +263,7 @@ At Standard, Bare, and Wetland field boundaries, variability decreased until abo
   include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
 ```
 
-## Wheat 
+## All wheat fields
 
 Similar to canola, there was a strong negative effect of ground speed on both yield and variability of wheat yield.
 

@@ -115,7 +115,7 @@ convertYield <- function(x,inUnits=NULL,outUnits=NULL){
 #postSamp = sample posterior?
 #noIntercept = set intercept to 0?
 #returnDF = return DF? Otherwise returns vector of predictions
-getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE){
+getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE,returnSE=FALSE){
   
   # #Debugging
   # smoothLabel <- 's(dist)'
@@ -123,11 +123,14 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
   # noIntercept <- TRUE
   # xvals <- seq(predRange[1],predRange[2],length.out=lengthOut) #x-values to use for smoother predictions
   
+  require(mgcv)
+  
   smoothLabs <- sapply(modList$smooth,function(x) x$label) #Labels for smoothers
   meanSmoothList <- modList$smooth[[which(smoothLabs==smoothLabel)]] #Get smoother info
   
   #Get locations of coefficients
-  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[1],meanSmoothList$first.para:meanSmoothList$last.para)
+  whichIntercept <- ifelse(grepl('s.1',smoothLabel),2,1) #Is intercept for mean or logSD?
+  meanVars <- c(which(grepl('Intercept',names(modList$coefs)))[whichIntercept],meanSmoothList$first.para:meanSmoothList$last.para)
   
   if(postSamp){ #Sample from posterior
     meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
@@ -138,7 +141,11 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
   #Marginalize across intercept (set intercept coef to 0)
   if(noIntercept) meanCoefs[1] <- 0
   
-  predDF <- data.frame(x=xvals) #Dataframe for holding predictions
+  if('matrix' %in% class(xvals)){ #If xvals is a matrix (2D smooth)
+    predDF <- data.frame(x=xvals[,1],y=xvals[,2]) #Dataframe for holding predictions
+  } else { #If not (1D smooth)
+    predDF <- data.frame(x=xvals) #Dataframe for holding predictions
+  }
   names(predDF) <- meanSmoothList$term #Name of terms
   
   if(meanSmoothList$by!='NA'){ #If using a by variable
@@ -146,8 +153,15 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
     names(predDF)[2] <- meanSmoothList$by
   }
   
-  #Get predictions (coef %*% model matrix)
-  predDF$pred <- cbind(rep(1,length(xvals)),PredictMat(meanSmoothList,data=predDF)) %*% meanCoefs
+  #Model matrix
+  predMat <- PredictMat(meanSmoothList,data=predDF) #Basis function columns
+  predMat <- cbind(rep(1,nrow(predMat)),predMat) #Intercept column
+  
+  predDF$pred <-  predMat %*% meanCoefs  #Get predictions (coef %*% model matrix)
+  
+  if(returnSE){ #Gets SE of prediction at each xval - from plot.gam code
+    predDF$se <- sqrt(pmax(0,rowSums(predMat %*% modList$vcv[meanVars,meanVars] * predMat)))
+  }
   
   return(predDF)
 } 
