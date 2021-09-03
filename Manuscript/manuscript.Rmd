@@ -47,6 +47,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
+theme_set(theme_bw())
 
 source('../helperFunctions.R')
 
@@ -60,9 +61,9 @@ yearsPerField <- datSourceFinal %>% count(field) %>% pull(n) #How many years of 
 bLengths <- read.csv('../Data/boundaryLengths.csv')
 bNames <- c('Bare','Grassland','Other Crop','Shelterbelt','Standard','Wetland')
 
-bLengthSummary <- bLengths %>% select(filename,contains('prop_')) %>% pivot_longer(contains('prop_')) %>% 
-  mutate(name=gsub('prop_','',name)) %>% na.omit() %>% 
-  group_by(name) %>% summarize(mean=mean(value),sd=sd(value),Nfields=sum(value>0)) %>% 
+bLengthSummary <- bLengths %>% select(filename,contains('prop_')) %>% pivot_longer(contains('prop_')) %>%
+  mutate(name=gsub('prop_','',name)) %>% na.omit() %>%
+  group_by(name) %>% summarize(mean=mean(value),sd=sd(value),Nfields=sum(value>0)) %>%
   mutate(name=bNames)
 
 #Model smoother summaries
@@ -112,16 +113,19 @@ Unfortunately, most of the research is concentrated in Europe, and they tend to 
 In particular, North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
   
 <!-- - SNL has conflicting effects on crop yield because of ecosystem service provision as well as negative edge effects -->
-SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate
-Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds
-At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (@kowalchuk1995)
-For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance
-Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (e.g. @vanVooren2017)
-This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
- 
+SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate.
+Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds.
+At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (@kowalchuk1995).
+For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance.
+Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (e.g. @vanVooren2017).
+This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services.
 <!-- - Less-considered are ecosystem ``disservices", where weeds and pests  -->
-
 <!-- - In North America, there are financial incentives to make fields large, homogeneous, and with simple geometry -->
+
+```{r rawData, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. In both figures, negative environmental effects (edge effects) are shown in red, and decrease with distance from the edge of the crop, creating an increase in yield with distance. The left figure shows a decline in ecosystem services with distance, leading to an intermediate peak in yield, while the right figure shows an increase in services with distance, leading to a peak at the centre of the field (note: this also occurs if ecosystem services do not depend on distance).', out.width='75%'}  
+  include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
+```
+
     
 Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (but see wheat study)
 Meta-analyses have been the standard solution to this problem, but precision yield data holds enormous promise.
@@ -211,6 +215,7 @@ All models were fit in _R_ using the _mgcv_ library [version `r packageVersion('
   
 Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation.
 _Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e. we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points)._
+
 <!-- - This is extremely common in precision yield data, but  -->
 
 To consider results from all field-level models together, we fit models independent of each other and fit an "overall" smoother as averages of the field-level smoothers.
@@ -224,51 +229,67 @@ Spatial variability was not averaged between fields because differences in field
 
 # Results
 
-## Field-level exanoke
+## Field-level example
 
 The filtered data from each field still contained a large amount of variation, but the non-stationary additive models were able to reveal underlying yield patterns.
-Figure \@ref(fig:examplePlot1)b shows the results from a single field to illustrate this, where areas of higher yield are clearly visible within the field.
-Additionally, Figure \@ref(fig:examplePlot1)c shows that yield "patchiness" (standard deviation, SD) also varies within fields, with areas of higher and lower patchiness also clearly visible within fields.
+To illustrate this, we show the results from a single wheat field, where we show the relative impact of ground speed, harvest sequence, boundary distance, and spatial variation on both yield mean and yield SD ("patchiness").
+Figure \@ref(fig:rawData) shows the raw data collected from a single field, demonstrating a large amount of variation even among the filtered data.
+Combine ground speed had a large effect on both yield mean and SD, and there was also a strong effect of harvest sequence on yield mean and SD (Figure \@ref(fig:orderSmooths).
+Yield mean and SD tended to decrease with distance from field boundaries, but there were no consistent differences between boundary types (Figure \@ref(fig:distSmooths).
+Finally, the random spatial smoothers in Figure \@ref(fig:spatialSmooths) show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions (Figure \@ref(fig:spatialSmooths).
 
 
-
-
-```{r examplePlot1, echo=FALSE, fig.cap='Example output from a single field.', out.width='100%'}  
-  include_graphics('../Figures/ExamplePlots/Trent_Clark JOHNSON 2014.png',dpi=NA)
-```
-```{r examplePlot1, echo=FALSE, fig.cap='Distance smoothers from a single field.', out.width='100%'}  
-  include_graphics('../Figures/ExamplePlots/Trent_Clark JOHNSON 2014 Summary.png',dpi=NA)
+```{r rawData, echo=FALSE, fig.cap='Example output from a single field.', out.width='75%'}  
+  include_graphics('../Figures/ExamplePlots/rawData.png',dpi=NA)
 ```
 
-## All canola fields
+```{r orderSmooths, echo=FALSE, fig.cap='Ground speed and harvest sequence (random temporal variation) smoothers from a single field.', out.width='100%'}  
+  include_graphics('../Figures/ExamplePlots/orderSmooths.png',dpi=NA)
+```
 
-"Standard" (grassy border) was the most common boundary type, followed by "Shelterbelt" and "Other Crop" (Table \@ref(tab:boundaryTypes)).
+```{r distSmooths, echo=FALSE, fig.cap='Distance smoothers from a single field.', out.width='100%'}  
+  include_graphics('../Figures/ExamplePlots/distSmooths.png',dpi=NA)
+```
 
-```{r boundaryTypes, echo=FALSE, out.width='100%'}  
-bLengthSummary %>% 
+```{r spatialSmooths, echo=FALSE, fig.cap='Spatial (random spatial variation) smoothers from a single field.', out.width='100%'}  
+  include_graphics('../Figures/ExamplePlots/spatialSmooths.png',dpi=NA)
+```
+
+## Overall results
+
+Across all fields, Standard (grassy border) field boundaries were the most common boundary type, followed by Shelterbelts and Other Crops.
+<!-- Not sure if we should talk about this. Not very many fields from southern regions, so it's hard to compare. Perhaps mention in Discussion -->
+
+```{r boundaryTypeTable, echo=FALSE, fig.cap='Percentage of field boundaries across sampled fields.', out.width='100%'}
+bLengthSummary %>% #Table version
   kable(.,format='latex',caption='Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.',col.names = c('Type','Mean','SD','Number of Fields'),digits = c(1,4,4,1),escape = FALSE)
+
 ```
 
-There was a strong negative effect combine ground speed on both the average and variability of canola yield.
+
+### Canola fields
+
+Overall, there was a strong negative effect of combine ground speed on both the average and variability of canola yield.
 At the field level, both yield average and yield variability (SD of yield) of yield were extremely spatially (average p-values: `r with(canolaMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(canolaMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`) and temporally dependent (`r with(canolaMods,formatC(meanP[Smoother=='s(r)'],3))`, `r with(canolaMods,formatC(meanP[Smoother=='s.1(r)'],3))`), meaning that average and variability changed with location in the field, as well as sequentially during the harvest.
 However, there was no difference in average or variability with harvest sequence when all fields were considered, meaning that combines did not appear to distort yield data from start to finish in any systematic way.
 
 Average canola yield tended to increase with distance from Standard and Other Crop boundaries, leveling off at about 25 m (Figure \@ref(fig:canolaPlot) top row, Other crop and Standard panels); yield was approximately 0.1 T/ha (1.5 bu/ac) lower at the edge for both of these boundary types.
-Interestingly, Shelterbelts were well-represented in the data (Table \@ref(tab:boundaryTypes)) but the negative edge effect was not strong (Figure \@ref(fig:canolaPlot) top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
+Interestingly, Shelterbelts were well-represented in the data (Table \@ref(tab:boundaryTypeTable)) but the negative edge effect was not strong (Figure \@ref(fig:canolaPlot) top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
 Other boundary types were less common in the data and had correspondingly weaker effects on mean yield, but all showed a small negative edge effect.
 Yield variability tended to decrease with distance from the edge of the field, indicating that edge effects contribute to yield "patchiness" as well as averages.
-At Standard, Bare, and Wetland field boundaries, variability decreased until about 100 m, after which variablity was constant, while the pattern was less consistent in Grassland, Other Crop, and Shelterbelt. 
+At Standard, Bare, and Wetland field boundaries, variability decreased until about 100 m, after which variability was constant, while the pattern was less consistent in Grassland, Other Crop, and Shelterbelt. 
 
 ```{r canolaPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
   include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
 ```
 
-## All wheat fields
+### Wheat fields
 
-Similar to canola, there was a strong negative effect of ground speed on both yield and variability of wheat yield.
+Similar to canola, there was a strong negative effect of ground speed on both yield and variability of wheat yield (Figure \@ref(fig:wheatPlotSpeed), left panels).
+At the field level, both yield average and yield variability (SD of yield) of yield were spatially (average p-values: `r with(wheatMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(wheatMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`) and temporally dependent (`r with(wheatMods,formatC(meanP[Smoother=='s(r)'],3))`, `r with(wheatMods,formatC(meanP[Smoother=='s.1(r)'],3))`), but harvest sequence did not distort the average or SD of wheat yield in a systematic way (Figure \@ref(fig:wheatPlotSpeed), right panel).
 
-
-Average wheat yield (Figure \@ref(fig:wheatPlot)
+Average wheat yield increased slightly with distance from the field boundary, but this was much more variable than the patterns seen in canola yield (Figure \@ref(fig:wheatPlot)).
+There was also a slight increase in variability away from the field boundary, at least for Standard and Other Crop boundaries, but this was inconsistent among other boundary types. 
 
 ```{r wheatPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").', out.width='100%'}  
   include_graphics('../Figures/ModelSummary3a_wheat.png',dpi=NA)
@@ -276,7 +297,9 @@ Average wheat yield (Figure \@ref(fig:wheatPlot)
 
 # Discussion
 
-Discussion here
+- Summary:
+  - At the level of individual fields, there was substantial variation in yield with distance from the field boundary, as well as with harvest sequence and spatially within each field
+  - Overall, however, the effect of field boundary on yield was inconsistent and the change in mean yield tended to be small ($\sim$0.5 T/ha for canola)
 
 # Author Contributions
 

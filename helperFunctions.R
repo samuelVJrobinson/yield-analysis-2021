@@ -494,6 +494,7 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   # nSubSamp <- 50000
   # useClosest <- TRUE
   # kPar <- c(12,60,60,12,60,60)
+  # filterData <- TRUE
   
   if(dS$modelComplete2[i]) return('Already completed')
   if(!dS$use[i]) return('Not used')

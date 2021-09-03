@@ -53,22 +53,27 @@ curve(leq(x,2,-0.1),0,100,ylim=c(0,1)) #Insects
 curve(leq(x,1,exp(-2))*leq(x,1,-0.1),0,100,ylim=c(0,1)) #Both
 curve(leq2(x,1,exp(-2),1,-0.1),0,100,ylim=c(0,1)) #Both
 
-par(mfrow=c(2,1))
+
+png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
+
+par(mfrow=c(1,2))
 #Scenario 1 - beneficial bugs decrease with distance into field
 a1 <- -2; b1 <- 0.2; a2 <- 3; b2 <- -0.03
 curve(leq2(x,a1,b1,a2,b2),0,100,ylim=c(0,1),
-      lwd=4,ylab='Yield',xlab='Distance from Edge',main='Scenario 1: bugs - with dist')
+      lwd=4,ylab='Yield',xlab='Distance from Edge')#,main='Scenario 1: bugs - with dist')
 curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
 curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
-text(5,0.9,'Bugs',col='blue'); text(80,0.9,'Environment',col='red'); text(80,0.6,'Yield')
+text(5,0.85,'Ecosystem\nservices',col='blue'); text(80,0.9,'Environment',col='red'); text(80,0.6,'Yield')
 
 #Scenario 2 - beneficial bugs increase with distance into field (or pest insects at edge)
 a2 <- 0; b2 <- 0.03
 curve(leq2(x,a1,b1,a2,b2),0,100,ylim=c(0,1),
-      lwd=4,ylab='Yield',xlab='Distance from Edge',main='Scenario 2: bugs + with dist')
+      lwd=4,ylab='Yield',xlab='Distance from Edge')#,main='Scenario 2: bugs + with dist')
 curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
 curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
 par(mfrow=c(1,1))
+
+dev.off()
 
 #Simulate data using logit-normal distribution --------------
 
