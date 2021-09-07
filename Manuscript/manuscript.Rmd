@@ -106,9 +106,9 @@ However, this is not without cost, as higher-diversity non-crops are converted t
 Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios
 Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems
 
-SNL in and around crops is important for both agricultural production and conservation
-They are habitat for mobile organisms, and can therefore act as sources of ecosystem services such as pollination or pest control (@albrecht2020; @gardner2021)
-They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed (@kort1988)
+SNL in and around crops is important for both agricultural production and conservation, as it has the potential to create better biotic and abiotic conditions (Case 2019, https://doi.org/10.1101/624635, Weninger 2021 https://doi.org/10.1088/1748-9326/ac1d0d)
+They are habitat for mobile organisms, and can act as sources of ecosystem services such as pollination or pest control (@albrecht2020; @gardner2021), but this can vary depending on the system (e.g. Quinn et al 2017, https://doi.org/10.1093/jee/tow306)
+They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed (@kort1988, Brandle et al 2004 https://doi.org/10.1007/978-94-017-2424-1_5)
 Unfortunately, most of the research is concentrated in Europe, and they tend to be less-studied on other continents
 In particular, North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
   
@@ -127,8 +127,8 @@ This suggests a ``goldilocks" field size, where negative edge effects are cancel
 ```
 
     
-Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (but see wheat study)
-Meta-analyses have been the standard solution to this problem, but precision yield data holds enormous promise.
+Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (Baker et al 2018, https://doi.org/10.1071/CP17242) (but see also wheat study)
+Meta-analyses have been the standard solution to this problem (e.g. @albrecht2020), but precision yield data holds enormous promise.
 However, its use is limited for several reasons: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) unfamiliarity with spatial statistics.
 Ecosystem services can influence both the mean and variability of yield in agroecosystems (@redhead2020).
 Typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable.
@@ -301,19 +301,46 @@ At the level of individual fields, both average and SD of yield varied with dist
 Both metrics also varied with ground speed and harvest sequence, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
 However, the overall effect of field boundary on yield was inconsistent and the change tended to be small.
 For example, average canola yield was $\sim$0.5 T/ha lower close to Standard field edges, and yield SD was $\sim$0.3 T/ha SD higher.
+So, why did we find few consistent effects of boundary type on canola and wheat yield?
+We consider a few potential reasons for this below:
+1. Landscape influence
+2. Boundary variables
+3. Ecosystem disservices
+4. Yearly/location variation
+5. Lack of pest pressure/pollination deficit
 
+Our analysis only examined boundary types, without considering the landscape context that fields were embedded in
+   - Some studies show the influence of landscape composition at larger spatial scales (e.g. Lan's paper) which could be particularly important when beneficial arthropods are highly mobile (e.g. bumblebee foraging) or disperse very broadly (Lynx spider paper from Sweden)
+   - There could also be interactions between landscape composition at different scales (e.g. our paper in AGEE), but this is not well-studied
+   - Landscape complexity (Fahrig et al 2010,  https://doi.org/10.1111/j.1461-0248.2010.01559.x) and connectivity are also associated with higher abundance of beneficial arthropods (Paul's new paper + others)
+   - This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat (but see Redhead 2020(?) ie. SLOSS problem)
 
-- Why no consistent effect for other boundary types? 
-  - Our analysis only looks at boundary types, without considering larger landscape context (e.g. Lan's paper)
-  - Boundary type itself is not well defined, so perhaps other metrics would be more helpful (height of veg, width of shelterbelt - I think this is important for hedgerows)
-  - Ecosystem disservices (e.g. weeds, pest insects) could also be coming from field boundaries, which may negate any effect of ecosystem services; this is still poorly studied (but see Woodcock 2015)
+Our definitions of boundary type were necessarily loose, as we used satellite imagery to manually classify them
+  - However, it may be that other boundary traits, such as size or plant species composition, are more important for spillover of ecosystems services into fields
+  - For example, larger hedgerows tend to support more biodiversity than smaller hedgerows (Lecq et al 2018, https://doi.org/10.1016/j.ufug.2018.08.002, Stasiov 2020 https://doi.org/10.1016/j.baae.2020.05.001) or more biodiverse (Bonifacio et al 2011 https://doi.org/10.1071/PC110022)
+  - Boughey et al 2011 (https://doi.org/10.1016/j.biocon.2011.02.017) showed that trees within hedgerows are important for bat diversity
+  - Increased litter cover and soil compaction increased pollen beetle predators (Sutter et al 2018 https://doi.org/10.1016/j.agee.2018.06.030)
+
+The net flow of ecosystem services may not be positive, if beneficial organisms do not disperse from the SNL, or if pests disperse along with them.
+- Ecosystem disservices such as pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services (Zhang et al 2007 https://doi.org/10.1016/j.ecolecon.2007.02.024)
+  - Gray and Lewis 2014 showed that remnant forest fragments do not provide significant pest control services (https://doi.org/10.1016/j.baae.2014.09.009)
+  - However, this is still poorly studied (but see Woodcock 2015), and parsing out services from disservices is impossible using crop yield data _alone_
+  
+Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield
+  - (crop history, differences in tillage)
   - Could vary by location; most fields were from central AB, but effects from southern AB may be confounding the signal
-  - Additional confounding variables (crop history, differences in tillage)
+  - Between-year effects may be important, especially when accounting for 
   
+Finally, pest pressure or pollination deficit may be at low enough levels that ecosystem service provision does not significantly change yield
+  - Canola is largely self-pollinating (at least in the hybrid canola varieties commonly used in Canada) and wheat is wind-pollinated, meaning that insect pollination may not change yields significantly
+  - Pest pressures are also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty
   
-
+We used harvest time as smoothed variable to deal with temporal autocorrelation in the data, but this is a crude way to deal with this
+  - This is because in-field combine driving patterns _almost always_ induce correlation between spatial and temporal measurements (e.g. northern section of the field was harvested before the southern section), meaning that temporal and spatial random effects are difficult to separate
+  - There are few solutions to this using harvest data as-is, other than to ignore temporal random effects entirely, thereby constraining all random variation to be spatial
+  - However, it is possible to remove correlation between spatial and temporal measurements by using specially designed harvest patterns within a field (harvesting alternating strips sequentially across the field, then harvesting the remaining strips on a second pass)
+  - Future studies could use this to estimate drift in combine sensor measurements over time
   
-
 
 # Author Contributions
 
