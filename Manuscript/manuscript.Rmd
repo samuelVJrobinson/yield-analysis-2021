@@ -297,9 +297,23 @@ There was also a slight increase in variability away from the field boundary, at
 
 # Discussion
 
-- Summary:
-  - At the level of individual fields, there was substantial variation in yield with distance from the field boundary, as well as with harvest sequence and spatially within each field
-  - Overall, however, the effect of field boundary on yield was inconsistent and the change in mean yield tended to be small ($\sim$0.5 T/ha for canola)
+At the level of individual fields, both average and SD of yield varied with distance from the field boundary.
+Both metrics also varied with ground speed and harvest sequence, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
+However, the overall effect of field boundary on yield was inconsistent and the change tended to be small.
+For example, average canola yield was $\sim$0.5 T/ha lower close to Standard field edges, and yield SD was $\sim$0.3 T/ha SD higher.
+
+
+- Why no consistent effect for other boundary types? 
+  - Our analysis only looks at boundary types, without considering larger landscape context (e.g. Lan's paper)
+  - Boundary type itself is not well defined, so perhaps other metrics would be more helpful (height of veg, width of shelterbelt - I think this is important for hedgerows)
+  - Ecosystem disservices (e.g. weeds, pest insects) could also be coming from field boundaries, which may negate any effect of ecosystem services; this is still poorly studied (but see Woodcock 2015)
+  - Could vary by location; most fields were from central AB, but effects from southern AB may be confounding the signal
+  - Additional confounding variables (crop history, differences in tillage)
+  
+  
+
+  
+
 
 # Author Contributions
 

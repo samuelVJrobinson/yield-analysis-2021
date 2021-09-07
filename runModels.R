@@ -897,6 +897,7 @@ ggsave(paste0('./Figures/groundSpeed_',croptype,'.png'),p,height=6,width=8,dpi=3
 # Example figures (Trent Clark Johnson 2014) ---------------------------------------------------------
 
 use <- which(datSource$filename == 'Trent_Clark W 34 2014')
+#Could also use 'Trent_Clark JOHNSON 2014'
 load(datSource$modelPath2[use]) #Load model
 
 #Spatial smoothers
