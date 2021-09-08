@@ -524,8 +524,22 @@ samplePreds <- function(a=NULL,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutof
 # stopCluster(cluster)
 # save(samp,file='./Data/postSamples_wheat.Rdata')
 
-croptype <- 'canola'
+# # Add to current samples - peas
+# isPeas <- which(datSource$crop=='Peas') #Peas
+# Nsamp <- 500 #Number of samples
+# library(parallel)
+# cluster <- makeCluster(15)
+# clusterExport(cluster,c('datSource'))
+# a <- Sys.time()
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isPeas,margInt=c(FALSE,FALSE,FALSE))
+# Sys.time()-a
+# stopCluster(cluster)
+# save(samp,file='./Data/postSamples_peas.Rdata')
+
+# croptype <- 'canola'
 # croptype <- 'wheat'
+croptype <- 'peas'
+
 
 load(paste0('./Data/postSamples_',croptype,'.Rdata'))
 
@@ -554,9 +568,12 @@ ylabSD <- 'Yield variablity (log(T/ha)) '
 if(croptype=='wheat'){
   ylimsMean <- c(5,13)
   ylimsSD <- c(-4,2)
-} else {
+} else if(croptype=='canola'){
   ylimsMean <- c(1,10)
   ylimsSD <- c(-4,4)
+} else if(croptype=='peas'){
+  ylimsMean <- c(5,12)
+  ylimsSD <- c(-5,5)
 }
 
 distLims <- c(0,200)
@@ -597,7 +614,6 @@ p3 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>%
   # geom_line(data=allEff[[2]],aes(x=dist,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + 
   geom_line(aes(y=med),col=colshade) + #Meta-model
-  # geom_hline(yintercept = 0,col='red',linetype='dashed')+
   facet_wrap(~dist_type,scales='free') + labs(x='Distance (m)',y=ylabMean)+ 
   coord_cartesian(xlim=distLims,ylim=ylimsMean)
 
@@ -610,7 +626,6 @@ p4 <- lapply(samp,function(x) x$coverDist %>% bind_rows(.id = 'dist_type')) %>%
   ggplot(aes(x=dist)) + 
   # geom_line(data=allEff[[2]],aes(x=dist,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade) + #Meta-model
-  # geom_hline(yintercept = 0,col='red',linetype='dashed')+
   facet_wrap(~dist_type) + labs(x='Distance (m)',y=ylabSD) +
   coord_cartesian(xlim=distLims,ylim=ylimsSD)
 
@@ -622,7 +637,6 @@ p5 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>%
   ggplot(aes(x=r))+
   # geom_line(data=allEff[[3]],aes(x=r,y=mean,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade)+
-  # geom_hline(yintercept = 0,col='red',linetype='dashed')+
   labs(x='Harvest order',y=ylabMean)
 
 p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>% 
@@ -633,7 +647,6 @@ p6 <- lapply(samp,function(x) x$r) %>% bind_rows(.id = 'sample') %>%
   ggplot(aes(x=r))+
   # geom_line(data=allEff[[3]],aes(x=r,y=logSD,group=field),alpha=0.1) + #"Raw" smoothers
   geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3,fill=fillshade) + geom_line(aes(y=med),col=colshade)+
-  # geom_hline(yintercept = 0,col='red',linetype='dashed')+
   labs(x='Harvest order',y=ylabSD)
 
 (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2)) #Plot of everything
@@ -670,7 +683,6 @@ convertArea <- lapply(datSource$dataPath, function(path){
 # Combine ground speed is talked about a lot, so this is more appropriate for growers/agronomists
 
 getPredsSpeed <- function(path,l=30,margInt=FALSE,samp=FALSE, minSpeed = NA, maxSpeed = NA, width = NA, speed2Distance = NA){
-  
   # #Debugging
   # l <- 30
   # # path <- paste0('./Figures/ModelCheck1/',datSource$filename[2],' modList.Rdata') #Model type 1
@@ -795,23 +807,40 @@ samplePredsSpeed <- function(a=NULL,ds=datSource,nX=100,minSpeeds=NA,maxSpeeds=N
 # stopCluster(cluster)
 # save(samp,file='./Data/postSamplesSpeed_canola.Rdata')
 #  
-# # Make samples - wheat
-# Nsamp <- 500 #Number of samples
-# useThese <- with(datSource,use&modelComplete2&crop=='Wheat')
-# tempDat <- datSource %>% filter(useThese)
-# minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
-# maxSpeeds <- sapply(convertArea,function(x) x$maxSpeed)[useThese]
-# maxWidth <- sapply(convertArea,function(x) x$maxSwathWidth)[useThese]
-# s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
-# library(parallel)
-# cluster <- makeCluster(15)
-# clusterExport(cluster,c('getPredsSpeed'))
-# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
-# stopCluster(cluster)
-# save(samp,file='./Data/postSamplesSpeed_wheat.Rdata')
+# Make samples - wheat
+Nsamp <- 500 #Number of samples
+useThese <- with(datSource,use&modelComplete2&crop=='Wheat')
+tempDat <- datSource %>% filter(useThese)
+minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
+maxSpeeds <- sapply(convertArea,function(x) x$maxSpeed)[useThese]
+maxWidth <- sapply(convertArea,function(x) x$maxSwathWidth)[useThese]
+s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
+library(parallel)
+cluster <- makeCluster(15)
+clusterExport(cluster,c('getPredsSpeed'))
+samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
+stopCluster(cluster)
+save(samp,file='./Data/postSamplesSpeed_wheat.Rdata')
+
+# Make samples - peas
+Nsamp <- 500 #Number of samples
+useThese <- with(datSource,use&modelComplete2&crop=='Peas')
+tempDat <- datSource %>% filter(useThese)
+minSpeeds <- sapply(convertArea,function(x) x$minSpeed)[useThese]
+maxSpeeds <- sapply(convertArea,function(x) x$maxSpeed)[useThese]
+maxWidth <- sapply(convertArea,function(x) x$maxSwathWidth)[useThese]
+s2d <- 1/sapply(convertArea,function(x) x$dist2Speed)[useThese]
+library(parallel)
+cluster <- makeCluster(15)
+clusterExport(cluster,c('getPredsSpeed'))
+samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePredsSpeed,ds=tempDat,minSpeeds=minSpeeds,maxSpeeds=maxSpeeds,maxWidth=maxWidth,s2d=s2d,margInt=FALSE)
+stopCluster(cluster)
+save(samp,file='./Data/postSamplesSpeed_peas.Rdata')
+
 
 # croptype <- 'canola'
-croptype <- 'wheat'
+# croptype <- 'wheat'
+croptype <- 'peas'
 
 load(paste0('./Data/postSamplesSpeed_',croptype,'.Rdata'))
 

@@ -125,36 +125,40 @@
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
 
-Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth
-This has allowed increases in human population and increased (global) stability in production
-However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms
-Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios
-Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems
+Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth.
+This has allowed increases in human population and increased global stability in production.
+However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms.
+Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios.
+Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems.
 
-SNL in and around crops is important for both agricultural production and conservation
-They are habitat for mobile organisms, and can therefore act as sources of ecosystem services such as pollination or pest control (Albrecht \emph{et al.} (2020); Gardner \emph{et al.} (2021))
-They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed (Kort (1988))
+SNL in and around crops is important for both agricultural production and conservation, as it has the potential to create better biotic and abiotic conditions (Case \emph{et al.} 2019; Weninger \emph{et al.} 2021).
+They are habitat for mobile organisms, and can act as sources of ecosystem services such as pollination or pest control (Albrecht \emph{et al.} 2020; Gardner \emph{et al.} 2021), but this can vary depending on the system (Gray \& Lewis 2014; Quinn \emph{et al.} 2017)
+They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed (Kort 1988; Brandle \emph{et al.} 2004)
 Unfortunately, most of the research is concentrated in Europe, and they tend to be less-studied on other continents
 In particular, North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
 
-SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate
-Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds
-At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (Kowalchuk \& Jong (1995))
-For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance
-Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (e.g. Van Vooren \emph{et al.} (2017))
-This suggests a ``goldilocks" field size, where negative edge effects are canceled out by ecosystem services
+SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate.
+Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds.
+At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (Kowalchuk \& Jong (1995)).
+For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance.
+Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (e.g. Van Vooren \emph{et al.} (2017)).
+This suggests a ``goldilocks'' field size, where negative edge effects are canceled out by ecosystem services.
 
-Studies of SNL effects on crop yield also suffer from limited scope (e.g.~few crop types) and small sample sizes, limiting inference and reducing generality (but see wheat study)
-Meta-analyses have been the standard solution to this problem, but precision yield data holds enormous promise.
-However, its use is limited for several reasons: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) unfamiliarity with spatial statistics.
-Ecosystem services can influence both the mean and variability of yield in agroecosystems (Redhead \emph{et al.} (2020)).
-Typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable.
+\begin{figure}
+\includegraphics[width=1\linewidth]{../Figures/ExamplePlots/hypotheses} \caption{Potential yield patterns, depending on ecosystem service effects with distance. In both figures, negative environmental effects (edge effects) are shown in red, and decrease with distance from the edge of the crop, creating an increase in yield with distance. The left figure shows a decline in ecosystem services with distance, leading to an intermediate peak in yield, while the right figure shows an increase in services with distance, leading to a peak at the centre of the field (note: Scenario 2 also occurs if ecosystem services do not change with distance).}\label{fig:hypotheses}
+\end{figure}
+
+Studies of SNL effects on crop yield also suffer from limited scope (e.g.~few crop types) and small sample sizes, limiting inference and reducing generality (Baker \emph{et al.} (2018); but see also Redhead \emph{et al.} (2020))
+Meta-analyses have been the standard solution to this problem (e.g. Albrecht \emph{et al.} (2020)), but precision yield data holds enormous promise.
+However, its use is limited for several reasons, namely: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistics.
+Ecosystem services can influence both the mean and variability of yield in agroecosystems (Redhead \emph{et al.} (2020)); typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable from the perspective of a grower.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
 
 In this paper we ask:
 1. How does crop yield change with distance from the edge of field?
 2. Does this depend on type of field edge?
 3. Is there an intermediate distance where yield is maximized or variance is minimized?
+To our knowledge, no other study has addressed the effect of field boundaries on productivity using precision yield, making this study highly novel.
 
 \hypertarget{methods}{%
 \section{Methods}\label{methods}}
@@ -166,10 +170,10 @@ Precision yield data were collected directly from farmers across Alberta.
 Farmers were solicited for yield data through local agronomists, and we received 298 field-years of data from 5 growers across a total of 7 years (2014-2020).
 We converted raw data to a standard csv format using Ag Leader SMS.
 72\% of the crop types where either wheat (\emph{Triticum aestivum}) or canola (\emph{Brassica napus}), two of the most common crops in rotation in Alberta.
-The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (94) or canola (119).
-Individual fields contained between 1 to 5 years of data (mean: 2.7), containing a total of 18.4 million data points.
+The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (94), canola (119), or peas (39).
+Individual fields contained between 1 and 6 years of data (mean: 3.1), containing a total of 14.4 million data points.
 
-Yield data is collected in rectangles of the same length as the data interval (distance = combine ground speed \(\times\) interval, typically 1 second) and the same width as the combine header (5-7 m, adjusted to account for overlap with adjacent swaths).
+Yield data was collected in rectangles of the same length as the data interval (distance = combine ground speed \(\times\) interval, typically 1 second) and the same width as the combine header (5-7 m, adjusted to account for overlap with adjacent swaths).
 We extracted the size of each polygon (m\(^2\)), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
 Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data
 Seeding and application rates were constant across fields, so we did not consider inputs in our analysis
@@ -189,15 +193,6 @@ We defined the following general categories for field boundaries:
 4. Other crop: annual crop or pasture with little or no visible boundary between planted areas
 5. Bare: unplanted, fallow, flooded area, temporary wetland (only present for a single season), staging yard, oil and gas equipment, or road without a planted boundary
 6. Grassland: permanent seminatural grassland or pasture (not in rotation)
-
-\begin{verbatim}
-<!-- STANDARD -->
-<!-- WETLAND -->
-<!-- SHELTERBELT -->
-<!-- OTHERCROP -->
-<!-- BARE -->
-<!-- GRASSLAND -->
-\end{verbatim}
 
 \hypertarget{analysis}{%
 \subsection{Analysis}\label{analysis}}
@@ -272,7 +267,7 @@ To illustrate this, we show the results from a single wheat field, where we show
 Figure \ref{fig:rawData} shows the raw data collected from a single field, demonstrating a large amount of variation even among the filtered data.
 Combine ground speed had a large effect on both yield mean and SD, and there was also a strong effect of harvest sequence on yield mean and SD (Figure \ref{fig:orderSmooths}.
 Yield mean and SD tended to decrease with distance from field boundaries, but there were no consistent differences between boundary types (Figure \ref{fig:distSmooths}.
-Finally, the random spatial smoothers in Figure \ref{fig:spatialSmooths} show that yield mean and SD systematically vary within fields, likely due to moisture and soil conditions (Figure \ref{fig:spatialSmooths}.
+Finally, the random spatial smoothers in Figure \ref{fig:spatialSmooths} show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions (Figure \ref{fig:spatialSmooths}.
 
 \begin{figure}
 \includegraphics[width=0.75\linewidth]{../Figures/ExamplePlots/rawData} \caption{Example output from a single field.}\label{fig:rawData}
@@ -293,7 +288,11 @@ Finally, the random spatial smoothers in Figure \ref{fig:spatialSmooths} show th
 \hypertarget{overall-results}{%
 \subsection{Overall results}\label{overall-results}}
 
-Across all fields, ``Standard'' (grassy border) was the most common boundary type, followed by Shelterbelts and Other Crops.
+Across all fields, Standard (grassy border) field boundaries were the most common boundary type, followed by Shelterbelts and Other Crops (Figure \ref{fig:boundaryTypes}).
+
+\begin{figure}
+\includegraphics[width=1\linewidth]{manuscript_files/figure-latex/boundaryTypes-1} \caption{Percentage of field boundaries across sampled fields.}\label{fig:boundaryTypes}
+\end{figure}
 
 \hypertarget{canola-fields}{%
 \subsubsection{Canola fields}\label{canola-fields}}
@@ -303,10 +302,10 @@ At the field level, both yield average and yield variability (SD of yield) of yi
 However, there was no difference in average or variability with harvest sequence when all fields were considered, meaning that combines did not appear to distort yield data from start to finish in any systematic way.
 
 Average canola yield tended to increase with distance from Standard and Other Crop boundaries, leveling off at about 25 m (Figure \ref{fig:canolaPlot} top row, Other crop and Standard panels); yield was approximately 0.1 T/ha (1.5 bu/ac) lower at the edge for both of these boundary types.
-Interestingly, Shelterbelts were well-represented in the data (Table \ref{tab:boundaryTypes}) but the negative edge effect was not strong (Figure \ref{fig:canolaPlot} top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
+Interestingly, Shelterbelts were well-represented in the data (Figure \ref{fig:boundaryTypes}) but the negative edge effect was not strong (Figure \ref{fig:canolaPlot} top row, Shelterbelt panel), indicating that they may provide better micro-climates for crops located near them.
 Other boundary types were less common in the data and had correspondingly weaker effects on mean yield, but all showed a small negative edge effect.
 Yield variability tended to decrease with distance from the edge of the field, indicating that edge effects contribute to yield ``patchiness'' as well as averages.
-At Standard, Bare, and Wetland field boundaries, variability decreased until about 100 m, after which variablity was constant, while the pattern was less consistent in Grassland, Other Crop, and Shelterbelt.
+At Standard, Bare, and Wetland field boundaries, variability decreased until about 100 m, after which variability was constant, while the pattern was less consistent in Grassland, Other Crop, and Shelterbelt.
 
 \begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_canola} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:canolaPlot}
@@ -325,20 +324,65 @@ There was also a slight increase in variability away from the field boundary, at
 \includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:wheatPlot}
 \end{figure}
 
+\hypertarget{pea-fields}{%
+\subsubsection{Pea fields}\label{pea-fields}}
+
+At the field level, both yield average and yield variability (SD of yield) of yield were spatially (average p-values: 2e-16, 2e-16) and temporally dependent (2e-16, 3.62e-07),
+There was a strong negative effect of ground speed on yield and variability of peas (Figure \ref{fig:peasPlotSpeed}), but harvest sequence did not distort the average or SD of wheat yield in a systematic way (Figure \ref{fig:wheatPlotSpeed}, right panel).
+
+Average pea yields increased with distance from Shelterbelt, Standard, and Wetland field boundaries.
+Interestingly, the reduction at the edge was slightly higher for Wetlands, but yield increased with distance more quickly, i.e.~yields were higher at distance for Wetlands.
+Variability decreased with distance from Grassland and Standard boundaries
+
+\begin{figure}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_peas} \caption{Field boundary effect on pea yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:peaPlot}
+\end{figure}
+
 \hypertarget{discussion}{%
 \section{Discussion}\label{discussion}}
 
-\begin{itemize}
-\tightlist
-\item
-  Summary:
+At the level of individual fields, both average and SD of yield varied with distance from the field boundary.
+Both metrics also varied with ground speed and harvest sequence, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
+Yield tended to increase with distance from field boundaries before plateauing, and there was little evidence of intermediate boosts in yield, meaning that ecosystem services likely increased or did not vary with distance from field boundaries (Scenario 2, Figure \ref{fig:hypotheses}).
+However, the effect of field boundary types was inconsistent, and the change tended to be small, especially for wheat.
+So, why did we find few consistent effects of boundary type on canola and wheat yield?
+We consider a few potential reasons for this below:
+1. Landscape influence
+2. Boundary variables
+3. Ecosystem disservices
+4. Yearly/location variation
+5. Lack of pest pressure/pollination deficit
 
-  \begin{itemize}
-  \tightlist
-  \item
-    At the level of an individual field, there were
-  \end{itemize}
-\end{itemize}
+Our analysis only examined boundary types, without considering the landscape context that fields were embedded in.
+Some studies show the influence of landscape composition at larger spatial scales (e.g.~Lan's paper) which could be particularly important when beneficial arthropods are highly mobile (e.g.~bumblebee foraging) or disperse very broadly (Öberg \emph{et al.} 2007).
+There could also be interactions between landscape composition at different scales (e.g.~our paper in AGEE), but this is not well-studied.
+Landscape complexity (Fahrig \emph{et al.} 2011) and connectivity are also associated with higher abundance of beneficial arthropods (Paul's new paper + others).
+This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat (but see Fahrig \emph{et al.} (2019)).
+
+Our definitions of boundary type were necessarily loose, as we used satellite imagery to manually classify them.
+However, it may be that other boundary traits, such as size or plant species composition, are more important for spillover of ecosystems services into fields.
+For example, larger (Lecq \emph{et al.} 2018; Stašiov \emph{et al.} 2020) or more functionally diverse (Bonifacio \emph{et al.} (2011); Boughey \emph{et al.} (2011)) hedgerows tend to support more biodiversity than smaller hedgerows.
+Increased litter cover and soil compaction increased pollen beetle predators (Sutter \emph{et al.} 2018).
+
+Finally, pest pressure or pollination deficit may be at low enough levels that ecosystem service provision does not significantly change yield.
+Canola is largely self-pollinating (at least in hybrid canola varieties, Lindström \emph{et al.} (2016)) and wheat is wind-pollinated, meaning that slight increases in pollination services may not change yields significantly in either crop (Woodcock \emph{et al.} 2016).
+Pest pressures may also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty.
+
+The net flow of ecosystem services may not be positive, if beneficial organisms do not disperse from the SNL, or if pests disperse along with them.
+Ecosystem disservices such as pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services (Zhang \emph{et al.} (2007)).
+Gray \& Lewis (2014) showed that remnant forest fragments do not provide significant pest control services , but also do not depress yield.
+However, this is still poorly studied, and parsing out services from disservices is impossible using crop yield data \emph{alone}.
+
+Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield.
+Most fields were located in Central Alberta (Dry Mixedwood region, Natural Regions Committee (2006)), where boundaries contained a higher proportion of Shelterbelts (Figure \ref{fig:boundaryTypes}), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
+Between-year effects may be important, especially during dry years (Kort 1988), but this was not considered in our analysis.
+Future work could examine whether boundaries have differing effects during hot or cool years.
+
+We used harvest time as smoothed variable to deal with temporal autocorrelation in the data, but this is a crude way to deal with this.
+This is because in-field combine driving patterns \emph{almost always} induce correlation between spatial and temporal measurements (e.g.~northern section of the field was harvested before the southern section), meaning that temporal and spatial random effects are difficult to separate.
+There are few solutions to this using harvest data as-is, other than to ignore temporal random effects entirely, thereby constraining all random variation to be spatial.
+However, it is possible to remove correlation between spatial and temporal measurements by using specially designed harvest patterns within a field (harvesting alternating strips sequentially across the field, then harvesting the remaining strips on a second pass).
+Future studies could use this to estimate drift in combine sensor measurements over time.
 
 \hypertarget{author-contributions}{%
 \section{Author Contributions}\label{author-contributions}}
@@ -365,8 +409,32 @@ Albrecht, M., Kleijn, D., Williams, N.M., Tschumi, M., Blaauw, B.R., Bommarco, R
 \leavevmode\hypertarget{ref-arslan2002}{}%
 Arslan, S. \& Colvin, T.S. (2002). An evaluation of the response of yield monitors and combines to varying yields. \emph{Precision Agriculture}, 3, 107--122.
 
+\leavevmode\hypertarget{ref-baker2018}{}%
+Baker, T.P., Moroni, M.T., Mendham, D.S., Smith, R. \& Hunt, M.A. (2018). Impacts of windbreak shelter on crop and livestock production. \emph{Crop and Pasture Science}, 69, 785.
+
+\leavevmode\hypertarget{ref-bonifacio2011}{}%
+Bonifacio, R.S., Kinross, C.M., Gurr, G.M. \& Nicol, H. (2011). The effect of woody plant diversity and other stand and landscape factors on the diversity and abundance of birds using farm shelterbelts. \emph{Pacific Conservation Biology}, 17, 22.
+
+\leavevmode\hypertarget{ref-boughey2011}{}%
+Boughey, K.L., Lake, I.R., Haysom, K.A. \& Dolman, P.M. (2011). Improving the biodiversity benefits of hedgerows: How physical characteristics and the proximity of foraging habitat affect the use of linear features by bats. \emph{Biological Conservation}, 144, 1790--1798.
+
+\leavevmode\hypertarget{ref-brandle2004}{}%
+Brandle, J.R., Hodges, L. \& Zhou, X.H. (2004). Windbreaks in {North American} agricultural systems. In: \emph{New vistas in agroforestry: A compendium for 1st world congress of agroforestry, 2004} (eds. Nair, P.K.R., Rao, M.R. \& Buck, L.E.). Springer Netherlands, Dordrecht, pp. 65--78.
+
+\leavevmode\hypertarget{ref-case2019}{}%
+Case, B.S., Pannell, J.L., Stanley, M.C., Norton, D.A., Brugman, A., Funaki, M., \emph{et al.} (2019). Non-production vegetation has a positive effect on ecological processes in agroecosystems. \emph{bioRxiv}, 624635.
+
+\leavevmode\hypertarget{ref-fahrig2019}{}%
+Fahrig, L., Arroyo-Rodríguez, V., Bennett, J.R., Boucher-Lalonde, V., Cazetta, E., Currie, D.J., \emph{et al.} (2019). Is habitat fragmentation bad for biodiversity? \emph{Biological Conservation}, 230, 179--186.
+
+\leavevmode\hypertarget{ref-fahrig2011}{}%
+Fahrig, L., Baudry, J., Brotons, L., Burel, F.G., Crist, T.O., Fuller, R.J., \emph{et al.} (2011). Functional landscape heterogeneity and animal biodiversity in agricultural landscapes. \emph{Ecology Letters}, 14, 101--112.
+
 \leavevmode\hypertarget{ref-gardner2021}{}%
 Gardner, E., Breeze, T.D., Clough, Y., Smith, H.G., Baldock, K.C.R., Campbell, A., \emph{et al.} (2021). Field boundary features can stabilise bee populations and the pollination of mass-flowering crops in rotational systems. \emph{Journal of Applied Ecology}, In press.
+
+\leavevmode\hypertarget{ref-gray2014}{}%
+Gray, C.L. \& Lewis, O.T. (2014). Do riparian forest fragments provide ecosystem services or disservices in surrounding oil palm plantations? \emph{Basic and Applied Ecology}, 15, 693--700.
 
 \leavevmode\hypertarget{ref-kassambara2020}{}%
 Kassambara, A. (2020). \emph{{ggpubr}: 'ggplot2' based publication ready plots}.
@@ -377,17 +445,47 @@ Kort, J. (1988). 9. Benefits of windbreaks to field and forage crops. \emph{Agri
 \leavevmode\hypertarget{ref-kowalchuk1995}{}%
 Kowalchuk, T.E. \& Jong, E. de. (1995). Shelterbelts and their effect on crop yield. \emph{Canadian Journal of Soil Science}, 75, 543--550.
 
+\leavevmode\hypertarget{ref-lecq2018}{}%
+Lecq, S., Loisel, A., Mullin, S.J. \& Bonnet, X. (2018). Manipulating hedgerow quality: Embankment size influences animal biodiversity in a peri-urban context. \emph{Urban Forestry {\&} Urban Greening}, 35, 1--7.
+
+\leavevmode\hypertarget{ref-lindstrom2016}{}%
+Lindström, S.A.M., Herbertsson, L., Rundlöf, M., Smith, H.G. \& Bommarco, R. (2016). Large-scale pollination experiment demonstrates the importance of insect pollination in winter oilseed rape. \emph{Oecologia}, 180, 759--769.
+
+\leavevmode\hypertarget{ref-ABRegions2006}{}%
+Natural Regions Committee. (2006). \emph{Natural regions and subregions of {Alberta}}. Government of Alberta, Edmonton.
+
+\leavevmode\hypertarget{ref-oberg2007}{}%
+Öberg, S., Ekbom, B. \& Bommarco, R. (2007). Influence of habitat type and surrounding landscape on spider diversity in {Swedish} agroecosystems. \emph{Agriculture, Ecosystems {\&} Environment}, 122, 211--219.
+
+\leavevmode\hypertarget{ref-quinn2017}{}%
+Quinn, N.F., Brainard, D.C. \& Szendrei, Z. (2017). Floral strips attract beneficial insects but do not enhance yield in cucumber fields. \emph{Journal of Economic Entomology}, 110, 517--524.
+
 \leavevmode\hypertarget{ref-redhead2020}{}%
-Redhead, J.W., Oliver, T.H., Woodcock, B.A. \& Pywell, R.F. (2020). The influence of landscape composition and configuration on crop yield resilience. \emph{Journal of Applied Ecology}.
+Redhead, J.W., Oliver, T.H., Woodcock, B.A. \& Pywell, R.F. (2020). The influence of landscape composition and configuration on crop yield resilience. \emph{Journal of Applied Ecology}, 57, 2180--2190.
+
+\leavevmode\hypertarget{ref-stasiov2020}{}%
+Stašiov, S., Diviaková, A., Svitok, M., Novikmec, M. \& Dovciak, M. (2020). Hedgerows support rich communities of harvestmen ({Opiliones}) in upland agricultural landscape. \emph{Basic and Applied Ecology}, 47, 73--82.
+
+\leavevmode\hypertarget{ref-sutter2018b}{}%
+Sutter, L., Amato, M., Jeanneret, P. \& Albrecht, M. (2018). Overwintering of pollen beetles and their predators in oilseed rape and semi-natural habitats. \emph{Agriculture, Ecosystems {\&} Environment}, 265, 275--281.
 
 \leavevmode\hypertarget{ref-vanVooren2017}{}%
 Van Vooren, L., Bert, R., Steven, B., Pieter, D.F., Victoria, N., Paul, P., \emph{et al.} (2017). Ecosystem service delivery of agri-environment measures: A synthesis for hedgerows and grass strips on arable land. \emph{Agriculture, Ecosystems {\&} Environment}, 244, 32--51.
+
+\leavevmode\hypertarget{ref-weninger2021}{}%
+Weninger, T., Scheper, S., Lackóová, L., Kitzler, B., Gartner, K., King, N.W., \emph{et al.} (2021). Ecosystem services of tree windbreaks in rural landscapes -- a systematic review. \emph{Environmental Research Letters}, In press.
 
 \leavevmode\hypertarget{ref-wickham2016}{}%
 Wickham, H. (2016). \emph{{ggplot2}: Elegant graphics for data analysis}. Springer-Verlag New York.
 
 \leavevmode\hypertarget{ref-wood2017}{}%
 Wood, S.N. (2017). \emph{Generalized additive models: An introduction with {R}}. CRC press.
+
+\leavevmode\hypertarget{ref-woodcock2016}{}%
+Woodcock, B.A., Bullock, J.M., McCracken, M., Chapman, R.E., Ball, S.L., Edwards, M.E., \emph{et al.} (2016). Spill-over of pest control and pollination services into arable crops. \emph{Agriculture, Ecosystems \& Environment}, 231, 15--23.
+
+\leavevmode\hypertarget{ref-zhang2007}{}%
+Zhang, W., Ricketts, T.H., Kremen, C., Carney, K. \& Swinton, S.M. (2007). Ecosystem services and dis-services to agriculture. \emph{Ecological Economics}, 64, 253--260.
 
 \end{CSLReferences}
 
@@ -398,15 +496,15 @@ Wood, S.N. (2017). \emph{Generalized additive models: An introduction with {R}}.
 \addcontentsline{toc}{section}{Appendix A: Supplementary Material}
 
 \begin{figure}
-\includegraphics[width=1\linewidth]{manuscript_files/figure-latex/boundaryTypes-1} \caption{Percentage of field boundaries across sampled fields.}\label{fig:boundaryTypes}
-\end{figure}
-
-\begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/groundSpeed_canola} \caption{Effect of ground speed and order (sequence of harvest) on canola yield.}\label{fig:canolaPlotSpeed}
 \end{figure}
 
 \begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/groundSpeed_wheat} \caption{Effect of ground speed and order (sequence of harvest) on wheat yield.}\label{fig:wheatPlotSpeed}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=1\linewidth]{../Figures/groundSpeed_peas} \caption{Effect of ground speed and order (sequence of harvest) on pea yield.}\label{fig:peasPlotSpeed}
 \end{figure}
 
 
