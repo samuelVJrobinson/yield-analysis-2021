@@ -1,1 +1,10 @@
-Abstract goes here
+Field boundaries can improve crop yields by creating better abiotic conditions for crop growth (e.g. mosture, temperature), and can act as refuges for beneficial arthropods.
+This suggests that beneficial crop boundaries may create an intermediate hump-shaped increase in crop yield, where negative edge effects are cancelled out by increased ecosystem services (e.g. pollination or pest suppression) from the field boundary.
+However, there is little large-scale evidence showing this, largely because yield is costly and time-consuming to measure.
+Precision yield data from combine yield monitors has huge potential in this respect, as the equipment is relatively cheap and commonly measured by growers.
+<!-- In this study, we used 252 field-years of yield monitor data from three common crops -- wheat (_Triticum aestivum_), canola (_Brassica napus_), or peas (_Pisum sativum_) -- recorded across Alberta, Canada, and examined how yield varied with distances from common crop boundary types. -->
+Average crop yield tended to increase with distance from crop boundaries before plateauing at about 50 m, and yield variation (SD) tended to decrease concurrently with distance.
+Differences between boundary types tended to be weak and variable, especially for wheat; there was some evidence of certain field boundaries causing a greater decrease in yield at the edge, but these differences tended to be small in magnitude (<5% of yield).
+Furthermore, there was little evidence of an intermediate increase in yield, suggesting that a) ecosystem services do not strongly depend on distance or b) their effect is relatively small.
+This study represents one of the first uses of precision yield data to measure ecosystem service provision at large spatial scales.
+
