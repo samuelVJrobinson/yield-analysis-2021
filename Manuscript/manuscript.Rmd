@@ -118,31 +118,30 @@ However, this is not without cost, as higher-diversity non-crops are converted t
 Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios.
 Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems.
 
-SNL in and around crops is important for both agricultural production and conservation, as it has the potential to create better biotic and abiotic conditions [@case2019; @weninger2021].
+SNL in and around crops is important for both agricultural production and conservation [@prietoBenitez2011], as it has the potential to create better biotic and abiotic conditions for crop growth [@case2019; @weninger2021; but see @lowe2021].
 They are habitat for mobile organisms, and can act as sources of ecosystem services such as pollination or pest control [@albrecht2020; @gardner2021], but this can vary depending on the system [@gray2014; @quinn2017]
-They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed [@kort1988; @brandle2004]
-Unfortunately, most of the research is concentrated in Europe, and they tend to be less-studied on other continents
-In particular, North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
+They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed [@kort1988; @brandle2004].
+North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
   
 <!-- - SNL has conflicting effects on crop yield because of ecosystem service provision as well as negative edge effects -->
 SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate.
 Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds.
 At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (@kowalchuk1995).
-For example, pollination services from central place foragers that nest in SNL but forage in crops drops rapidly with distance.
+For example, pollination services from central place foragers (bees) that nest in SNL but forage in crops drops rapidly with distance [@garibaldi2011].
 Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (e.g. @vanVooren2017).
 This suggests a "goldilocks" field size, where negative edge effects are canceled out by ecosystem services.
-<!-- - Less-considered are ecosystem ``disservices", where weeds and pests  -->
-<!-- - In North America, there are financial incentives to make fields large, homogeneous, and with simple geometry -->
+<!-- In North America there are financial incentives to make fields large, homogeneous, and geometrically simple [@clare2021], but  -->
+
 
 ```{r hypotheses, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. In both figures, negative environmental effects (edge effects) are shown in red, and decrease with distance from the edge of the crop, creating an increase in yield with distance. The left figure shows a decline in ecosystem services with distance, leading to an intermediate peak in yield, while the right figure shows an increase in services with distance, leading to a peak at the centre of the field (note: Scenario 2 also occurs if ecosystem services do not change with distance).', out.width='100%'}  
   include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
 ```
 
     
-Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (@baker2018; but see also @redhead2020)
-Meta-analyses have been the standard solution to this problem (e.g. @albrecht2020), but precision yield data holds enormous promise.
+Studies of SNL effects on crop yield also suffer from limited scope (e.g. few crop types) and small sample sizes, limiting inference and reducing generality (@baker2018; but see also @redhead2020).
+Meta-analyses have been the standard solution to this problem (e.g. @albrecht2020; @lowe2021), but precision yield data holds enormous promise.
 However, its use is limited for several reasons, namely: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistics.
-Ecosystem services can influence both the mean and variability of yield in agroecosystems (@redhead2020); typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable from the perspective of a grower.
+Ecosystem services can influence both the mean and variability of yield in agroecosystems (@redhead2020); typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
 
 In this paper we ask:
@@ -339,10 +338,14 @@ Variability decreased with distance from Grassland and Standard boundaries
 
 At the level of individual fields, both average and SD of yield varied with distance from the field boundary.
 Both metrics also varied with ground speed and harvest sequence, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
-Yield tended to increase with distance from field boundaries before plateauing, and there was little evidence of intermediate boosts in yield, meaning that ecosystem services likely increased or did not vary with distance from field boundaries (Scenario 2, Figure \@ref(fig:hypotheses)).
-However, the effect of field boundary types was inconsistent, and the change tended to be small, especially for wheat.
+Yield tended to increase with distance from field boundaries before plateauing, but there was little evidence of intermediate boosts in yield, meaning that ecosystem services likely increased or did not vary with distance from field boundaries (Scenario 2, Figure \@ref(fig:hypotheses)).
+Some crops displayed a larger decrease in yield next to field boundaries; for example, pea yield directly adjacent to Wetland was lower overall, but increased with distance more than other crop types, indicating that Wetlands may locally decrease pea yields but are beneficial to the crop in general.
+Canola yields next to Other Crops had a reduced edge effect compared to Standard field boundaries, indicating that Other Crops may provide a more consistent microclimate for canola than grassy field boundaries.
+However, the difference between boundary types tended to be both small and variable, especially for wheat.
 <!-- For example, average canola yield was about 0.5 T/ha lower close to Standard field edges, and yield SD was about 0.3 T/ha SD higher. -->
-So, why did we find few consistent effects of boundary type on canola and wheat yield?
+
+
+Why did we find few consistent effects of boundary type on crop yield?
 We consider a few potential reasons for this below:
 1. Landscape influence
 2. Boundary variables
@@ -352,24 +355,24 @@ We consider a few potential reasons for this below:
 
 Our analysis only examined boundary types, without considering the landscape context that fields were embedded in.
 Some studies show the influence of landscape composition at larger spatial scales (e.g. Lan's paper) which could be particularly important when beneficial arthropods are highly mobile (e.g. bumblebee foraging) or disperse very broadly [@oberg2007].
-There could also be interactions between landscape composition at different scales (e.g. our paper in AGEE), but this is not well-studied.
+There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021], but this is not well-studied.
 Landscape complexity [@fahrig2011] and connectivity are also associated with higher abundance of beneficial arthropods (Paul's new paper + others).
 This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat (but see @fahrig2019).
-
-Our definitions of boundary type were necessarily loose, as we used satellite imagery to manually classify them.
+Our definitions of boundary type were also (necessarily) loose, as we used satellite imagery to manually classify them.
 However, it may be that other boundary traits, such as size or plant species composition, are more important for spillover of ecosystems services into fields.
-For example, larger [@lecq2018; @stasiov2020] or more functionally diverse (@bonifacio2011; @boughey2011) hedgerows tend to support more biodiversity than smaller hedgerows.
-Increased litter cover and soil compaction increased pollen beetle predators [@sutter2018b].
+For example, larger [@lecq2018; @stasiov2020] or more functionally diverse (@bonifacio2011; @boughey2011) hedgerows tend to support more biodiversity than smaller hedgerows, and some studies have shown that leaf litter and soil compaction matters to predatory beetle communities [@sutter2018b].
+These fine-scale boundary characteristics were not measured in our study, but could be used as variables in more biologically-meaningful classifications of field boundaries.
 
-Finally, pest pressure or pollination deficit may be at low enough levels that ecosystem service provision does not significantly change yield.
-Canola is largely self-pollinating (at least in hybrid canola varieties, @lindstrom2016) and wheat is wind-pollinated, meaning that slight increases in pollination services may not change yields significantly in either crop [@woodcock2016].
-Pest pressures may also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty.
-
-The net flow of ecosystem services may not be positive, if beneficial organisms do not disperse from the SNL, or if pests disperse along with them.
+Our first scenario (Scenario 1, Figure \@ref(fig:hypotheses)) assumes that beneficial organisms disperse from boundaries into the field, and had a generally positive effect on crop yield.
+However, field boundaries may not have a positive effect if a) pests (ecosystem dis-services) also disperse along with beneficials, b) if beneficials do not disperse from the boundary environment, or if c) the effect of beneficial organisms is small.
 Ecosystem disservices such as pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services (@zhang2007).
 @gray2014 showed that remnant forest fragments do not provide significant pest control services , but also do not depress yield.
 However, this is still poorly studied, and parsing out services from disservices is impossible using crop yield data _alone_.
-  
+Ecosystem services from field boundaries may be limited if beneficial organisms stay in field boundaries, or disperse at wider spatial scales (@oberg2007; @zamorano2020, but see @robinson2021).
+Finally, pest pressure or pollination deficit may be low enough that ecosystem service provision does not significantly change yield.
+Canola is largely self-pollinating (at least in hybrid canola varieties, @lindstrom2016) and wheat is wind-pollinated, meaning that slight increases in pollination services may not change yields significantly in either crop [@woodcock2016].
+Pests are also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty.
+
 Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield.
 Most fields were located in Central Alberta (Dry Mixedwood region, @ABRegions2006), where boundaries contained a higher proportion of Shelterbelts (Figure \@ref(fig:boundaryTypes)), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
 Between-year effects may be important, especially during dry years [@kort1988], but this was not considered in our analysis.
