@@ -132,27 +132,27 @@ Potential reviewers: Teja Tscharntke, Ignasi Bartomeus, Ben Woodcock, John Redhe
 Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth.
 This has allowed increases in human population and increased global stability in production.
 However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms.
-Maintaining both biodiversity and production in agroecosystems represents a seldom-considered goal of conservationists and agronomists, and hold the potential for win-win scenarios.
-Key to this is the preservation of semi-natural land (SNL), which represents the interface between crops and non-crops within agroecosystems.
+Maintaining both biodiversity and production in agroecosystems represents a goal of conservationists and agronomists, and holds the potential for win-win scenarios.
 
-SNL in and around crops is important for both agricultural production and conservation (Prieto-Benítez \& Méndez 2011), as it has the potential to create better biotic and abiotic conditions for crop growth (Case \emph{et al.} 2019; Weninger \emph{et al.} 2021; but see Lowe \emph{et al.} 2021).
-They are habitat for mobile organisms, and can act as sources of ecosystem services such as pollination or pest control (Albrecht \emph{et al.} 2020; Gardner \emph{et al.} 2021), but this can vary depending on the system (Gray \& Lewis 2014; Quinn \emph{et al.} 2017)
+Key to this goal is the preservation of semi-natural land (SNL) in and around crops, which represents the interface between crops and non-crops within agroecosystems.
+SNL in agroecosystems is important for both agricultural production and conservation (Prieto-Benítez \& Méndez 2011), and can create better biotic and abiotic conditions for crop growth (Case \emph{et al.} 2019; Weninger \emph{et al.} 2021; but see Lowe \emph{et al.} 2021).
+SNL consitutes habitat for mobile organisms, and can act as sources of ecosystem services such as pollination or pest control (Albrecht \emph{et al.} 2020; Gardner \emph{et al.} 2021), but this can vary depending on the system (Gray \& Lewis 2014; Quinn \emph{et al.} 2017).
 They also can create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed (Kort 1988; Brandle \emph{et al.} 2004).
-North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL
+North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL.
 
 SNL may affect yields at intermediate distances, depending on the spatial scale at which ecosystem services operate.
 Edge effects cause low yields at the edge of crops because of sparse or late seedling emergence, poor microclimate, and competition with weeds.
 At the same time, the centre of large fields will not receive ecosystem services if they decay with distance from edges (Kowalchuk \& Jong 1995).
 For example, pollination services from central place foragers (bees) that nest in SNL but forage in crops drops rapidly with distance (Garibaldi \emph{et al.} 2011).
-Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects (Van Vooren \emph{et al.} 2017).
-This suggests a ``goldilocks'' field size, where negative edge effects are canceled out by ecosystem services.
+Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects {[}Van Vooren \emph{et al.} (2017); Figure \ref{fig:hypotheses}{]}.
+This also suggests a ``goldilocks'' field size, where negative edge effects are canceled out by ecosystem services.
 
 \begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/ExamplePlots/hypotheses} \caption{Potential yield patterns, depending on ecosystem service effects with distance. In both figures, negative environmental effects (edge effects) are shown in red, and decrease with distance from the edge of the crop, creating an increase in yield with distance. The left figure shows a decline in ecosystem services with distance, leading to an intermediate peak in yield, while the right figure shows an increase in services with distance, leading to a peak at the centre of the field (note: Scenario 2 also occurs if ecosystem services do not change with distance).}\label{fig:hypotheses}
 \end{figure}
 
 Studies of SNL effects on crop yield also suffer from limited scope (e.g.~few crop types) and small sample sizes, limiting inference and reducing generality (Baker \emph{et al.} 2018; but see also Redhead \emph{et al.} 2020).
-Meta-analyses have been the standard solution to this problem (e.g. Albrecht \emph{et al.} 2020; Lowe \emph{et al.} 2021), but precision yield data holds enormous promise.
+Meta-analyses have been the standard solution to this problem (e.g. Albrecht \emph{et al.} 2020; Lowe \emph{et al.} 2021), but precision yield data holds enormous promise because of its common usage and relatively cheap operating costs.
 However, its use is limited for several reasons, namely: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistics.
 Ecosystem services can influence both the mean and variability of yield in agroecosystems (Redhead \emph{et al.} 2020); typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
@@ -172,7 +172,7 @@ To our knowledge, no other study has addressed the effect of field boundaries on
 Precision yield data were collected directly from farmers across Alberta.
 Farmers were solicited for yield data through local agronomists, and we received 298 field-years of data from 5 growers across a total of 7 years (2014-2020).
 We converted raw data to a standard csv format using Ag Leader SMS.
-85\% of the crop types where either wheat (\emph{Triticum aestivum}), canola (\emph{Brassica napus}), or peas (\emph{Pisum sativum}), three of the most common crops in rotation in Alberta.
+85\% of the crop types where either wheat (\emph{Triticum aestivum}), canola (\emph{Brassica napus}), or peas (\emph{Pisum sativum}), three of the most common crops in rotation in Alberta (Statistics Canada 2014).
 The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (94), canola (119), or peas (39), for a total of 252 field-years of data.
 Individual fields contained between 1 and 6 years of data (mean: 3.1), containing a total of 14.4 million data points.
 
@@ -205,7 +205,7 @@ We fit an additive model of the effect of boundary distance on crop yield while 
 Crop yield can vary within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices.
 Ground speed is extremely important to yield monitor accuracy (Arslan \& Colvin 2002), with low ground speed registering higher yields.
 Sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields across fields), this does not address sensor drift that occurs over time.
-This may be caused by sensors accumulating debris during harvest (especially in canola, pers. comm. Trent Clark), leading to changes in accuracy and bias over time.
+This may be caused by sensors accumulating debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time.
 To model this, we fit the following model to each field-year of data:
 
 \begin{equation}
@@ -324,18 +324,18 @@ Average wheat yield increased slightly with distance from the field boundary, bu
 There was also a slight increase in variability away from the field boundary, at least for Standard and Other Crop boundaries, but this was inconsistent among other boundary types.
 
 \begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on canola yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:wheatPlot}
+\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on wheat yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:wheatPlot}
 \end{figure}
 
 \hypertarget{pea-fields}{%
 \subsubsection{Pea fields}\label{pea-fields}}
 
 At the field level, both yield average and yield variability (SD of yield) of yield were spatially (average p-values: 2e-16, 2e-16) and temporally dependent (2e-16, 3.62e-07),
-There was a strong negative effect of ground speed on yield and variability of peas (Figure \ref{fig:peasPlotSpeed}), but harvest sequence did not distort the average or SD of wheat yield in a systematic way (Figure \ref{fig:wheatPlotSpeed}, right panel).
+There was a strong negative effect of ground speed on yield and variability of peas (Figure \ref{fig:peasPlotSpeed}), but harvest sequence did not distort the average or SD of wheat yield in a systematic way (Figure \ref{fig:peasPlotSpeed}, right panel).
 
 Average pea yields increased with distance from Shelterbelt, Standard, and Wetland field boundaries.
 Interestingly, the reduction at the edge was slightly higher for Wetlands, but yield increased with distance more quickly, i.e.~yields were higher at distance for Wetlands.
-Variability decreased with distance from Grassland and Standard boundaries
+Yield variability decreased with distance from Grassland and Standard boundaries, and was slightly lower overall at Standard boundaries.
 
 \begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_peas} \caption{Field boundary effect on pea yield, accounting for the effect of combine speed, spatial variation, and harvest sequence. Upper panel represents mean yield, while the lower panel represents yield variation (i.e. "patchiness").}\label{fig:peaPlot}
@@ -486,6 +486,9 @@ Robinson, S.V.J., Edwards, D., Vickruck, J.L., Best, L.R. \& Galpern, P. (2021).
 
 \leavevmode\hypertarget{ref-stasiov2020}{}%
 Stašiov, S., Diviaková, A., Svitok, M., Novikmec, M. \& Dovciak, M. (2020). Hedgerows support rich communities of harvestmen ({Opiliones}) in upland agricultural landscape. \emph{Basic and Applied Ecology}, 47, 73--82.
+
+\leavevmode\hypertarget{ref-statscan_canola2014}{}%
+Statistics Canada. (2014). Table 001-0010 - estimated areas, yield, production and average farm price of principal field crops, in metric units, annual.
 
 \leavevmode\hypertarget{ref-sutter2018b}{}%
 Sutter, L., Amato, M., Jeanneret, P. \& Albrecht, M. (2018). Overwintering of pollen beetles and their predators in oilseed rape and semi-natural habitats. \emph{Agriculture, Ecosystems {\&} Environment}, 265, 275--281.

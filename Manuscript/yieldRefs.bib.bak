@@ -527,4 +527,25 @@ Ground-dwelling arthropods can be important generalist predators in agroecosyste
   publisher = {Elsevier {BV}},
 }
 
+@Article{lowe2021,
+  author    = {Erin B. Lowe and Russell Groves and Claudio Gratton},
+  journal   = {Agriculture, Ecosystems {\&} Environment},
+  title     = {Impacts of field-edge flower plantings on pollinator conservation and ecosystem service delivery {\textendash} A meta-analysis},
+  year      = {2021},
+  month     = {apr},
+  pages     = {107290},
+  volume    = {310},
+  abstract  = {Highlights
+- We conducted a systematic review and meta-analysis of 54 studies.
+- Field-edge flower plantings consistently increased pollinator richness and abundance in field edges and became more effective as they matured.
+- The influence of field-edge plantings on crop pollination and yield was inconsistent.
+- Factors such as landscape context and crop type may influence when plantings are effective.
+- Defining how plantings impact pollinator population growth would help clarify how they impact on crop pollination and pollinator conservation.
+
+Planting flowers along crop field edges is an increasingly common management strategy for addressing pollinator declines and improving crop pollination. However, few reviews have been published summarizing the efficacy of this specific management practice and how it impacts ecosystem service delivery to crops. We conducted a systematic review (54 studies) and meta-analysis (4–29 studies, depending on the response) to determine whether such plantings 1) increase pollinator abundance or richness within field edges, 2) increase the abundance or richness of pollinators visiting crop flowers, or 3) improve crop yields. Our review and meta-analysis suggest that field-edge flower plantings are highly effective at increasing pollinator richness and abundance in field edges and that plantings become more effective as they mature. However, the influence of field-edge plantings on crop pollination and yield is inconsistent. Planting size and richness did not change these results. While this analysis shows that field-edge flower plantings consistently increase pollinator abundance and richness, there remain critical gaps in our knowledge of when and how plantings can improve ecosystem service provision and delivery. Determining if field-edge plantings affect pollinator population growth may clarify how plantings improve crop pollination, while further research on landscape context and crop type may define when this happens.},
+  doi       = {10.1016/j.agee.2020.107290},
+  groups    = {Landscape effects, Landscape, Spillover},
+  publisher = {Elsevier {BV}},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}
