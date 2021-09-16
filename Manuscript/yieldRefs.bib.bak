@@ -685,4 +685,18 @@ Synthesis and applications: Distance functions of natural pest control are not u
   url      = {https://doi.org/10.1146/annurev-arplant-042817-040256},
 }
 
+@Article{vickruck2019,
+  author    = {Jess L. Vickruck and Lincoln R. Best and Michael P. Gavin and James H. Devries and Paul Galpern},
+  journal   = {Biological Conservation},
+  title     = {Pothole wetlands provide reservoir habitat for native bees in prairie croplands},
+  year      = {2019},
+  month     = {apr},
+  pages     = {43--50},
+  volume    = {232},
+  abstract  = {The act of converting prairie grassland to agricultural farmland has negative implications for pollinator communities. In the Prairie Pothole Region, wetland remnants are a common feature in intensively cultivated landscapes. These wetlands are typically small and often left embedded in the cropland matrix and may act as the only semi-natural feature in a radius of several hundred metres. To quantify the role that these in-field wetlands play in supporting native pollinators, we sampled bees at three distances from the wetland margin into the surrounding cropland (0 m, 25 m and 75 m) across the season in three field types (canola, cereal and perennial grassland). We used Bayesian multilevel models to test the hypothesis that native bees are using infield wetlands as habitat for nesting and foraging. Native bee abundance and diversity decreased further away from the margin of wetlands in both canola and cereal fields, while it increased in wetlands located in perennial grassland. Community composition did not change further away from wetlands, which may be because the foraging range of most species was within the sampling distance of the study. These results suggest that wetlands play an important role in providing critical resources for native pollinators, and encouraging farmers not to drain or plow through these wetlands will have beneficial impacts for native pollinators in the area. Maintaining in-field wetlands may have additional pollination benefits for farmers growing crops such as canola, which is known to benefit from insect visitors.},
+  doi       = {10.1016/j.biocon.2019.01.015},
+  groups    = {Landscape effects, Agroecology},
+  publisher = {Elsevier {BV}},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}

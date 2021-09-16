@@ -118,7 +118,7 @@ Potential reviewers: Teja Tscharntke, Ignasi Bartomeus, Ben Woodcock, John Redhe
 <!-- - remove y axis from hypothesis figure – make it completely theoretical -->
 <!-- - setup: SNL is generally good for “good bugs”, but connection to spillover, and therefore ecosystem service + yield, is tenuous -->
 <!-- - Does scale beyond the field matter vs within the field? -->
-<!-- - The variables that moderate spillover and yield needs to be re-investigated -->
+<!-- - The variables that moderate spillover and yield need to be re-investigated -->
 <!-- - Under what circumstance might we expect this? -->
 <!-- - Emphasis: implications of natural areas for yield -->
 <!-- - Variable curves are “consistent with  -->
@@ -145,12 +145,14 @@ North American agroecosystems have larger fields, different crop varieties, and 
 Semi-natural field boundaries (e.g. grass and flower strips, tree or shrub shelterbelts, road right-of-ways) are of particular interest, as they are extremely common and require less land than field-sized agricultural set-asides.
   
 <!-- - SNL has conflicting effects on crop yield because of ecosystem service provision as well as negative edge effects -->
-Field boundaries may affect crop yield at intermediate distances, depending on the spatial scale at which ecosystem services operate, as they can induce positive and negative effects on crops.
-Field boundaries can cause low yields at the edge of crops because of patchy seed emergence, poor microclimate, shading, and greater competition with weeds.
-At the same time field boundaries can provide helpful ecosystem services, such as pest suppression or pollination, but these tend to be concentrated around the field edge.
+Field boundaries can cause both positive or negative effects on crops, depending on the spatial scale at which ecosystem services operate.
+Low yields near may occur near the edge of the field because of patchy seed emergence, poor microclimate, shading from trees, or greater competition with weeds.
+Field boundaries can also provide helpful ecosystem services, such as pest suppression or pollination, and these also tend to be occur close to the field edge [@duelli2003]. 
 For example, crop pollination services from bees that nest in field boundaries drops rapidly with distance [@kowalchuk1995; @garibaldi2011].
-Therefore, yield may be maximized at intermediate distances, where the ecosystem services cancel out negative edge effects [@mitchell2014; @vanVooren2017; Figure \@ref(fig:hypotheses)].
+If negative edge effects of the edge improve with distance and ecosystem services decrease with distance, yield may be maximized at intermediate distances where the ecosystem services cancel out negative edge effects [@mitchell2014; @vanVooren2017; Figure \@ref(fig:hypotheses)a].
 This suggests a "goldilocks" field size, where negative edge effects are canceled out by ecosystem services.
+Alternatively, if ecosystem services are constant with distance (or increase, Figure \@ref(fig:hypotheses)b) then yield will increase with distance from a field boundary and then plateau.
+
 <!-- In North America there are financial incentives to make fields large, homogeneous, and geometrically simple [@clare2021], but  -->
 
 
@@ -158,11 +160,12 @@ This suggests a "goldilocks" field size, where negative edge effects are cancele
   include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
 ```
 
-    
+
+Boundary effects are difficult to observe without large amounts of crop yield data, which is typically expensive and time-consuming to collect.    
 Studies of semi-natural field boundaries on crop yield tend to suffer from limited spatial scope and small sample sizes, limiting inference and reducing generality [@baker2018; but see also @redhead2020].
 Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs. 
 However, its use is limited for several reasons, namely: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistics.
-Ecosystem services from field boundaries can influence both the mean and variability of yield in agroecosystems [@redhead2020]; typically only averages (means) are considered, but higher stability (lower variance) in yield can also be valuable from a grower's perspective.
+Ecosystem services from field boundaries may influence both the mean as well as the variability of yield in agroecosystems [@redhead2020]; typically only means are considered, but lower variability in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
 
 In this paper use a precision yield dataset from Alberta, Canada to ask the following questions:
@@ -367,37 +370,39 @@ However, the difference between boundary types tended to be both small and varia
 
 
 Why did we find few consistent effects of boundary type on crop yield?
-We consider a few potential reasons for this below:
-1. Landscape influence
-2. Boundary variables
-3. Ecosystem disservices
-4. Yearly/location variation
-5. Lack of pest pressure/pollination deficit
+Our work examined only the first and last links in the causal chain _Field boundary_ $\rightarrow$ _Insect Abundance_ $\rightarrow$ _Crop Yield_, meaning that are two mediating relationships where the overall relationship could be broken or obscured.
+First, field boundaries may not have any influence on insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
+Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary yearly, or by location.
+<!-- However, our work does show that precision yield data could easily be joined to data on insect abundance to model this more completely. -->
+Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) when organisms in crops provide tangible ecosystem services.
+We consider these reasons below:
 
-Our analysis only examined boundary types, without considering the landscape context that fields were embedded in.
-Some studies show the influence of landscape composition at larger spatial scales (e.g. Lan's paper) which could be particularly important when beneficial arthropods are highly mobile (e.g. bumblebee foraging) or disperse very broadly [@oberg2007].
-There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021], but this is not well-studied.
+## Boundaries may not provide spillover
+
+SNL generally has a positive effect on spillover, but field boundaries only represent a fraction of the SNL that surrounds a given field.
+Our analysis only examined boundary types, without considering the landscape context that fields were embedded in, but some studies show the influence of landscape composition at larger spatial scales (e.g. Lan's paper) which could be particularly important when beneficial arthropods are disperse very broadly [@oberg2007].
+There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021], but this is not broadly studied.
 Landscape complexity [@fahrig2011] and connectivity are also associated with higher abundance of beneficial arthropods (Paul's new paper + others).
 This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat [but see @fahrig2019].
-Our definitions of boundary type were also (necessarily) loose, as we used satellite imagery to manually classify them.
-However, it may be that other boundary traits, such as size or plant species composition, are more important for spillover of ecosystems services into fields.
+
+Field boundary traits may play an important role in mediating spillover, but our definitions of boundaries were (necessarily) loose, as we used satellite imagery to manually classify them.
+Therefore, it may be that other aspects of field boundaries, such as size or plant community composition, are more important for spillover of ecosystems services into fields.
 For example, larger [@lecq2018; @stasiov2020] or more functionally diverse [@bonifacio2011; @boughey2011] hedgerows tend to support more biodiversity than smaller hedgerows, and some studies have shown that leaf litter and soil compaction matters to predatory beetle communities [@sutter2018b].
 These fine-scale boundary characteristics were not measured in our study, but could be used as variables in more biologically-meaningful classifications of field boundaries.
 
+
 Our first scenario (Scenario 1, Figure \@ref(fig:hypotheses)) assumes that beneficial organisms disperse from boundaries into the field, and had a generally positive effect on crop yield.
-However, field boundaries may not have a positive effect if a) pests (ecosystem dis-services) also disperse along with beneficials, b) if beneficials do not disperse from the boundary environment, or if c) the effect of beneficial organisms is small.
+However, field boundaries may not have a positive effect if a) pests (ecosystem dis-services) also disperse along with beneficials, b) if beneficials do not disperse from the boundary environment
 Ecosystem disservices such as pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services [@zhang2007].
 @gray2014 showed that remnant forest fragments do not provide significant pest control services , but also do not depress yield.
 However, this is still poorly studied, and parsing out services from disservices is impossible using crop yield data _alone_.
 Ecosystem services from field boundaries may be limited if beneficial organisms stay in field boundaries, or disperse at wider spatial scales [@oberg2007; @zamorano2020, but see @robinson2021].
-Finally, pest pressure or pollination deficit may be low enough that ecosystem service provision does not significantly change yield.
+
+## Beneficial organisms may not provide ecosystem services
+
+Pest pressure or pollination deficit may be low enough that ecosystem service provision does not significantly change yield.
 Canola is largely self-pollinating [at least in hybrid canola varieties, @lindstrom2016] and wheat is wind-pollinated, meaning that slight increases in pollination services may not change yields significantly in either crop [@woodcock2016].
 Pests are also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty.
-
-Our work examined only the first and last links in the causal chain _Field boundary_ $\rightarrow$ _Insect Abundance_ $\rightarrow$ _Crop Yield_, but there are two places where this chain could be broken.
-First, field boundaries may not have any influence on insect abundance if separated from the larger landscape context.
-Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low.
-However, our work does show that precision yield data could easily be joined to data on insect abundance to model this more completely.
 
 Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield.
 Most fields were located in Central Alberta [Dry Mixedwood region, @ABRegions2006], where boundaries contained a higher proportion of Shelterbelts (Figure \@ref(fig:boundaryTypes)), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
@@ -419,7 +424,7 @@ SVJR collected data, conducted analysis, and wrote the manuscript.
 # Acknowledgements
 
 We thank Trent Clark, Dean Hubbard, Alvin French, and Kristina Polziehn for providing yield data for us, and providing insight on their yield data. 
-We also thank Autumn Barnes and Keith Gabert of the Canola Council of Canada, and Laurel Thompson and JP Pettyjohn of Lakeland College for connecting us with farmers and agronomists. 
+We also thank Autumn Barnes and Keith Gabert of the Canola Council of Canada, and Laurel Thompson and JP Pettyjohn of Lakeland College for connecting us with farmers and agronomists.
 Funding for this research was provided by Ducks Unlimited Canada's Institute for Wetland and Waterfowl Research, the Alberta Canola Producers Commission, Manitoba Canola Growers Association, SaskCanola, the Alberta Biodiversity Monitoring Institute, and the Alberta Conservation Association.
 
 # References {-}
