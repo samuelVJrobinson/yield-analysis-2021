@@ -10,7 +10,7 @@ library(sf)
 library(beepr)
 
 # datLoc <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2019\\SW02.csv" #Multivac
-datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent Clark/2019/SW 02.csv" #Galpern machine
+datLoc <- "/media/rsamuel/Storage/geoData/Rasters/yieldData/csv files/Trent_Clark SW_02 2019.csv" #Galpern machine
 
 #Name of field
 fieldName <- unlist(strsplit(datLoc,split='/'))
@@ -20,7 +20,6 @@ fieldName <- gsub('\\.csv','',fieldName)
 source('helperFunctions.R')
 
 dat <- read.csv(datLoc,stringsAsFactors=TRUE,fileEncoding='latin1') %>% 
-  rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
   rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
   rename_with(.fn = ~gsub('..m.s.$','_ms',.x)) %>%
   rename_with(.fn = ~gsub('.km.h.$','_kmh',.x)) %>%
@@ -30,21 +29,18 @@ dat <- read.csv(datLoc,stringsAsFactors=TRUE,fileEncoding='latin1') %>%
   rename_with(.fn = ~gsub('.deg.','Angle',.x)) %>%
   rename_with(.fn = ~gsub('\\.','',.x)) %>%
   rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
-  # select(Lon:Distance,TrackAngle,Pass.Num,DryYield,Date) %>% 
   st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
   st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
-  makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%  
-  mutate(pArea=as.numeric(st_area(.))) %>% 
-  mutate(YieldMass=convertYield(DryYield,'tpha','gpm2')*pArea) %>% 
-  mergePoly(fList=lst(Date= first, ID = first, Pass= first, Speed= mean, YieldMass = sum)) %>% #Merges completely overlapping polygons. Takes a few seconds
-  mutate(pArea=as.numeric(st_area(.))) %>%
-  mutate(DryYield=convertYield(YieldMass/pArea,'gpm2','tpha')) %>%
+  # makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+  # mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
+  # st_centroid() %>% #Convert back to point
   mutate(r=1:n()) %>% #row number
   mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
   group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
-  mutate(E=st_coordinates(st_centroid(.))[,1],N=st_coordinates(st_centroid(.))[,2]) %>% 
+  mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
   mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
   
+
 fieldEdge <- dat %>% st_union() %>% st_buffer(dist=10) %>% #10m buffer around polygons
   st_cast('LINESTRING')
 
@@ -52,17 +48,19 @@ dat <- dat %>%  #Distance from edge of field
   mutate(dist=as.numeric(st_distance(.,fieldEdge))[1:nrow(.)]) %>% 
   mutate(dist=dist-min(dist)) #Shrink to 0
 
-yieldMap <- ggplot(dat)+
-  geom_sf(aes(fill=log(DryYield),col=log(DryYield)))+
+(yieldMap <- ggplot(dat)+
+  geom_sf(aes(col=sqrt(DryYield)))+
   geom_sf(data=fieldEdge,col='red')+
-  labs(title=fieldName)
+  scale_colour_distiller(type='div',palette = "Spectral") +
+  labs(title=fieldName))
 ggsave(paste0('./Figures/YieldMaps/',fieldName,'.png'),yieldMap,height=8,width=8)  
 
 # Look at data ------------------------------------------------------------
 
 dat %>% #Mostly done on Nov 4 2019
   ggplot()+geom_sf(aes(col=DryYield),alpha=0.7)+ #Yield over entire field
-  facet_wrap(~Date,ncol=1)+scale_colour_continuous(type='viridis')
+  facet_wrap(~Date,ncol=1)+
+  scale_colour_distiller(type='div',palette = "Spectral")
 
 #Dates are split between two places in data 
 dat %>% ggplot(aes(x=r,y=Date))+geom_point()
@@ -70,7 +68,8 @@ dat %>% ggplot(aes(x=r,y=Date))+geom_point()
 #Was this done on 2 combines?
 dat %>% ggplot()+
   geom_sf(aes(col=r),alpha=0.7) + #geom_path()+
-  facet_wrap(~Date,ncol=1)
+  facet_wrap(~Date,ncol=1)+
+  scale_colour_distiller(type='div',palette = "Spectral") 
 
 dat %>% ggplot(aes(x=r,y=ID))+geom_point()+ #ID number seems useful, not Pass.Number
   facet_wrap(~Date)
@@ -86,6 +85,56 @@ dat %>%
   ggplot()+geom_sf(aes(col=sqrt(dist),fill=sqrt(dist)))+
   geom_sf(data=fieldEdge,col='red')
 
+#Show extreme values
+dat %>%
+  mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% 
+  mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>% filter(!is.na(YieldDiff1)) %>% 
+  mutate(
+    extreme=case_when( #Identify "extreme" areas
+      # pArea<quantile(pArea,0.025) ~ 'pArea_low', pArea>quantile(pArea,0.975) ~ 'pArea_high', #Filter large/small pArea
+      # DryYield<quantile(DryYield,0.025) ~ 'yield_low',DryYield>quantile(DryYield,0.975) ~ 'yield_high', #Filter extreme yields
+      # Speed<quantile(Speed,0.025) ~ 'speed_low', Speed>quantile(Speed,0.975) ~ 'speed_high', #Filter high and low speeds
+      YieldDiff1>quantile(YieldDiff1,0.97) ~ 'yieldDiff',
+      AngleDiff>quantile(AngleDiff,0.97) ~ 'angleDiff',
+      TRUE ~ 'regular')
+  ) %>% 
+  # filter(extreme!='regular') %>% 
+  ggplot()+geom_sf(aes(col=extreme))+
+  scale_colour_brewer(type='qual',palette = "Set1")
+
+
+
+
+dat %>% st_drop_geometry() %>% 
+  mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% 
+  mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>%
+  filter(!is.na(YieldDiff1)) %>% 
+  mutate(filt=YieldDiff1>quantile(YieldDiff1,0.97)|AngleDiff>quantile(AngleDiff,0.97)) %>% 
+  filter(r>=1300,r<=1600) %>% 
+  select(r,filt,DryYield,AngleDiff,contains('YieldDiff'),Speed) %>% 
+  pivot_longer(-r:-filt) %>% 
+  ggplot(aes(x=r,y=value))+
+  geom_line()+
+  geom_point(aes(col=filt))+
+  facet_wrap(~name,ncol=1,scales = 'free_y')
+
+ydiff <- dat %>% 
+  mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>%
+  filter(!is.na(YieldDiff1)) %>% 
+  pull(YieldDiff1) 
+
+adiff <- dat %>% 
+  mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% 
+  filter(!is.na(AngleDiff)) %>% 
+  pull(AngleDiff)
+
+hist(ydiff)
+plot(quantile(ydiff,seq(0,1,by=0.01)),pch=19,type='b',xlab='Percentile',ylab='YieldDiff')
+abline(h=0:5,lty='dashed')
+
+plot(quantile(adiff,seq(0,1,by=0.01)),pch=19,type='b',xlab='Percentile',ylab='AngleDiff')
+abline(h=seq(0,50,5),lty='dashed')
+
 
 
 # Additive model ----------------------------------------------------------
@@ -97,8 +146,12 @@ cl <- makeCluster(12)
 #Isotropic model:
 
 #DryYield ~ distance from edge, polygon area (turning + speed), geographic smoother
-f <- sqrt(DryYield) ~ s(dist,k=10) + s(E,N,k=60) + s(r,k=30) + log(pArea) #Mean model
+f <- sqrt(DryYield) ~ log(pArea) + s(dist,k=10) + s(E,N,k=60) + s(r,k=30) #Mean model
 m1 <- bam(f,cluster=cl,data=dat)
+
+f <- DryYield ~ log(pArea) + s(dist,k=10) + s(E,N,k=60) + s(r,k=30) #Mean model
+# m1 <- gam(f,data=dat,family=inverse.gaussian()) #Doesn't look particularly good
+m1 <- gam(f,data=dat,family=scat())  #Looks OK
 
 summary(m1)
 par(mfrow=c(2,2)); gam.check(m1); abline(0,1,col='red'); par(mfrow=c(1,1))
@@ -107,7 +160,8 @@ plot(m1,scheme=2,all.terms=TRUE,too.far=0.01,pages=1)
 stopCluster(cl) 
 
 #Non-isotropic model - much better than first one
-f2 <- ~ s(dist,k=6) + s(E,N,k=60) + s(r,k=60) + log(pArea) #Variance model
+f <- sqrt(DryYield) ~ log(pArea) + s(dist,k=10) + s(E,N,k=60) + s(r,k=30) #Mean model
+f2 <- ~ log(pArea) + s(dist,k=6) + s(E,N,k=60) + s(r,k=30) #Variance model
 flist <- list(f,f2)
 
 a <- Sys.time()

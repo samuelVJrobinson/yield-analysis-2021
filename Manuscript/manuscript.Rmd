@@ -190,8 +190,8 @@ We extracted the size of each polygon (m$^2$), dry yield (tonnes), and the spati
 Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data
 Seeding and application rates were constant across fields, so we did not consider inputs in our analysis
 We used dry yield (tonnes of seed/hectare minus recorded crop moisture) as our measure of crop yield
-Precision yield data can be highly variable and is prone to extreme outliers (both positive and negative), especially when combine ground speeds are low and at the beginning of rows [@]
-Therefore, we filtered data that lay outside the 95th percentiles of yield within each field, values less than or equal to zero, and values outside of the 95th percentiles of ground speed.
+Precision yield data can be highly variable and is prone to extreme outliers, especially when combine ground speeds are low and at the beginning of rows [@griffin2007; @whelan2013].
+We filtered data that lay outside the 95th percentiles of yield within each field, values less than or equal to zero, and values outside of the 95th percentiles of ground speed.
 Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time.
 
 Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC. 

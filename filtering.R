@@ -19,20 +19,19 @@ datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
 
 nSubSamp <- 50000 #Number of points to start with
 
-# fieldName <- 'Alvin_French C41 2020'
-fieldName <- 'Gibbons Bill Visser 2017'
-# fieldName <- 'Trent_Clark E 06 2018'
+fieldName <- 'Alvin_French C41 2020' #Canola - extremely messy - 1st filter seems better, but hard to tell
+# fieldName <- 'Gibbons Bill Visser 2017' #Peas - 2nd filter seems better
+# fieldName <- 'Trent_Clark E 06 2018' #Canola - chunks missing - 2nd filter seems better
+# fieldName <- 'Dean_Hubbard E_21_11_25 2018' #Wheat
+# fieldName <- 'Dean_Hubbard E_21_11_25 2020' #Wheat
 
 rownum <- which(datSource$filename==fieldName)
 csvPath <- datSource$dataPath[rownum] #Get file paths
 boundaryPath <- datSource$boundaryPath[rownum]
 boundaryPath2 <- datSource$boundaryPath2[rownum]
+(cropType <- datSource$crop[rownum])
 
 dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
-
-if(nrow(dat)>nSubSamp){
-  dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
-}
 
 dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
   rename_with(.fn = ~gsub('..tonne.ha.$','_tHa',.x)) %>%
@@ -46,19 +45,18 @@ dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
   rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
   st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
   st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
-  makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+  makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%
   mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
   mutate(r=1:n()) %>% #row number
-  #Remove extreme values
-  filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
-         DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
-         Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95), #Filter high and low speeds
-         ) %>%
   st_centroid() %>% #Convert back to point
   mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
   group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
   mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
   mutate(E=(E-mean(E)),N=(N-mean(N))) #Center coordinates
+
+if(nrow(dat)>nSubSamp){ #If too many samples
+  dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+}
 
 fieldEdge <- read_sf(boundaryPath) #Read in boundary polygon
 fieldEdgeType <- read_sf(boundaryPath2) #Read in boundary type linestrings
@@ -68,7 +66,59 @@ dat <- dat %>%
   bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdgeType),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdgeType$type[which.min(x)]))))) %>% 
   mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
 
-ggplot(dat)+geom_sf(alpha=0.3)+geom_sf(data=fieldEdge,col='red',fill=NA)
+# ggplot(dat)+geom_sf(aes(col=DryYield),alpha=0.3)+
+#   geom_sf(data=fieldEdge,col='red',fill=NA)+
+#   scale_colour_distiller(type='div',palette = "Spectral",direction=1)
+
+dat2 <- dat %>% #Trying out different filters
+  #Filter 1: Retains only 90th percentils of pArea, dryYield, and speed
+  mutate(filt=pArea<quantile(pArea,0.05)|pArea>quantile(pArea,0.95)| #Large/small pArea
+           DryYield<quantile(DryYield,0.05)|DryYield>quantile(DryYield,0.95)| #Filter extreme yields
+           Speed<quantile(Speed,0.05)|Speed>quantile(Speed,0.95) #Filter high and low speeds
+         )
+dat3 <- dat %>% 
+  #Filter 2: Uses angle and yield differences
+  mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% #Absolute value of bearing angle difference (turning)
+  mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>% #Lagged difference in dry yield
+  filter(!is.na(YieldDiff1)) %>%
+  mutate(filt=YieldDiff1>quantile(YieldDiff1,0.97)|AngleDiff>quantile(AngleDiff,0.97)|DryYield>quantile(DryYield,0.99)|DryYield<quantile(DryYield,0.01))
+
+p1 <- dat2 %>% #Lineplot
+  filter(r>23000&r<24000) %>%
+  ggplot(aes(x=r,y=DryYield))+
+  geom_line()+
+  geom_point(aes(col=filt))
+p2 <- dat3 %>% #Lineplot
+  filter(r>23000&r<24000) %>%
+  ggplot(aes(x=r,y=DryYield))+
+  geom_line()+
+  geom_point(aes(col=filt))
+ggarrange(p1,p2,ncol=1,nrow=2)
+
+
+p1 <- dat2 %>% filter(!filt) %>% #Yield data after filtering
+  ggplot()+
+  geom_sf(aes(col=DryYield),alpha=0.3)+
+  geom_sf(data=fieldEdge,col='red',fill=NA)+
+  scale_colour_distiller(type='div',palette = "Spectral",direction=1)
+p2 <- dat3 %>% filter(!filt) %>% #Yield data after filtering
+  ggplot()+
+  geom_sf(aes(col=DryYield),alpha=0.3)+
+  geom_sf(data=fieldEdge,col='red',fill=NA)+
+  scale_colour_distiller(type='div',palette = "Spectral",direction=1)
+ggarrange(p1,p2,ncol=2,nrow=1)
+
+p1 <- dat2 %>% 
+  ggplot()+ #Where are filtered data located in the field?
+  geom_sf(aes(col=filt),alpha=0.3)+
+  geom_sf(data=fieldEdge,col='red',fill=NA)+
+  scale_color_manual(values=c('yellow','black'))
+p2 <- dat3 %>% 
+  ggplot()+ #Where are filtered data located in the field?
+  geom_sf(aes(col=filt),alpha=0.3)+
+  geom_sf(data=fieldEdge,col='red',fill=NA)+
+  scale_color_manual(values=c('yellow','black'))
+ggarrange(p1,p2,ncol=2,nrow=1)
 
 # Look at data --------------------------------------
 

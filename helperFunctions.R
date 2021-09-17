@@ -3,6 +3,16 @@
 #Scales x between 0 and 1
 range01 <- function(x) (x-min(x))/(max(x)-min(x))
 
+#Difference in compass bearings (in degrees)
+bearingDiff <- function(x1,x2){
+  x <- x1-x2
+  x <- ifelse(abs(x)>180,x-(360*sign(x)),x) #Angle differences can't be >180
+  return(x)
+}
+# bearingDiff(0,15) #Should be the same as below
+# bearingDiff(355,10)
+# bearingDiff(NA,10)
+
 seqGroup <- function(x,singles=TRUE){ #Turns sequential IDs into numbered groups.
   #Singles = TRUE, sequential values must be exactly 1 greater (gaps matter)
   #Singles = FALSE, sequential values must be greater (gaps don't matter)
@@ -43,7 +53,7 @@ makePolys <- function(dat,width='w',dist='d',angle='a',backwards=FALSE){
     st_polygon(list(r))
   })
   #Combine dat with new polygon geometry, and add original CRS
-  dat2 <- st_sf(st_drop_geometry(dat),st_sfc(polys)) %>% st_set_crs(datCRS)
+  dat2 <- st_sf(st_drop_geometry(dat),geometry=st_sfc(polys)) %>% st_set_crs(datCRS)
   return(dat2)
 }
 
