@@ -3,16 +3,6 @@
 #Scales x between 0 and 1
 range01 <- function(x) (x-min(x))/(max(x)-min(x))
 
-#Difference in compass bearings (in degrees)
-bearingDiff <- function(x1,x2){
-  x <- x1-x2
-  x <- ifelse(abs(x)>180,x-(360*sign(x)),x) #Angle differences can't be >180
-  return(x)
-}
-# bearingDiff(0,15) #Should be the same as below
-# bearingDiff(355,10)
-# bearingDiff(NA,10)
-
 seqGroup <- function(x,singles=TRUE){ #Turns sequential IDs into numbered groups.
   #Singles = TRUE, sequential values must be exactly 1 greater (gaps matter)
   #Singles = FALSE, sequential values must be greater (gaps don't matter)
@@ -989,3 +979,99 @@ getModelInfo <- function(path){
 # 
 # debugonce(getModelInfo)
 # getModelInfo("./Figures/ModelCheck/Dean Hubbard 2018 All_27_11_25 results.txt")
+
+
+#Yield data filters -----------------
+
+#"Inlier" spatial filtering procedure from Vega et al 2019, written to work with sf + dplyr. Returns NA-filtered results or boolean
+vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
+  require(sf)
+  require(sp)
+  require(spdep)
+  require(tidyverse)
+  
+  # #Debugging
+  # nDist <- 30
+  # yield <- data$DryYield
+  
+  # if(is.null(ycol)) stop('Specify yield column')
+  if(!any(class(data) %in% 'sf')) stop('Dataframe must be sf object')
+  
+  yield <- pull(data,{{ycol}}) #Get yield data column
+  coords <- st_coordinates(data) #Get coordinates in matrix form
+  
+  #Get neighbourhood weights from 0 to ndist meters
+  nWeights <- dnearneigh(coords,0,nDist) 
+  
+  #Get neighbourhood indices for each point (which other points are in this point's neighbourhood?)
+  nIndices <- nb2listw(nWeights, style = "W") 
+  
+  #Local Moran's I
+  LM <- localmoran(yield,nIndices,p.adjust.method="bonferroni",alternative ="less")
+  
+  # # Moran Plot of Yield data against spatially lagged values - not needed for filter, only for plotting
+  # MP <- moran.plot(yield,nIndices,quiet=TRUE,labels=TRUE,zero.policy=FALSE,
+  #                  xlab='Yield', ylab="Spatially Lagged")
+  # results <- data.frame(LM,MP) %>% #Joins into single dataframe
+    
+  results <- data.frame(LM) %>% 
+    rename('pval'=contains('Pr.z.')) %>% 
+    mutate(keepThese= Ii > 0 | pval > pvalCutoff) #Filter negative Ii and pvals < 0.05
+  
+  ret <- pull(results,keepThese) 
+  return(ret)
+}
+
+ZscoreFilter <- function(x,z=3){
+  xmean <- mean(x,na.rm=TRUE)
+  xsd <- sd(x,na.rm=TRUE)
+  zscore <- abs(((x-xmean)/xsd))
+  zscore<z
+} #Function to filter anything above a certain z-score
+
+QuantileFilter <- function(x,quant=0.99){ #Function to filter anything above certain quantiles
+  l <- c((1-quant)/2,1-(1-quant)/2) #Symmetric quantiles
+  x>quantile(x,l[1]) & x<quantile(x,l[2]) 
+}
+
+bearingFilter <- function(bearing,q=NULL,z=NULL){
+  if(!xor(is.null(q),is.null(z))) stop('Input quantiles or Z-score')
+  #Difference in compass bearings (in degrees)
+  bearingDiff <- function(x1,x2){
+    x <- x1-x2
+    x <- ifelse(abs(x)>180,x-(360*sign(x)),x) #Angle differences can't be >180
+    return(x)
+  }
+  # bearingDiff(0,15) #Should be the same as below
+  # bearingDiff(355,10)
+  # bearingDiff(NA,10)
+  bd <- bearingDiff(lag(bearing),bearing)
+  bd[1] <- 0 #Set first difference to 0 (avoids NA problem)
+  
+  if(!is.null(q)){
+    ret <- QuantileFilter(bd,q=q)
+  } else {
+    ret <- ZscoreFilter(bd,z=z)
+  }
+  return(ret)
+  
+} 
+
+dSpeedFilter <- function(speed,l=c(-1,1),perc=0.2){ #Filter for (forward and backward) lagged speed differences.
+  # #Debugging
+  # speed <- dat$Speed[1:30]
+  # l <- c(2,1,-1,-2) #Backward and forward lags
+  # perc <- 0.2
+  
+  lag2 <- function(x,n){ #Overloaded lag function that takes negative values
+    if(n>0) lag(x,n) else lead(x,abs(n))
+  }
+  
+  llist <- sapply(l,function(x) (lag2(speed,x)-speed)/lag2(speed,x)) #Matrix of % diffs
+  
+  #Are any lagged speed values > percent change threshold?
+  ret <- !apply(llist,1,function(y) any(abs(y)[!is.na(y)]>perc))
+  
+  return(ret)
+}
+

@@ -11,14 +11,11 @@ library(ggpubr)
 setwd("~/Documents/yield-analysis-2021")
 source('./helperFunctions.R')
 
-datSource <- read.csv('./Data/datSource.csv') %>% #Read previous datasource file
-  mutate(boundaryComplete=file.exists(boundaryPath)) %>% #Has boundary been made already?
-  mutate(modelComplete1=file.exists(modelPath1)) %>% #Has model1 already been run?
-  mutate(modelComplete2=file.exists(modelPath2)) %>% #Has model2 already been run?
-  mutate(modelComplete0=file.exists(modelPath0)) #Has model0 already been run?
+datSource <- read.csv('./Data/datSource.csv') 
 
-nSubSamp <- 50000 #Number of points to start with
+nSubSamp <- 60000 #Number of points to start with
 
+#Galpern machine paths
 fieldName <- 'Alvin_French C41 2020' #Canola - extremely messy - 1st filter seems better, but hard to tell
 # fieldName <- 'Gibbons Bill Visser 2017' #Peas - 2nd filter seems better
 # fieldName <- 'Trent_Clark E 06 2018' #Canola - chunks missing - 2nd filter seems better
@@ -30,6 +27,9 @@ csvPath <- datSource$dataPath[rownum] #Get file paths
 boundaryPath <- datSource$boundaryPath[rownum]
 boundaryPath2 <- datSource$boundaryPath2[rownum]
 (cropType <- datSource$crop[rownum])
+
+#Multivac paths
+csvPath <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2018\\E 06.csv" 
 
 dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
 
@@ -58,20 +58,20 @@ if(nrow(dat)>nSubSamp){ #If too many samples
   dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
 }
 
-fieldEdge <- read_sf(boundaryPath) #Read in boundary polygon
-fieldEdgeType <- read_sf(boundaryPath2) #Read in boundary type linestrings
-
-#Get distance and type of closest boundary
-dat <- dat %>% 
-  bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdgeType),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdgeType$type[which.min(x)]))))) %>% 
-  mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
+# fieldEdge <- read_sf(boundaryPath) #Read in boundary polygon
+# fieldEdgeType <- read_sf(boundaryPath2) #Read in boundary type linestrings
+# 
+# #Get distance and type of closest boundary
+# dat <- dat %>% 
+#   bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdgeType),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdgeType$type[which.min(x)]))))) %>% 
+#   mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
 
 # ggplot(dat)+geom_sf(aes(col=DryYield),alpha=0.3)+
 #   geom_sf(data=fieldEdge,col='red',fill=NA)+
 #   scale_colour_distiller(type='div',palette = "Spectral",direction=1)
 
 dat2 <- dat %>% #Trying out different filters
-  #Filter 1: Retains only 90th percentils of pArea, dryYield, and speed
+  #Filter 1: Retains only 90th percentiles of pArea, dryYield, and speed
   mutate(filt=pArea<quantile(pArea,0.05)|pArea>quantile(pArea,0.95)| #Large/small pArea
            DryYield<quantile(DryYield,0.05)|DryYield>quantile(DryYield,0.95)| #Filter extreme yields
            Speed<quantile(Speed,0.05)|Speed>quantile(Speed,0.95) #Filter high and low speeds
@@ -119,6 +119,58 @@ p2 <- dat3 %>%
   geom_sf(data=fieldEdge,col='red',fill=NA)+
   scale_color_manual(values=c('yellow','black'))
 ggarrange(p1,p2,ncol=2,nrow=1)
+
+
+#Tests of automatic filtering criteria
+dat <- dat %>% mutate(vegaFilt = vegaFilter(dat,DryYield,nDist = 30)) %>%  #Trim spatial "inliers" - takes about a minute
+  mutate(Zfilt = ZscoreFilter(DryYield)) %>% #Trim dry yield outliers
+  mutate(bFilt = bearingFilter(TrackAngle,q=0.99)) %>% #Trim extreme bearing changes (turning)
+  mutate(speedFilt = QuantileFilter(Speed,q=0.99)) %>% #Trim absolute speed outliers
+  mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+  
+  #Combine differences
+  mutate(DryYield_filt = ifelse(vegaFilt & Zfilt & bFilt & speedFilt & dSpeedFilt, 
+                                DryYield, NA))
+
+p1 <- ggplot(dat)+geom_sf(aes(col=DryYield))+
+  scale_colour_distiller(type='div',palette = "Spectral") +
+  labs(col='Yield',title='Raw Yield')+theme(legend.position='bottom')
+
+p2 <- ggplot(dat)+geom_sf(aes(col=is.na(DryYield_filt)))+
+  scale_colour_manual(values=c('black','red'))+
+  labs(col='Filtered')+theme(legend.position='bottom')
+
+p3 <- ggplot(dat)+geom_sf(aes(col=DryYield_filt))+
+  scale_colour_distiller(type='div',palette = "Spectral") +
+  labs(col='Filtered',title='Filtered Yield')+theme(legend.position='bottom')
+
+ggarrange(p1,p2,p3,ncol=3,nrow=1) 
+
+#Bearing filtering
+ggplot(dat,aes(x=r))+
+  geom_line(aes(y=DryYield),col='black')+
+  geom_point(aes(y=DryYield,alpha=bFilt),col='blue')+
+  scale_alpha_discrete(range = c(1,0))+
+  coord_cartesian(xlim=c(10000,20000))
+
+#Speed filtering
+ggplot(dat,aes(x=r))+
+  geom_line(aes(y=DryYield),col='black')+
+  geom_point(aes(y=DryYield,alpha=speedFilt),col='blue')+
+  scale_alpha_discrete(range = c(1,0))+
+  coord_cartesian(xlim=c(10000,11000))
+
+#dSpeed filtering
+ggplot(dat,aes(x=r))+
+  # geom_line(aes(y=Speed),col='black')+
+  # geom_point(aes(y=Speed,col=dSpeedFilt))+
+  
+  geom_line(aes(y=DryYield),col='black')+
+  geom_point(aes(y=DryYield,col=dSpeedFilt))+
+  
+  scale_colour_manual(values=c('red','blue'))+
+  coord_cartesian(xlim=c(10000,20000))
+
 
 # Look at data --------------------------------------
 
@@ -264,3 +316,5 @@ p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>%
   labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
 
   
+
+
