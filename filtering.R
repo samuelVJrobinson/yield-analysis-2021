@@ -13,11 +13,12 @@ source('./helperFunctions.R')
 
 datSource <- read.csv('./Data/datSource.csv') 
 
-nSubSamp <- 60000 #Number of points to start with
+nSubSamp <- 60000 #Number of points to use
 
 #Galpern machine paths
-fieldName <- 'Alvin_French C41 2020' #Canola - extremely messy - 1st filter seems better, but hard to tell
-# fieldName <- 'Gibbons Bill Visser 2017' #Peas - 2nd filter seems better
+# fieldName <- 'Alvin_French C41 2020' #Canola - extremely messy - 1st filter seems better, but hard to tell
+fieldName <- 'Gibbons Bill Visser 2017' #Peas - 2nd filter seems better
+# fieldName <- 'Gibbons Wilf 2016' #Canola
 # fieldName <- 'Trent_Clark E 06 2018' #Canola - chunks missing - 2nd filter seems better
 # fieldName <- 'Dean_Hubbard E_21_11_25 2018' #Wheat
 # fieldName <- 'Dean_Hubbard E_21_11_25 2020' #Wheat
@@ -28,8 +29,8 @@ boundaryPath <- datSource$boundaryPath[rownum]
 boundaryPath2 <- datSource$boundaryPath2[rownum]
 (cropType <- datSource$crop[rownum])
 
-#Multivac paths
-csvPath <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2018\\E 06.csv" 
+# #Multivac paths
+# csvPath <- "C:\\Users\\Samuel\\Documents\\Ag Leader Technology\\SMS\\Export\\Trent Clark\\2018\\E 06.csv" 
 
 dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
 
@@ -47,8 +48,8 @@ dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
   st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
   makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%
   mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
-  mutate(r=1:n()) %>% #row number
   st_centroid() %>% #Convert back to point
+  mutate(r=1:n()) %>% #row number
   mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
   group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
   mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
@@ -58,79 +59,87 @@ if(nrow(dat)>nSubSamp){ #If too many samples
   dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
 }
 
-# fieldEdge <- read_sf(boundaryPath) #Read in boundary polygon
-# fieldEdgeType <- read_sf(boundaryPath2) #Read in boundary type linestrings
-# 
-# #Get distance and type of closest boundary
-# dat <- dat %>% 
-#   bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdgeType),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdgeType$type[which.min(x)]))))) %>% 
-#   mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
+fieldEdge <- read_sf(boundaryPath) #Read in boundary polygon
+fieldEdgeType <- read_sf(boundaryPath2) #Read in boundary type linestrings
+
+#Get distance and type of closest boundary
+dat <- dat %>%
+  bind_cols(.,data.frame(t(apply(st_distance(dat,fieldEdgeType),1,function(x) c(dist=min(x,na.rm=TRUE),boundaryType=fieldEdgeType$type[which.min(x)]))))) %>%
+  mutate(dist=as.numeric(dist),boundaryType=factor(boundaryType))
 
 # ggplot(dat)+geom_sf(aes(col=DryYield),alpha=0.3)+
 #   geom_sf(data=fieldEdge,col='red',fill=NA)+
 #   scale_colour_distiller(type='div',palette = "Spectral",direction=1)
 
-dat2 <- dat %>% #Trying out different filters
-  #Filter 1: Retains only 90th percentiles of pArea, dryYield, and speed
-  mutate(filt=pArea<quantile(pArea,0.05)|pArea>quantile(pArea,0.95)| #Large/small pArea
-           DryYield<quantile(DryYield,0.05)|DryYield>quantile(DryYield,0.95)| #Filter extreme yields
-           Speed<quantile(Speed,0.05)|Speed>quantile(Speed,0.95) #Filter high and low speeds
-         )
-dat3 <- dat %>% 
-  #Filter 2: Uses angle and yield differences
-  mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% #Absolute value of bearing angle difference (turning)
-  mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>% #Lagged difference in dry yield
-  filter(!is.na(YieldDiff1)) %>%
-  mutate(filt=YieldDiff1>quantile(YieldDiff1,0.97)|AngleDiff>quantile(AngleDiff,0.97)|DryYield>quantile(DryYield,0.99)|DryYield<quantile(DryYield,0.01))
+# #Trying out different filters
+# dat2 <- dat %>% 
+#   #Filter 1: Retains only 90th percentiles of pArea, dryYield, and speed
+#   mutate(filt=pArea<quantile(pArea,0.05)|pArea>quantile(pArea,0.95)| #Large/small pArea
+#            DryYield<quantile(DryYield,0.05)|DryYield>quantile(DryYield,0.95)| #Filter extreme yields
+#            Speed<quantile(Speed,0.05)|Speed>quantile(Speed,0.95) #Filter high and low speeds
+#          )
+# dat3 <- dat %>% 
+#   #Filter 2: Uses angle and yield differences
+#   mutate(AngleDiff=abs(bearingDiff(lag(TrackAngle),TrackAngle))) %>% #Absolute value of bearing angle difference (turning)
+#   mutate(YieldDiff1=abs((lag(DryYield)-DryYield))) %>% #Lagged difference in dry yield
+#   filter(!is.na(YieldDiff1)) %>%
+#   mutate(filt=YieldDiff1>quantile(YieldDiff1,0.97)|AngleDiff>quantile(AngleDiff,0.97)|DryYield>quantile(DryYield,0.99)|DryYield<quantile(DryYield,0.01))
+# 
+# p1 <- dat2 %>% #Lineplot
+#   filter(r>23000&r<24000) %>%
+#   ggplot(aes(x=r,y=DryYield))+
+#   geom_line()+
+#   geom_point(aes(col=filt))
+# p2 <- dat3 %>% #Lineplot
+#   filter(r>23000&r<24000) %>%
+#   ggplot(aes(x=r,y=DryYield))+
+#   geom_line()+
+#   geom_point(aes(col=filt))
+# ggarrange(p1,p2,ncol=1,nrow=2)
+# 
+# p1 <- dat2 %>% filter(!filt) %>% #Yield data after filtering
+#   ggplot()+
+#   geom_sf(aes(col=DryYield),alpha=0.3)+
+#   geom_sf(data=fieldEdge,col='red',fill=NA)+
+#   scale_colour_distiller(type='div',palette = "Spectral",direction=1)
+# p2 <- dat3 %>% filter(!filt) %>% #Yield data after filtering
+#   ggplot()+
+#   geom_sf(aes(col=DryYield),alpha=0.3)+
+#   geom_sf(data=fieldEdge,col='red',fill=NA)+
+#   scale_colour_distiller(type='div',palette = "Spectral",direction=1)
+# ggarrange(p1,p2,ncol=2,nrow=1)
+# 
+# p1 <- dat2 %>% 
+#   ggplot()+ #Where are filtered data located in the field?
+#   geom_sf(aes(col=filt),alpha=0.3)+
+#   geom_sf(data=fieldEdge,col='red',fill=NA)+
+#   scale_color_manual(values=c('yellow','black'))
+# p2 <- dat3 %>% 
+#   ggplot()+ #Where are filtered data located in the field?
+#   geom_sf(aes(col=filt),alpha=0.3)+
+#   geom_sf(data=fieldEdge,col='red',fill=NA)+
+#   scale_color_manual(values=c('yellow','black'))
+# ggarrange(p1,p2,ncol=2,nrow=1)
 
-p1 <- dat2 %>% #Lineplot
-  filter(r>23000&r<24000) %>%
-  ggplot(aes(x=r,y=DryYield))+
-  geom_line()+
-  geom_point(aes(col=filt))
-p2 <- dat3 %>% #Lineplot
-  filter(r>23000&r<24000) %>%
-  ggplot(aes(x=r,y=DryYield))+
-  geom_line()+
-  geom_point(aes(col=filt))
-ggarrange(p1,p2,ncol=1,nrow=2)
+#Variograms
 
-
-p1 <- dat2 %>% filter(!filt) %>% #Yield data after filtering
-  ggplot()+
-  geom_sf(aes(col=DryYield),alpha=0.3)+
-  geom_sf(data=fieldEdge,col='red',fill=NA)+
-  scale_colour_distiller(type='div',palette = "Spectral",direction=1)
-p2 <- dat3 %>% filter(!filt) %>% #Yield data after filtering
-  ggplot()+
-  geom_sf(aes(col=DryYield),alpha=0.3)+
-  geom_sf(data=fieldEdge,col='red',fill=NA)+
-  scale_colour_distiller(type='div',palette = "Spectral",direction=1)
-ggarrange(p1,p2,ncol=2,nrow=1)
-
-p1 <- dat2 %>% 
-  ggplot()+ #Where are filtered data located in the field?
-  geom_sf(aes(col=filt),alpha=0.3)+
-  geom_sf(data=fieldEdge,col='red',fill=NA)+
-  scale_color_manual(values=c('yellow','black'))
-p2 <- dat3 %>% 
-  ggplot()+ #Where are filtered data located in the field?
-  geom_sf(aes(col=filt),alpha=0.3)+
-  geom_sf(data=fieldEdge,col='red',fill=NA)+
-  scale_color_manual(values=c('yellow','black'))
-ggarrange(p1,p2,ncol=2,nrow=1)
-
-
-#Tests of automatic filtering criteria
-dat <- dat %>% mutate(vegaFilt = vegaFilter(dat,DryYield,nDist = 30)) %>%  #Trim spatial "inliers" - takes about a minute
-  mutate(Zfilt = ZscoreFilter(DryYield)) %>% #Trim dry yield outliers
-  mutate(bFilt = bearingFilter(TrackAngle,q=0.99)) %>% #Trim extreme bearing changes (turning)
-  mutate(speedFilt = QuantileFilter(Speed,q=0.99)) %>% #Trim absolute speed outliers
-  mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+#Tests of automatic filtering criteria - uses filter criteria from Vega et al 2019
+dat <- dat %>% mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) #Trim spatial "inliers" - takes about a minute
   
-  #Combine differences
-  mutate(DryYield_filt = ifelse(vegaFilt & Zfilt & bFilt & speedFilt & dSpeedFilt, 
-                                DryYield, NA))
+dat <- dat %>% 
+  mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% 
+  #JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+  
+  # mutate(noBS = TRUE) %>% #Turn off filter
+  mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
+  # mutate(Qfilt = DryYield<quantile(DryYield,0.99)) %>% #Trim dry yield outliers
+  mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
+  mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
+  mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+  mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
+  #Combine filter criteria
+  mutate(allFilt = noBS & vegaFilt & Qfilt & bFilt & speedFilt & dSpeedFilt & posFilt, 
+         DryYield_filt = ifelse(allFilt, DryYield, NA)) #Turns filtered values to NAs
 
 p1 <- ggplot(dat)+geom_sf(aes(col=DryYield))+
   scale_colour_distiller(type='div',palette = "Spectral") +
@@ -138,38 +147,103 @@ p1 <- ggplot(dat)+geom_sf(aes(col=DryYield))+
 
 p2 <- ggplot(dat)+geom_sf(aes(col=is.na(DryYield_filt)))+
   scale_colour_manual(values=c('black','red'))+
-  labs(col='Filtered')+theme(legend.position='bottom')
+  labs(col='Filtered',title='Filtered Points')+theme(legend.position='bottom')
 
-p3 <- ggplot(dat)+geom_sf(aes(col=DryYield_filt))+
+p3 <- dat %>% filter(!is.na(DryYield_filt)) %>% 
+  ggplot()+geom_sf(aes(col=DryYield_filt))+
   scale_colour_distiller(type='div',palette = "Spectral") +
   labs(col='Filtered',title='Filtered Yield')+theme(legend.position='bottom')
 
 ggarrange(p1,p2,p3,ncol=3,nrow=1) 
 
-#Bearing filtering
+#Overall filtering
 ggplot(dat,aes(x=r))+
+  geom_line(aes(y=DryYield),col='black')+
+  geom_line(aes(y=DryYield_filt),col='red')+
+  coord_cartesian(xlim=c(10000,20000),ylim=c(0,50))
+
+#Bearing filtering
+dat %>% mutate(bDiffs=bearingFilter(TrackAngle,returnDiffs = TRUE)) %>% 
+  ggplot(aes(x=r,y=bDiffs))+
+  geom_line()+
+  geom_line(aes(y=ifelse(bFilt,bDiffs,NA)),col='red')+labs(y='Bearing differences')+
+  coord_cartesian(xlim=c(10000,20000))
+
+ggplot(dat,aes(x=r))+ #Yield
   geom_line(aes(y=DryYield),col='black')+
   geom_point(aes(y=DryYield,alpha=bFilt),col='blue')+
   scale_alpha_discrete(range = c(1,0))+
-  coord_cartesian(xlim=c(10000,20000))
+  coord_cartesian(xlim=c(10000,20000),ylim=c(0,50))
 
 #Speed filtering
 ggplot(dat,aes(x=r))+
-  geom_line(aes(y=DryYield),col='black')+
+  geom_line(aes(y=DryYield_filt),col='black')+
   geom_point(aes(y=DryYield,alpha=speedFilt),col='blue')+
   scale_alpha_discrete(range = c(1,0))+
-  coord_cartesian(xlim=c(10000,11000))
+  coord_cartesian(xlim=c(10000,20000),ylim=c(0,50))
 
 #dSpeed filtering
 ggplot(dat,aes(x=r))+
   # geom_line(aes(y=Speed),col='black')+
   # geom_point(aes(y=Speed,col=dSpeedFilt))+
-  
   geom_line(aes(y=DryYield),col='black')+
   geom_point(aes(y=DryYield,col=dSpeedFilt))+
-  
   scale_colour_manual(values=c('red','blue'))+
   coord_cartesian(xlim=c(10000,20000))
+
+
+# #Chung et al 2002 looks what the appropriate crop lag time should be using nugget variance. This is tricky to do, and likely varies within field
+# delayTime <- function(d,l,varName=DryYield,makePlot=FALSE,varMod='Exp',cressie=FALSE){
+#   require(dplyr)
+#   require(sf)
+#   require(gstat)
+#   require(spacetime) 
+#   
+#   dat_sp <- d %>% mutate(resid={{varName}}-mean({{varName}})) %>% 
+#     select(resid) %>% 
+#     mutate(resid=lag2(resid,l)) %>%
+#     filter(!is.na(resid)) %>% 
+#     as_Spatial()
+#   
+#   v <- variogram(resid~1, data=dat_sp,width=2,cutoff=80,cressie=cressie) #Variogram
+#   varFit <- fit.variogram(v,vgm(varMod)) #Fit exponential variogram
+#   
+#   if(makePlot){
+#     plot(v,varFit)
+#   } else {
+#     return(varFit$psill[1]) #Return nugget value
+#   }
+# }
+# 
+# #Non-lagged variogram
+# delayTime(d=dat,l=0,makePlot = TRUE,varMod = 'Exp')
+# 
+# lagTimes <- -30:30
+# library(parallel); detectCores()
+# cluster <- makeCluster(15) 
+# clusterExport(cluster,'lag2')
+# a <- Sys.time()
+# nuggetVals <- parSapply(cl=cluster,lagTimes,delayTime,d=dat,cressie=FALSE,varMod = 'Exp') 
+# beep(1)
+# stopCluster(cluster)
+# Sys.time()-a 
+# 
+# # nuggetVals <- sapply(lagTimes,function(x) delayTime(dat,x))
+# plot(lagTimes,nuggetVals,type='b') #Not super clear what the appropriate lag should be
+# abline(v=c(-5,0,5),lty='dashed')
+# 
+# lagTimes[which.max(nuggetVals)]
+# lagTimes[which.min(nuggetVals)]
+# 
+# p1 <- dat %>% mutate(DryYield_filt=lag2(DryYield_filt,0)) %>% 
+#   filter(!is.na(DryYield_filt)) %>% 
+#   ggplot()+geom_sf(aes(col=DryYield_filt))
+# 
+# p2 <- dat %>% mutate(DryYield_filt=lag2(DryYield_filt,7)) %>% 
+#   filter(!is.na(DryYield_filt)) %>% 
+#   ggplot()+geom_sf(aes(col=DryYield_filt))
+# 
+# ggarrange(p1,p2) #Looks like changing the lag doesn't really help. Leaving this alone for now
 
 
 # Look at data --------------------------------------
@@ -224,28 +298,30 @@ ggplot(dat,aes(x=r))+
 # qqnorm(lyield[lyield>lyieldLims[1] & lyield<lyieldLims[2]],main='Windowed filter'); qqline(lyield[lyield>lyieldLims[1] & lyield<lyieldLims[2]])
 
 
-#Fit model --------------------------------
+#Fit models --------------------------------
 
 # #Fit non-isotropic GAM:
 # kPar <- c(12,60,60,12,60,60)
-# f <- sqrt(DryYield) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) + log(pArea) #Mean model
-# f2 <- ~ s(dist,k=kPar[4]) + s(E,N,k=kPar[5]) + s(r,k=kPar[6]) + log(pArea) #Variance model
+# f <- sqrt(DryYield) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) #Mean model
+# f2 <- ~ s(dist,k=kPar[4]) + s(E,N,k=kPar[5]) + s(r,k=kPar[6]) #Variance model
 # flist <- list(f,f2) #List of model formulae
+#  
+# mod <- gam(flist,data=dat,family=gaulss()) #Unfiltered data
+# save(mod,file =  "/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod.Rdata")
 # 
-# a <- Sys.time() 
-# mod2 <- gam(flist,data=dat,family=gaulss())
-# fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
-# # save(mod,file =  "/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod_3.Rdata")
-# save(mod2,file =  "/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod_3.Rdata")
+# f <- sqrt(DryYield_filt) ~ s(dist,k=kPar[1]) + s(E,N,k=kPar[2]) + s(r,k=kPar[3]) + log(pArea) #Mean model
+# flist <- list(f,f2) #List of model formulae
+# mod2 <- gam(flist,data=dat,family=gaulss()) #Filtered data
+# save(mod2,file =  "/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod.Rdata")
 
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod.Rdata") #mod
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod.Rdata") #mod2
-# 
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod_2.Rdata") #mod
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod_2.Rdata") #mod2
-# 
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod_3.Rdata") #mod
-# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod_3.Rdata") #mod2
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod.Rdata") #Gibbons Bill Visser 2017 - peas
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod.Rdata")
+
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod_2.Rdata") # Dean_Hubbard E_21_11_25 2018 - wheat
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod_2.Rdata") 
+ 
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/unfilteredMod_3.Rdata") #Trent Clark E 06 - canola
+# load("/home/rsamuel/Documents/yield-analysis-2021/Data/filteredMod_3.Rdata") 
 
 plot(mod,pages=1,scheme=2) #Some differences between filtered/unfiltered models
 plot(mod2,pages=1,scheme=2)
@@ -260,7 +336,8 @@ with(dat,data.frame(pArea=median(pArea),dist=seq(min(dist),max(dist),length.out=
          predF_mean_se=predict(mod2,newdata=.,se.fit = TRUE)$se.fit[,1],
          predF_logSD_mu=predict(mod2,newdata=.,se.fit = TRUE)$fit[,2],
          predF_logSD_se=predict(mod2,newdata=.,se.fit = TRUE)$se.fit[,2]) %>% 
-  pivot_longer(contains('pred')) %>% separate(name,c('modType','param','moment'),sep='_') %>% 
+  pivot_longer(contains('pred')) %>% 
+  separate(name,c('modType','param','moment'),sep='_') %>% 
   pivot_wider(names_from=moment,values_from = value) %>% mutate(upr=mu+se*1.96,lwr=mu-se*1.96) %>% 
   ggplot(aes(x=dist,y=mu))+geom_ribbon(aes(ymax=upr,ymin=lwr,fill=modType),alpha=0.3)+
   geom_line(aes(col=modType))+

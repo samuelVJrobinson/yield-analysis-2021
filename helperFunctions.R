@@ -1034,19 +1034,21 @@ QuantileFilter <- function(x,quant=0.99){ #Function to filter anything above cer
   x>quantile(x,l[1]) & x<quantile(x,l[2]) 
 }
 
-bearingFilter <- function(bearing,q=NULL,z=NULL){
-  if(!xor(is.null(q),is.null(z))) stop('Input quantiles or Z-score')
+bearingFilter <- function(bearing,q=NULL,z=NULL,returnDiffs=FALSE){
+  if(!xor(is.null(q),is.null(z))&!returnDiffs) stop('Input quantiles or Z-score')
   #Difference in compass bearings (in degrees)
   bearingDiff <- function(x1,x2){
     x <- x1-x2
     x <- ifelse(abs(x)>180,x-(360*sign(x)),x) #Angle differences can't be >180
     return(x)
   }
-  # bearingDiff(0,15) #Should be the same as below
-  # bearingDiff(355,10)
-  # bearingDiff(NA,10)
-  bd <- bearingDiff(lag(bearing),bearing)
-  bd[1] <- 0 #Set first difference to 0 (avoids NA problem)
+
+  #Looks 1 point ahead and behind
+  bd <- cbind(bearingDiff(lag(bearing),bearing),
+              bearingDiff(lead(bearing),bearing))
+  bd <- apply(bd,1,function(x) max(abs(x),na.rm=TRUE)*sign(x[which.max(abs(x))])) #Maximum bearing difference ahead and behind
+  
+  if(returnDiffs) return(bd) #Return bearing differences only, without filtering
   
   if(!is.null(q)){
     ret <- QuantileFilter(bd,q=q)
@@ -1054,18 +1056,33 @@ bearingFilter <- function(bearing,q=NULL,z=NULL){
     ret <- ZscoreFilter(bd,z=z)
   }
   return(ret)
-  
 } 
+
+
+posFilter <- function(data,q=NULL,returnDiffs=FALSE){ #Positional difference filter - filters out very distant and very close points
+  if(is.null(q)&!returnDiffs) stop('Input upper quantile')
+  # #Debugging
+  # data <- dat
+  # q <- 0.99
+  
+  if(units(st_distance(data[1,],data[2,]))$numerator!='m') warning('Position differences not in meters')
+  coords <- st_coordinates(data) #Get coordinates
+  pdiff <- sapply(1:(nrow(coords)-1),function(i) as.numeric(dist(coords[i:(i+1),]))) #Distances between points
+  pdiff <- cbind(c(pdiff,NA),c(NA,pdiff)) #Forward and backward lags
+  pdiff <- apply(pdiff,1,max,na.rm=TRUE) #Maximum distance ahead and behind
+  if(returnDiffs){
+    return(pdiff)
+  } else {
+    return(QuantileFilter(pdiff,q)) #Note: uses 2-sided quantiles
+  }
+}
+
 
 dSpeedFilter <- function(speed,l=c(-1,1),perc=0.2){ #Filter for (forward and backward) lagged speed differences.
   # #Debugging
   # speed <- dat$Speed[1:30]
   # l <- c(2,1,-1,-2) #Backward and forward lags
   # perc <- 0.2
-  
-  lag2 <- function(x,n){ #Overloaded lag function that takes negative values
-    if(n>0) lag(x,n) else lead(x,abs(n))
-  }
   
   llist <- sapply(l,function(x) (lag2(speed,x)-speed)/lag2(speed,x)) #Matrix of % diffs
   
@@ -1075,3 +1092,13 @@ dSpeedFilter <- function(speed,l=c(-1,1),perc=0.2){ #Filter for (forward and bac
   return(ret)
 }
 
+#Overloaded lag function that takes negative values
+lag2 <- function(x,n){
+  if(n==0) {
+    return(x) #No lag
+  } else if(n>0){
+    lag(x,n) #Positive lag
+    } else {
+      lead(x,abs(n)) #Negative lag
+    } 
+  } 
