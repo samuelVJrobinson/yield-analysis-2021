@@ -300,31 +300,35 @@ ggsave(paste0('./Figures/ModelSummary1a.png'),p,height=6,width=12,dpi=300)
 
 # Run second set of models - boundary type included ---------------------------
 
-# #Test with single model
-# a <- Sys.time()
-# runModII(295,dS=datSource)
-# Sys.time()-a
-# # beep(1)
-# debugonce(runModII)
+# Test with single model
+a <- Sys.time()
+runModII(1,dS=datSource)
+Sys.time()-a
+# beep(1)
+debugonce(runModII)
 
 library(parallel)
 detectCores()
 cluster <- makeCluster(15) #10 procs uses about 30% of memory - could probably max it out
 a <- Sys.time()
-parLapply(cl=cluster,1:nrow(datSource),runModII,dS=datSource,useClosest=TRUE) #All models
+runWhich <- c(1:nrow(datSource))[with(datSource,use&!modelComplete2)]
+parLapply(cl=cluster,runWhich,runModII,dS=datSource,useClosest=TRUE) #All models
 beep(1)
 stopCluster(cluster)
 Sys.time()-a #Takes ~ 10 hrs for 50 models at 15 procs
 #Takes 2.364893 days to do all fields at 15 procs
 
+
+
 # Get smoother info from second set of models ---------------------------
 
-# #Estimate at single field
-# est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata'),
-#                 margInt=c(FALSE,TRUE,TRUE),
-#                 samp=FALSE)$distDat %>%
-#   bind_rows(.id='dist_type')
-# 
+#Estimate at single field
+debugonce(getPreds)
+est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[13],' modList.Rdata'),
+                margInt=c(FALSE,TRUE,TRUE),
+                samp=FALSE)$distDat %>%
+  bind_rows(.id='dist_type')
+
 # #Draw posterior samples at field 1
 # Nsamp <- 100 #Number of samples
 # # samp <- lapply(1:Nsamp,

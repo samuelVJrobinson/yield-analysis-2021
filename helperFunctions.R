@@ -121,7 +121,7 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
   # smoothLabel <- 's(dist)'
   # postSamp <- FALSE
   # noIntercept <- TRUE
-  # xvals <- seq(predRange[1],predRange[2],length.out=lengthOut) #x-values to use for smoother predictions
+  # xvals <- seq(0,100,length.out=101) #x-values to use for smoother predictions
   
   require(mgcv)
   
@@ -173,19 +173,19 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
 
 getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
   
-  # #Debugging
-  # l <- c(30,100,500)
-  # # path <- paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata') #Model type 1
-  # path <- paste0('./Figures/ModelCheck2/',datSource$filename[2],' modList.Rdata') #Model type 2
-  # margInt <- c(FALSE,TRUE,TRUE)
-  # samp <- FALSE
+  #Debugging
+  l <- c(30,100,500)
+  # path <- paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata') #Model type 1
+  path <- paste0('./Figures/ModelCheck2/',datSource$filename[13],' modList.Rdata') #Model type 2
+  margInt <- c(FALSE,TRUE,TRUE)
+  samp <- FALSE
   require(mgcv)
   
   load(path) #Load data
   
-  #Polygon area (basically speed) regression
-  logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
-  pArea <- exp(logPArea) 
+  # #Polygon area (basically speed) regression
+  # logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
+  # pArea <- exp(logPArea) 
   
   meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
   sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
@@ -200,13 +200,14 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
   }
   
   if(margInt[1]){ #Marginalize across intercept (set intercept coef to 0)
-    meanCoefs[1] <- 0 
-    sdCoefs[1] <- 0  
+    meanCoefs[1] <- 0
+    sdCoefs[1] <- 0
   }
   
-  pAreaDat <- data.frame(pArea, 
-                         mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
-                         logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
+  # pAreaDat <- data.frame(pArea, 
+  #                        mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
+  #                        logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
+  pAreaDat <- NA
   
   # Field boundary distance smoothers
   
@@ -249,14 +250,15 @@ getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALS
     names(distDat) <- distTypes  
   }
   
-  #Point order (time of combining) smoothers
-  rRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(r)')]],
-                 range(Xu)+rep(shift,2)) #Get range from smooths
-  r <- seq(rRange[1],rRange[2],length.out=l[3]) #r values to sample from
-  
-  rDat <- data.frame(r=r,
-                        mean=getSmooths(smoothLabel='s(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred,
-                        logSD=getSmooths(smoothLabel='s.1(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred)
+  # #Point order (time of combining) smoothers
+  # rRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(r)')]],
+  #                range(Xu)+rep(shift,2)) #Get range from smooths
+  # r <- seq(rRange[1],rRange[2],length.out=l[3]) #r values to sample from
+  # 
+  # rDat <- data.frame(r=r,
+  #                       mean=getSmooths(smoothLabel='s(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred,
+  #                       logSD=getSmooths(smoothLabel='s.1(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred)
+  rDat <- NA
   
   #Assemble into list
   datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
@@ -292,14 +294,13 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
   
   source('helperFunctions.R')
   
-  csvPath <- dS$dataPath[i]
-  fieldName <- dS$filename[i]
-  boundaryPath <- dS$boundaryPath[i]
+  csvPath <- dS$dataPath[i] #Path to data
+  fieldName <- dS$filename[i] #Field/year ID
+  boundaryPath <- dS$boundaryPath2[i] #Path to boundary shapefile
+  cropType <- dS$crop[i] #Crop type
   
   print('Reading in data')
   dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
-  
-  cropType <- unique(dat$Product) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
@@ -323,16 +324,23 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
   
-  if(filterData){
-    #Remove extreme values
-    dat <- dat %>% 
-      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
-             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
-             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
-      )
-  }
+  print('Filtering data')  
   
-  if(nrow(dat)>nSubSamp){ #Limit to nSubSamp sequential samples
+  #Filter data
+  dat <- dat %>% mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) #Vega et al 2019 spatial "inlier" filter - takes about a minute
+  
+  dat <- dat %>% 
+    mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% #JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+    mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
+    mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
+    mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
+    mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+    mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
+    #Combine filter criteria
+    mutate(allFilt = noBS & vegaFilt & Qfilt & bFilt & speedFilt & dSpeedFilt & posFilt) %>%  
+    filter(allFilt)
+  
+  if(nrow(dat)>nSubSamp){ #Limit to nSubSamp sequential samples if too large
     dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
   }
   
@@ -489,7 +497,8 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
 #Function to run the ith model, but with boundary type
 #useClosest = use only closest boundary? Otherwise, uses distance from all boundaries
 runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2',filterData=TRUE){ 
-  # i <- 295 #Debugging
+  # i <- 295 #Debugging - "Trent_Clark W 34 2019"
+  # i <- 5 #Alvin French Zoltan - 1.2 million points
   # dS <- datSource
   # nSubSamp <- 50000
   # useClosest <- TRUE
@@ -507,14 +516,18 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   
   source('helperFunctions.R')
   
-  csvPath <- dS$dataPath[i]
-  fieldName <- dS$filename[i]
-  boundaryPath <- dS$boundaryPath2[i]
+  csvPath <- dS$dataPath[i] #Path to data
+  fieldName <- dS$filename[i] #Field/year ID
+  boundaryPath <- dS$boundaryPath2[i] #Path to boundary shapefile
+  cropType <- dS$crop[i] #Crop type
   
   print('Reading in data')
   dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
   
-  cropType <- as.character(unique(dat$Product)) #Crop types
+  uprLim <- 150000 #Upper limit of 150,000 points (takes about 6 mins to do spatial inlier filtering)
+  if(nrow(dat)>uprLim){
+    dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=uprLim)))
+  }
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
@@ -529,27 +542,38 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
     rename('ID'='ObjId','DryYield'='YldMassDry_tHa','Lon'='Longitude','Lat'='Latitude','Pass'='PassNum','Speed'='Speed__m') %>%
     st_as_sf(coords=c('Lon','Lat')) %>% #Add spatial feature info
     st_set_crs(4326) %>% st_transform(3401) %>% #Lat-lon -> UTM
-    makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
-    mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
-    st_centroid() %>% #Convert back to point
+    # makePolys(width='SwthWdth_m',dist='Distance_m',angle='TrackAngle') %>%    
+    # mutate(pArea=as.numeric(st_area(.))) %>% #Area of polygon
+    # st_centroid() %>% #Convert back to point
+    mutate(pArea=SwthWdth_m*Distance_m) %>% #Area of polygon
     mutate(r=1:n()) %>% #row number
     mutate(Pass=factor(seqGroup(ID,FALSE))) %>% 
     group_by(Pass) %>% mutate(rGroup=1:n()) %>% ungroup() %>% 
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
   
-  if(filterData){
-    #Remove extreme values
-    dat <- dat %>% 
-      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
-             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
-             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
-      )
-  }
+  print('Filtering data')  
+  NrawDat <- nrow(dat)
   
-  if(nrow(dat)>nSubSamp){
-    #Limit to nSubSamp sequential samples
+  #Filter data
+  dat <- dat %>% mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) #Vega et al 2019 spatial "inlier" filter - takes about a minute
+  
+  dat <- dat %>% 
+    mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% #JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+    mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
+    mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
+    mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
+    mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+    mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
+    #Combine filter criteria
+    mutate(allFilt = noBS & vegaFilt & Qfilt & bFilt & speedFilt & dSpeedFilt & posFilt) %>%  
+    filter(allFilt)
+  
+  NfiltDat <- nrow(dat)
+  
+  if(NfiltDat>nSubSamp){ #Limit to nSubSamp sequential samples if too large
     dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
+    print(paste0('Limiting analysis to ',nSubSamp,' data points'))
   }
   
   print('Calculating distance from boundary')  
@@ -573,21 +597,35 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   
   #Make model formula for non-isotropic gam
   if(useClosest){
-    f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],') + log(pArea)')
-    f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],') + log(pArea)')
+    f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],')')
+    f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],')')
   } else {
-    f2 <- paste0('~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[1],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],') + log(pArea)')
-    f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[4],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],') + log(pArea)')
+    f2 <- paste0('~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[1],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[2],')')
+    f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[4],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[5],')')
   }
   
+  # if(useClosest){ #These ones include a time smoother
+  #   f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],')')
+  #   f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],')')
+  # } else {
+  #   f2 <- paste0('~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[1],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[2],') + s(r,k=',kPar[3],')')
+  #   f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[4],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[5],') + s(r,k=',kPar[6],')')
+  # }
+
   flist <- list(as.formula(f),as.formula(f2)) #List of model formulae
   
   #Fit Gaussian location-scale  model
-  #NOTE: this model can't be run using bam or gamm because of location-scale modeling
-  
   a <- Sys.time() #Takes about 20 mins for a 50000 point model
   mod <- gam(flist,data=dat,family=gaulss())
   fitTime <- paste(as.character(round(Sys.time()-a,2)),units(Sys.time()-a)) #Time taken to fit model
+  
+  #Other models:
+  # mod2 <- gam(as.formula(f),data=dat) #Standard model (constant variance)
+  # f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],')')
+  # f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],')')
+  # flist <- list(as.formula(f),as.formula(f2)) #List of model formulae
+  # mod3 <- gam(flist,data=dat,family=gaulss()) #Model without time smoothers
+  # mod4 <- gam(as.formula(f),data=dat) #Standard model without time smoother
   
   print('Saving model results')
   
@@ -598,6 +636,9 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   
   capture.output({ #Model summary
     print("Time taken: "); print(fitTime)
+    print(" ")
+    print(paste0('Filtered out ',NrawDat-NfiltDat,' of ',NrawDat,' data points'))
+    if(NfiltDat>nSubSamp) print(paste0('Limiting analysis to ',nSubSamp,' data points'))
     print(" ")
     print("SUMMARY---------------------------------")
     summary(mod) 
@@ -617,26 +658,29 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
     ggplot() + 
     geom_sf(data=dat,col='grey',size=1)+
     geom_sf(aes(col=DryYield),alpha=0.3) + 
-    geom_sf(data=fieldEdge,col='magenta')+ #Field boundary
-    labs(title=paste(fieldName,'Data')) + #guides(alpha='none') + 
+    geom_sf(data=fieldEdge,col='black')+ #Field boundary
+    labs(title=paste(fieldName,'Raw Data'),colour='Yield (T/ha)') + #guides(alpha='none') + 
     scale_colour_distiller(type='div',palette = "Spectral") +
     theme(legend.position='bottom')
   
-  #Marginalize across r (point order) and pArea (speed)
+  #Marginalize across r (point order) 
   pred <- dat %>% 
-    mutate(pArea=median(pArea)) %>% #Set pArea to its median value
     predict(mod,newdata = .,type='response',exclude='s(r)') #Exclude s(r)
   
   dat <- dat %>% mutate(yieldMean=pred[,1],yieldSD=1/pred[,2],resid=resid(mod))
   
   #Predicted yield, marginalizing across pArea and r
   p1 <- ggplot(dat)+geom_sf(aes(col=yieldMean^2),alpha=0.3)+
-    labs(title='Predicted yield | Combine Speed, Point Order',fill='Yield (T per Ha)',col='Yield (T per Ha)')+
-    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+    labs(title='Predicted Mean | Point Order',fill='Yield (T/ha)',col='Yield (T/ha)')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+
+    geom_sf(data=fieldEdge,col='black')+ #Field boundary
+    theme(legend.position='bottom')
   #Predicted SD
   p2 <- ggplot(dat)+geom_sf(aes(col=yieldSD^2),alpha=0.3)+
-    labs(title='Yield SD | Combine Speed, Point Order',fill='SD Yield ',col='SD Yield')+
-    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+theme(legend.position='bottom')
+    labs(title='Predicted SD | Point Order',fill='SD Yield ',col='SD Yield')+
+    scale_colour_distiller(type='div',palette = "Spectral",direction=-1)+
+    geom_sf(data=fieldEdge,col='black')+ #Field boundary
+    theme(legend.position='bottom')
   p <- ggarrange(yieldMap,p1,p2,ncol=3)
   ggsave(paste0(resultsDir,'/',fieldName,'.png'),p,height=6,width=15,dpi=100)  
   
@@ -651,29 +695,36 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   library(gstat)
   library(spacetime) 
   dat_sp <- as_Spatial(select(dat,ID,resid))
-  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=300) #Variogram
-  # vmod <- fit.variogram(v,vgm('Mat'),fit.kappa=TRUE) #Fit Matern covariance model
+  v <- variogram(resid~1, data=dat_sp,width=5,cutoff=100) #Variogram
+  vmod <- fit.variogram(v,vgm('Exp'),fit.kappa=TRUE) #Fit Matern covariance model
   # plot(v,vmod)
   p5 <- v %>% 
     ggplot()+geom_point(aes(x=dist,y=gamma))+
+    geom_line(dat=variogramLine(vmod,maxdist = 100,min = 1,n=100),aes(x=dist,y=gamma))+
     labs(title='Residual variogram',x='Distance',y='Semivariance')
   # dat_variogram2 <- gstat::variogram(resid~1, #Used to look at non-stationary semivariance
   #                                   data=dat_sp,width=5,cutoff=150,alpha=c(0,45,90,135)) #North, NE, E, SW
-  res_acf <- acf(dat$resid,lag.max=300,type='correlation',plot=FALSE)
+  res_acf <- acf(dat$resid,lag.max=100,type='correlation',plot=FALSE)
   p6 <- with(res_acf,data.frame(acf=acf,lag=lag)) %>% 
     ggplot(aes(x=lag,y=acf))+geom_col()+
     labs(x='Time Lag',y='Autocorrelation',title='Residual autocorrelation')
   p <- ggarrange(p3,p4,p5,p6,ncol=2,nrow=2)
-  p <- annotate_figure(p,top = text_grob(paste0(fieldName,' Residuals')))
   ggsave(paste0(modelCheckDir,'/',fieldName,' residuals.png'),p,height=8,width=10,dpi=100)  
   
   #Models are huge, so saving only key components (about 25% of the size)
+  
+  if(useClosest){ #Range of distances
+    distRange <- with(dat,tapply(Distance_m,boundaryType,range))
+  } else {
+    distRange <- st_drop_geometry(dat) %>% select(contains('dist_')) %>% summarize(across(everything(),range)) %>% data.frame()
+  } 
+  
   modList <- list(cropType=cropType, #Crop type
                   boundaryTypes=boundaryTypes, #Boundary types
                   coefs=coef(mod), #Coefficients
                   vcv=vcov(mod), #Covariance matrix
                   smooths=mod$smooth, #Smooth specifications
-                  distRange=st_drop_geometry(dat) %>% select(contains('dist_')) %>% summarize(across(everything(),range)) %>% data.frame(), #Range of distances
+                  distRange=distRange,
                   pAreaRange=range(dat$pArea), #Range of polygon areas
                   rRange=range(dat$r)) #Range of r
   save(modList,file=paste0(modelCheckDir,'/',fieldName,' modList.Rdata'))
@@ -703,15 +754,13 @@ runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,mode
   
   source('helperFunctions.R')
   
-  csvPath <- dS$dataPath[i]
-  fieldName <- dS$filename[i]
-  boundaryPath <- dS$boundaryPath[i]
-  fieldEdge <- read_sf(boundaryPath) %>% st_cast('MULTILINESTRING') #Read in boundary file
+  csvPath <- dS$dataPath[i] #Path to data
+  fieldName <- dS$filename[i] #Field/year ID
+  boundaryPath <- dS$boundaryPath2[i] #Path to boundary shapefile
+  cropType <- dS$crop[i] #Crop type
   
   print('Reading in data')
   dat <- read.csv(csvPath,stringsAsFactors=TRUE,fileEncoding='latin1') 
-  
-  cropType <- as.character(unique(dat$Product)) #Crop types
   
   #Takes 40 seconds with subsamp of 50000 using full 800000 samples from Alvin French's Al Jr Field
   dat <- dat %>% rename_with(.fn = ~gsub('..L.ha.$','_lHa',.x)) %>%
@@ -735,17 +784,23 @@ runMod0 <- function(i,dS,nSubSamp=50000,kPar=c(60,60,60,60),useClosest=TRUE,mode
     mutate(E=st_coordinates(.)[,1],N=st_coordinates(.)[,2]) %>% 
     mutate(E=E-mean(E),N=N-mean(N)) #Center coordinates
   
-  if(filterData){
-    #Remove extreme values
-    dat <- dat %>% 
-      filter(pArea>quantile(pArea,0.05),pArea<quantile(pArea,0.95), #Filter large/small pArea
-             DryYield>quantile(DryYield,0.05),DryYield<quantile(DryYield,0.95), #Filter extreme yields
-             Speed>quantile(Speed,0.05),Speed<quantile(Speed,0.95) #Filter high and low speeds
-      )
-  }
+  print('Filtering data')  
   
-  if(nrow(dat)>nSubSamp){
-    #Limit to nSubSamp sequential samples
+  #Filter data
+  dat <- dat %>% mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) #Vega et al 2019 spatial "inlier" filter - takes about a minute
+  
+  dat <- dat %>% 
+    mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% #JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+    mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
+    mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
+    mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
+    mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+    mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
+    #Combine filter criteria
+    mutate(allFilt = noBS & vegaFilt & Qfilt & bFilt & speedFilt & dSpeedFilt & posFilt) %>%  
+    filter(allFilt)
+  
+  if(nrow(dat)>nSubSamp){ #Limit to nSubSamp sequential samples if too large
     dat <- dat %>% slice(round(seq(1,nrow(dat),length.out=nSubSamp)))
   }
   
