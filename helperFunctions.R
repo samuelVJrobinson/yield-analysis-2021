@@ -171,99 +171,109 @@ getSmooths <- function(smoothLabel,modList,xvals,postSamp=FALSE,noIntercept=TRUE
 # margInt = marginalize across intercepts
 # samp = sample from posterior distribution of coefficients rather than using the mean
 
-getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE){
+getPreds <- function(path,l=c(30,100,500),margInt=c(FALSE,FALSE,FALSE),samp=FALSE,reps=1){
   
-  #Debugging
-  l <- c(30,100,500)
-  # path <- paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata') #Model type 1
-  path <- paste0('./Figures/ModelCheck2/',datSource$filename[13],' modList.Rdata') #Model type 2
-  margInt <- c(FALSE,TRUE,TRUE)
-  samp <- FALSE
+  # #Debugging
+  # l <- c(30,100,500)
+  # # path <- paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata') #Model type 1
+  # path <- paste0('./Figures/ModelCheck2/',datSource$filename[13],' modList.Rdata') #Model type 2
+  # margInt <- c(FALSE,TRUE,TRUE)
+  # samp <- FALSE
+  
   require(mgcv)
-  
   load(path) #Load data
   
   # #Polygon area (basically speed) regression
   # logPArea <- seq(log(modList$pAreaRange[1]),log(modList$pAreaRange[2]),length.out=l[1])
   # pArea <- exp(logPArea) 
   
-  meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
-  sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
-  
-  #Coefficients (intercept and slope) for mean and logSD relationship
-  if(samp){ #Sample from posterior
-    meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
-    sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
-  } else {
-    meanCoefs <- modList$coefs[meanVars] 
-    sdCoefs <- modList$coefs[sdVars]
-  }
-  
-  if(margInt[1]){ #Marginalize across intercept (set intercept coef to 0)
-    meanCoefs[1] <- 0
-    sdCoefs[1] <- 0
-  }
-  
-  # pAreaDat <- data.frame(pArea, 
-  #                        mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
-  #                        logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
-  pAreaDat <- NA
-  
-  # Field boundary distance smoothers
-  
-  #Figure out if model has only 1 type of distance (model type 1) or multiple distances (model type 2)
-  #If first type, returns dataframe, otherwise a list of dataframes
-  
-  type1 <- !any(grepl('(dist_|\\:)',sapply(modList$smooths,function(x) x$label)))
-  
-  if(type1){
-    dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(dist)')]],
-                   range(Xu)+rep(shift,2)) #Get range from smooths
-    d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values to sample from
+  retList <- lapply(1:reps,function(i){
     
-    distDat <- data.frame(dist=d,
-                          mean=getSmooths(smoothLabel='s(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
-                          logSD=getSmooths(smoothLabel='s.1(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
-  } else { #If using different types of distances
+    #Indices for mean/sd intercepts
+    meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
+    sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
     
-    #Get names of different distances
-    distTypes <- unique(gsub('(\\)|s\\(|s.1\\()','',sapply(modList$smooths,function(x) x$label)))
-    distTypes <- distTypes[grepl('dist',distTypes)]
+    #Coefficients (intercept and slope) for mean and logSD relationship
+    if(samp){ #Sample from posterior
+      meanCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[meanVars],sqrt(diag(modList$vcv)[meanVars]))
+      sdCoefs <- rnorm(rep(1,length(meanVars)),modList$coefs[sdVars],sqrt(diag(modList$vcv)[sdVars]))
+    } else {
+      meanCoefs <- modList$coefs[meanVars] 
+      sdCoefs <- modList$coefs[sdVars]
+    }
     
-    distDat <- lapply(distTypes,function(dType){
-      if(grepl('\\:',dType)){ #If smoother used "by" (rather than separate distance columns)
-        meanLab <- gsub('dist','s(dist)',dType) #Gets appropriate text labels for smoothers
-        sdLab <- gsub('dist','s.1(dist)',dType) #Gets appropriate text labels for smoothers
-      } else {
-        meanLab <- paste0('s(',dType,')') #Gets appropriate text labels for smoothers
-        sdLab <- paste0('s.1(',dType,')')
-      }
-      
-      dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)==meanLab)]],
+    if(margInt[1]){ #Marginalize across intercept (set intercept coef to 0)
+      meanCoefs[1] <- 0
+      sdCoefs[1] <- 0
+    }
+    
+    # pAreaDat <- data.frame(pArea, 
+    #                        mean=cbind(rep(1,length(logPArea)),logPArea) %*% meanCoefs,
+    #                        logSD=cbind(rep(1,length(logPArea)),logPArea) %*% sdCoefs)
+    pAreaDat <- NA
+    
+    # Field boundary distance smoothers
+    
+    #Figure out if model has only 1 type of distance (model type 1) or multiple distances (model type 2)
+    #If first type, returns dataframe, otherwise a list of dataframes
+    
+    type1 <- !any(grepl('(dist_|\\:)',sapply(modList$smooths,function(x) x$label)))
+    
+    if(type1){
+      dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(dist)')]],
                      range(Xu)+rep(shift,2)) #Get range from smooths
-      d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values values to sample from
-      distDat <- data.frame(dist=d, #
-                            mean=getSmooths(smoothLabel=meanLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
-                            logSD=getSmooths(smoothLabel=sdLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
-      return(distDat)
-    })
-    names(distDat) <- distTypes  
+      d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values to sample from
+      
+      distDat <- data.frame(dist=d,
+                            mean=getSmooths(smoothLabel='s(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
+                            logSD=getSmooths(smoothLabel='s.1(dist)', modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
+    } else { #If using different types of distances
+      
+      #Get names of different distances
+      distTypes <- unique(gsub('(\\)|s\\(|s.1\\()','',sapply(modList$smooths,function(x) x$label)))
+      distTypes <- distTypes[grepl('dist',distTypes)]
+      
+      distDat <- lapply(distTypes,function(dType){
+        if(grepl('\\:',dType)){ #If smoother used "by" (rather than separate distance columns)
+          meanLab <- gsub('dist','s(dist)',dType) #Gets appropriate text labels for smoothers
+          sdLab <- gsub('dist','s.1(dist)',dType) #Gets appropriate text labels for smoothers
+        } else {
+          meanLab <- paste0('s(',dType,')') #Gets appropriate text labels for smoothers
+          sdLab <- paste0('s.1(',dType,')')
+        }
+        
+        dRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)==meanLab)]],
+                       range(Xu)+rep(shift,2)) #Get range from smooths
+        d <- seq(dRange[1],dRange[2],length.out=l[2]) #x values values to sample from
+        distDat <- data.frame(dist=d, #
+                              mean=getSmooths(smoothLabel=meanLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred,
+                              logSD=getSmooths(smoothLabel=sdLab, modList=modList, xvals = d,postSamp=samp, noIntercept=margInt[2])$pred)
+        return(distDat)
+      })
+      names(distDat) <- distTypes  
+    }
+    
+    # #Point order (time of combining) smoothers
+    # rRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(r)')]],
+    #                range(Xu)+rep(shift,2)) #Get range from smooths
+    # r <- seq(rRange[1],rRange[2],length.out=l[3]) #r values to sample from
+    # 
+    # rDat <- data.frame(r=r,
+    #                       mean=getSmooths(smoothLabel='s(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred,
+    #                       logSD=getSmooths(smoothLabel='s.1(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred)
+    rDat <- NA
+    
+    #Assemble into list
+    datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
+    return(datList)
+  })
+    
+  if(reps==1){
+    return(retList[[1]])
+  } else {
+    return(retList)
   }
   
-  # #Point order (time of combining) smoothers
-  # rRange <- with(modList$smooths[[which(sapply(modList$smooths,function(x) x$label)=='s(r)')]],
-  #                range(Xu)+rep(shift,2)) #Get range from smooths
-  # r <- seq(rRange[1],rRange[2],length.out=l[3]) #r values to sample from
-  # 
-  # rDat <- data.frame(r=r,
-  #                       mean=getSmooths(smoothLabel='s(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred,
-  #                       logSD=getSmooths(smoothLabel='s.1(r)', modList=modList, xvals = r, postSamp=samp, noIntercept=margInt[3])$pred)
-  rDat <- NA
-  
-  #Assemble into list
-  datList <- list(pAreaDat=pAreaDat,distDat=distDat,rDat=rDat)
-  
-  return(datList)
 }
 # debugonce(getPreds)
 # (temp <- getPreds(paste0('./Figures/ModelCheck/',datSource$filename[2],' modList.Rdata'),margInt=c(FALSE,TRUE,TRUE),samp=FALSE)) #Test with first type of model
@@ -1038,7 +1048,7 @@ getModelInfo <- function(path){
 
 #Yield data filters -----------------
 
-#"Inlier" spatial filtering procedure from Vega et al 2019, written to work with sf + dplyr. Returns NA-filtered results or boolean
+#"Inlier" spatial filtering procedure from Vega et al 2019, written to work with sf + dplyr. Returns boolean
 vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
   require(sf)
   require(sp)
@@ -1052,14 +1062,17 @@ vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
   # if(is.null(ycol)) stop('Specify yield column')
   if(!any(class(data) %in% 'sf')) stop('Dataframe must be sf object')
   
-  yield <- pull(data,{{ycol}}) #Get yield data column
   coords <- st_coordinates(data) #Get coordinates in matrix form
   
   #Get neighbourhood weights from 0 to ndist meters
   nWeights <- dnearneigh(coords,0,nDist) 
   
+  if(any(sapply(nWeights,length)==1)) warning('Some points had no neighbours and were removed')
+  
   #Get neighbourhood indices for each point (which other points are in this point's neighbourhood?)
-  nIndices <- nb2listw(nWeights, style = "W") 
+  nIndices <- nb2listw(nWeights, style = "W",zero.policy = TRUE) 
+  
+  yield <- pull(data,{{ycol}}) #Get yield data column
   
   #Local Moran's I
   LM <- localmoran(yield,nIndices,p.adjust.method="bonferroni",alternative ="less")
@@ -1071,9 +1084,10 @@ vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
     
   results <- data.frame(LM) %>% 
     rename('pval'=contains('Pr.z.')) %>% 
-    mutate(keepThese= Ii > 0 | pval > pvalCutoff) #Filter negative Ii and pvals < 0.05
+    mutate(keepThese= Ii > 0 | pval > pvalCutoff) %>% #Filter negative Ii and pvals < 0.05
+    mutate(keepThese=ifelse(is.na(keepThese),FALSE,keepThese)) #NAs (points had no neighbours)
   
-  ret <- pull(results,keepThese) 
+  ret <- pull(results)
   return(ret)
 }
 
