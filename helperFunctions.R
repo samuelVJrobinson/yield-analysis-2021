@@ -506,7 +506,7 @@ runModI <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),modelCheckDir=
 
 #Function to run the ith model, but with boundary type
 #useClosest = use only closest boundary? Otherwise, uses distance from all boundaries
-runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2',filterData=TRUE){ 
+runModII <- function(i,dS,nSubSamp=50000,kPar=c(5,80,5,80),useClosest=TRUE,modelCheckDir='./Figures/ModelCheck2',resultsDir='./Figures/YieldMaps2',filterData=TRUE){ 
   # i <- 295 #Debugging - "Trent_Clark W 34 2019"
   # i <- 5 #Alvin French Zoltan - 1.2 million points
   # dS <- datSource
@@ -608,10 +608,10 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(12,60,60,12,60,60),useClosest=TR
   #Make model formula for non-isotropic gam
   if(useClosest){
     f2 <- paste0('~ s(dist,k=',kPar[1],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[2],')')
-    f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[4],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[5],')')
+    f <- paste0('sqrt(DryYield)~ s(dist,k=',kPar[3],',bs="ts",by=boundaryType) + s(E,N,k=',kPar[4],')')
   } else {
     f2 <- paste0('~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[1],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[2],')')
-    f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[4],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[5],')')
+    f <- paste0('sqrt(DryYield) ~ ',paste0('s(dist_',boundaryTypes,',k=',kPar[3],',bs="ts")',collapse=' + '),' + s(E,N,k=',kPar[4],')')
   }
   
   # if(useClosest){ #These ones include a time smoother

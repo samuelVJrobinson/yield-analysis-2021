@@ -165,7 +165,7 @@ Boundary effects are difficult to observe without large amounts of crop yield da
 Studies of semi-natural field boundaries on crop yield tend to suffer from limited spatial scope and small sample sizes, limiting inference and reducing generality [@baker2018; but see also @redhead2020].
 Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs. 
 However, its use is limited for several reasons, namely: 1) Lack of standardized formats between equipment types, 2) Sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistics.
-Ecosystem services from field boundaries may influence both the mean as well as the variability of yield in agroecosystems [@redhead2020]; typically only means are considered, but lower variability in yield can also be valuable from a grower's perspective.
+Ecosystem services from field boundaries may influence both the mean as well as the variability of yield in agroecosystems [@redhead2020; @hunicken2021]; typically only means are considered, but lower variability in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
 
 In this paper use a precision yield dataset from Alberta, Canada to ask the following questions:
@@ -185,14 +185,20 @@ We converted raw data to a standard csv format using Ag Leader SMS.
 The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (`r sum(datSourceFinal$crop=='Wheat')`), canola (`r sum(datSourceFinal$crop=='Canola')`), or peas (`r sum(datSourceFinal$crop=='Peas')`), for a total of `r nrow(datSourceFinal)` field-years of data.
 Individual fields contained between `r min(yearsPerField)` and `r max(yearsPerField)` years of data (mean: `r round(mean(yearsPerField),1)`), containing a total of `r round(sum(datSourceFinal$npoints)/1e6,1)` million data points.
   
-Yield data was collected in rectangles of the same length as the data interval (distance = combine ground speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m, adjusted to account for overlap with adjacent swaths).
-We extracted the size of each polygon (m$^2$), dry yield (tonnes), and the spatial location, and the sequence of collection (1 - end of harvest)
-Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data
-Seeding and application rates were constant across fields, so we did not consider inputs in our analysis
-We used dry yield (tonnes of seed/hectare minus recorded crop moisture) as our measure of crop yield
-Precision yield data can be highly variable and is prone to extreme outliers, especially when combine ground speeds are low and at the beginning of rows [@griffin2007; @whelan2013].
-We filtered data that lay outside the 95th percentiles of yield within each field, values less than or equal to zero, and values outside of the 95th percentiles of ground speed.
-Due to the large number of data at each field, we sub-sampled to 50,000 data points per field to reduce computation time.
+Yield data was collected in rectangles of the same length as the data interval (distance = combine ground speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m, adjusted by the combine to account for overlap with adjacent swaths).
+We used dry yield (tonnes of seed per hectare minus - crop moisture) as our measure of yield, using the size of each rectangle (m$^2$), dry yield (tonnes), and the spatial location.
+Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data.
+Seeding and application rates were constant across fields, so we did not consider inputs in our analysis.
+Precision yield data can be highly variable and is prone to extreme outliers, especially when combine ground speeds are low and at the beginning of rows [@griffin2007; @whelan2013], or when the combine is accelerating or decelerating [@arslan2002].
+Therefore, we used the following filtering procedure to clean the data prior to model fitting: 
+
+1. Filtered spatial outliers and "inliers" using the procedure from [@vega2019] 
+2. Filtered unrealistic yield values (10.75 T/ha for wheat, 8 T/ha for canola and peas), or values less than or equal to zero
+3. Filtered extremely low and high outliers (below 1st percentile, above 99th percentile) for: dry yield, steering angle differences, ground speed
+4. Filtered points with large changes (>20%) in ground speed
+5. Filtered extremely low and high changes in position, indicating that the combine had stopped or moved to another part of the field between points
+
+Due to the large number of data at each field, we sub-sampled filtered data to 50,000 data points per field to reduce computation time.
 
 Field boundaries were automatically digitized using buffers from the yield data locations, then manually checked using satellite imagery from Google Earth and classified land cover data from AAFC. 
 Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions (e.g. flooding during some years).
@@ -206,7 +212,6 @@ We defined the following general categories for field boundaries:
     5. Bare: unplanted, fallow, flooded area, temporary wetland (only present for a single season), staging yard, oil and gas equipment, or road without a planted boundary
     6. Grassland: permanent seminatural grassland or pasture (not in rotation)
   
-  
 <!-- STANDARD -->
 <!-- WETLAND -->
 <!-- SHELTERBELT -->
@@ -217,9 +222,9 @@ We defined the following general categories for field boundaries:
 ## Analysis
 
 Yield data from each field contains both random and systematic errors that must be modeled in order to reveal underlying changes in yield.
-We fit an additive model of the effect of boundary distance on crop yield while accounting for within-field spatial variation and temporal variation in the data.
+We fit an additive model of the effect of boundary distance on crop yield while accounting for within-field spatial variation.
 Crop yield can vary within a field due to soil conditions, moisture, seeding rates, herbicide application, and previous agricultural practices.      <!-- - such as strip farming -->
-Ground speed is extremely important to yield monitor accuracy [@arslan2002], with low ground speed registering higher yields.
+Ground speed is extremely important to yield monitor accuracy, with low ground speed registering higher yields.
 Sensor calibration can reduce combine-level bias (such as a combine recording consistently higher/lower yields across fields), this does not address sensor drift that occurs over time.
 This may be caused by sensors accumulating debris during harvest (pers. comm. Trent Clark), leading to changes in accuracy and bias over time.
 To model this, we fit the following model to each field-year of data:
@@ -227,10 +232,10 @@ To model this, we fit the following model to each field-year of data:
   \begin{equation}
   \begin{split}
   \sqrt{yield} \sim & Normal (\mu, \sigma)\\
-  \mu = & Intercept + log(\text{Polygon Size}) + f(\text{Edge Distance}, b=12)_i + \\
-   & f(\text{Easting}, \text{Northing}, b=60) + f(\text{Sequence}, b=60) \\
-  log(\sigma) =  & Intercept + log(\text{Polygon Size}) + f(\text{Edge Distance}, b=12)_i + \\
-   & f(\text{Easting}, \text{Northing}, b=60) + f(\text{Sequence}, b=60) \\
+  \mu = & Intercept + f(\text{Edge Distance}, b=5)_i + \\
+   & f(\text{Easting}, \text{Northing}, b=60)\\
+  log(\sigma) =  & Intercept + f(\text{Edge Distance}, b=5)_i + \\
+   & f(\text{Easting}, \text{Northing}, b=60)\\
   \end{split}
   \end{equation}
   
@@ -248,11 +253,17 @@ The number of basis dimensions was checked with the _gam.check_ function from _m
 The relationship between polygon size and yield was modeled with a log-linear relationship with a single slope term, as this closely matched smoothed versions.
 Because polygon size is not intuitive, we converted it into ground speed by regressing speed on distance traveled per polygon, then using this to back-calculate the ground speed for a given polygon size (given a fixed width of header). 
 All models were fit in _R_ using the _mgcv_ library [version `r packageVersion('mgcv')`, @wood2017], and figures were created with _ggplot2_ and _ggpubr_ [versions `r packageVersion('ggplot2')`, @wickham2016; and `r packageVersion('ggpubr')`, @kassambara2020].
-  
-Despite the use of spatial and temporal smoothers, the residuals in most of the models displayed a large amount of spatial and temporal autocorrelation.
-_Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e. we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points)._
 
-<!-- - This is extremely common in precision yield data, but  -->
+The residuals in most of the models displayed both spatial and temporal autocorrelation in the residuals, representing "micro-scale" variation [@cr] that was not captured by the spatial smoothers.
+
+This is extremely common in precision yield data.
+
+We did not include temporal smoothers because spatial and temporal processes are confounded in our model; that is, combining of fields occurs in patterns (e.g. east-to-west) so it is impossible to tell whether lower or higher yields in certain areas of the field were caused by deviations in the yield monitor sensors over time.
+Therefore, we assigned all random variation as spatial in nature; customized combine driving patterns may be able to detect temporal variation, but this is beyond the scope of this research.
+
+<!-- _Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e. we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points)._ -->
+
+
 
 To consider results from all field-level models together, we fit models independent of each other and fit an "overall" smoother as averages of the field-level smoothers.
 However, this does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping of hierarchical mixed effects models:
@@ -381,7 +392,7 @@ We consider these reasons below:
 
 SNL generally has a positive effect on spillover, but field boundaries only represent a fraction of the SNL that surrounds a given field.
 Our analysis only examined boundary types, without considering the landscape context that fields were embedded in, but some studies show the influence of landscape composition at larger spatial scales (e.g. Lan's paper) which could be particularly important when beneficial arthropods are disperse very broadly [@oberg2007].
-There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021], but this is not broadly studied.
+There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021; @haslem2021], but this is not broadly studied.
 Landscape complexity [@fahrig2011] and connectivity are also associated with higher abundance of beneficial arthropods (Paul's new paper + others).
 This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat [but see @fahrig2019].
 

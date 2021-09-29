@@ -54,7 +54,7 @@ curve(leq(x,1,exp(-2))*leq(x,1,-0.1),0,100,ylim=c(0,1)) #Both
 curve(leq2(x,1,exp(-2),1,-0.1),0,100,ylim=c(0,1)) #Both
 
 
-png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
+# png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
 
 par(mfrow=c(1,2))
 #Scenario 1 - beneficial bugs decrease with distance into field
@@ -73,7 +73,35 @@ curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
 curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
 par(mfrow=c(1,1))
 
-dev.off()
+# dev.off()
+
+#Approximately how many basis functions needed to represent this?
+library(tidyverse)
+library(mgcv)
+
+a1 <- -2; b1 <- 0.2; a2 <- 3; b2 <- -0.03
+scen1 <- data.frame(dist=1:100,yield=leq2(1:100,a1,b1,a2,b2)) %>% mutate(y=yield+rnorm(n(),0,0.1))
+a2 <- 0; b2 <- 0.03
+scen2 <- data.frame(dist=1:100,yield=leq2(1:100,a1,b1,a2,b2)) %>% mutate(y=yield+rnorm(n(),0,0.1))
+a2 <- 1; b2 <- 0
+scen3 <- data.frame(dist=1:100,yield=leq2(1:100,a1,b1,a2,b2)) %>% mutate(y=yield+rnorm(n(),0,0.1))
+
+m1 <- gam(y~s(dist,k=5,bs='cs'),data=scen1) #Looks like about 5 is necessary
+m2 <- gam(y~s(dist,k=5),data=scen2)
+m3 <- gam(y~s(dist,k=5),data=scen3)
+summary(m1)
+
+scen1 %>% mutate(pred=predict(m1)) %>% 
+  ggplot(aes(x=dist,y=y))+geom_point()+
+  geom_line(aes(y=yield))+geom_line(aes(y=pred),col='red')
+
+scen2 %>% mutate(pred=predict(m2)) %>% 
+  ggplot(aes(x=dist,y=y))+geom_point()+
+  geom_line(aes(y=yield))+geom_line(aes(y=pred),col='red')
+
+scen3 %>% mutate(pred=predict(m3)) %>% 
+  ggplot(aes(x=dist,y=y))+geom_point()+
+  geom_line(aes(y=yield))+geom_line(aes(y=pred),col='red')
 
 #Simulate data using logit-normal distribution --------------
 
