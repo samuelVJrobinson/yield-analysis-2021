@@ -777,4 +777,51 @@ One of the most important challenges facing global agriculture is to ensure an a
   publisher = {Elsevier {BV}},
 }
 
+@Article{vega2019,
+  author    = {Andr\'{e}s Vega and Mariano C\'{o}rdoba and Mauricio Castro-Franco and M\'{o}nica Balzarini},
+  journal   = {Precision Agriculture},
+  title     = {Protocol for automating error removal from yield maps},
+  year      = {2019},
+  month     = {jan},
+  number    = {5},
+  pages     = {1030--1044},
+  volume    = {20},
+  abstract  = {Yield mapping is one of the most widely used precision farming technologies. However, the value of the maps can be compromised by the presence of systematic and random errors in raw within field data. In this paper, an automated method to clean yield maps is proposed so as to ensure the quality of further data processing and management decisions. First, data were screened by filtering null and edge yield values as well global outliers. Second, spatial outliers or local defective observations were deleted. The local Moran’s index of spatial autocorrelation and Moran’s plot were used as tool to identify the spatial outliers. The protocol to filter out global and local outliers was evaluated on 595 real yield datasets from different grain crops. Significant improvements in the distribution and spatial structure of yield datasets was found. Approximately 30% of the dataset size was removed from each monitor dataset, with one third of the removal occurring during filtering of spatial outliers. The automation of null, edge yield values and the removal of global outliers improved yield distributions, whereas the cleaning of local outliers impacted the yield spatial structure for all yield maps and crops. The algorithm proposed to clean yield maps is easy to apply for preprocessing the growing number of available yield maps.},
+  doi       = {10.1007/s11119-018-09632-8},
+  file      = {:vega et al 2019.pdf:PDF},
+  groups    = {Precision yield},
+  publisher = {Springer Science and Business Media {LLC}},
+}
+
+@Book{cressie2011,
+  author    = {Noel Cressie and Christopher K. Wikle},
+  publisher = {Wiley},
+  title     = {Statistics for Spatio-Temporal Data},
+  year      = {2011},
+  isbn      = {978-0-471-69274-4},
+  abstract  = {Description
+Winner of the 2013 DeGroot Prize.
+
+A state-of-the-art presentation of spatio-temporal processes, bridging classic ideas with modern hierarchical statistical modeling concepts and the latest computational methods
+
+Noel Cressie and Christopher K. Wikle, are also winners of the 2011 PROSE Award in the Mathematics category, for the book “Statistics for Spatio-Temporal Data” (2011), published by John Wiley and Sons. (The PROSE awards, for Professional and Scholarly Excellence, are given by the Association of American Publishers, the national trade association of the US book publishing industry.)
+
+Statistics for Spatio-Temporal Data has now been reprinted with small corrections to the text and the bibliography. The overall content and pagination of the new printing remains the same; the difference comes in the form of corrections to typographical errors, editing of incomplete and missing references, and some updated spatio-temporal interpretations.
+
+From understanding environmental processes and climate trends to developing new technologies for mapping public-health data and the spread of invasive-species, there is a high demand for statistical analyses of data that take spatial, temporal, and spatio-temporal information into account. Statistics for Spatio-Temporal Data presents a systematic approach to key quantitative techniques that incorporate the latest advances in statistical computing as well as hierarchical, particularly Bayesian, statistical modeling, with an emphasis on dynamical spatio-temporal models.
+
+Cressie and Wikle supply a unique presentation that incorporates ideas from the areas of time series and spatial statistics as well as stochastic processes. Beginning with separate treatments of temporal data and spatial data, the book combines these concepts to discuss spatio-temporal statistical methods for understanding complex processes.
+
+Topics of coverage include:
+
+    Exploratory methods for spatio-temporal data, including visualization, spectral analysis, empirical orthogonal function analysis, and LISAs
+    Spatio-temporal covariance functions, spatio-temporal kriging, and time series of spatial processes
+    Development of hierarchical dynamical spatio-temporal models (DSTMs), with discussion of linear and nonlinear DSTMs and computational algorithms for their implementation
+    Quantifying and exploring spatio-temporal variability in scientific applications, including case studies based on real-world environmental data
+
+Throughout the book, interesting applications demonstrate the relevance of the presented concepts. Vivid, full-color graphics emphasize the visual nature of the topic, and a related FTP site contains supplementary material. Statistics for Spatio-Temporal Data is an excellent book for a graduate-level course on spatio-temporal statistics. It is also a valuable reference for researchers and practitioners in the fields of applied mathematics, engineering, and the environmental and health sciences.},
+  groups    = {Statistics},
+  url       = {https://www.wiley.com/en-us/Statistics for Spatio Temporal Data-p-9780471692744},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}
