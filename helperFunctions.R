@@ -1,5 +1,23 @@
 # Helper functions
 
+backTrans <- function(x){ #Back-transform units - data was sqrt transformed, so logSD is actually (log(sqrt(sd)))
+  pow <- function(x,p) x^p
+  expow <- function(x,p) log(exp(x)^p)
+  # x$pArea$predMean <- pow(x$pArea$predMean,2)
+  # x$pArea$predLogSD <- expow(x$pArea$predLogSD,2)
+  
+  x$coverDist <- lapply(x$coverDist,function(y){
+    y$predMean <- pow(y$predMean,2)
+    y$predLogSD <- expow(y$predLogSD,2)
+    return(y)
+  })
+  
+  # x$r$predMean <- pow(x$r$predMean,2)
+  # x$r$predLogSD <- expow(x$r$predLogSD,2)
+  
+  return(x)
+}
+
 #Scales x between 0 and 1
 range01 <- function(x) (x-min(x))/(max(x)-min(x))
 
@@ -1170,4 +1188,6 @@ lag2 <- function(x,n){
     } else {
       lead(x,abs(n)) #Negative lag
     } 
-  } 
+} 
+
+

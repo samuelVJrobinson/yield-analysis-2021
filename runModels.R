@@ -559,7 +559,7 @@ samplePreds <- function(a=NA,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutoff=
 
 # Add to current samples - canola
 isCanola <- which(with(datSource,use & crop=='Canola' & modelComplete2)) #Canola crops only
-Nsamp <- 200 #Number of samples
+Nsamp <- 500 #Number of samples
 library(parallel)
 cluster <- makeCluster(15) #Memory usage is OK, so could probably max it out
 clusterExport(cluster,c('datSource'))
@@ -571,7 +571,7 @@ save(samp,file='./Data/postSamples_canola.Rdata')
 
 # Add to current samples - wheat
 isWheat <- which(datSource$crop=='Wheat') #Wheat
-Nsamp <- 200 #Number of samples
+Nsamp <- 500 #Number of samples
 library(parallel)
 cluster <- makeCluster(15)
 clusterExport(cluster,c('datSource'))
@@ -583,7 +583,7 @@ save(samp,file='./Data/postSamples_wheat.Rdata')
 
 # Add to current samples - peas
 isPeas <- which(datSource$crop=='Peas') #Peas
-Nsamp <- 200 #Number of samples
+Nsamp <- 500 #Number of samples
 library(parallel)
 cluster <- makeCluster(15)
 clusterExport(cluster,c('datSource'))
@@ -594,23 +594,6 @@ stopCluster(cluster)
 save(samp,file='./Data/postSamples_peas.Rdata')
 
 #Get samples from storage
-backTrans <- function(x){ #Back-transform units - data was sqrt transformed, so logSD is actually (log(sqrt(sd)))
-  pow <- function(x,p) x^p
-  expow <- function(x,p) log(exp(x)^p)
-  # x$pArea$predMean <- pow(x$pArea$predMean,2)
-  # x$pArea$predLogSD <- expow(x$pArea$predLogSD,2)
-  
-  x$coverDist <- lapply(x$coverDist,function(y){
-    y$predMean <- pow(y$predMean,2)
-    y$predLogSD <- expow(y$predLogSD,2)
-    return(y)
-  })
-  
-  # x$r$predMean <- pow(x$r$predMean,2)
-  # x$r$predLogSD <- expow(x$r$predLogSD,2)
-  
-  return(x)
-}
 croptype <- c('canola','wheat','peas')
 samp2 <- vector(mode='list',length=3) %>% set_names(croptype)
 for(i in 1:length(croptype)){
@@ -760,7 +743,7 @@ fieldBoundary <- st_sfc(st_polygon(lapply(fieldBoundary$geometry,function(x) st_
 hexGrid <- st_make_grid(fieldBoundary,square=FALSE,n=75)  #Make hexagonal grid
 hexGrid <- hexGrid[sapply(st_within(st_centroid(hexGrid),fieldBoundary),function(x) length(x)==1)] %>%  #Strip out points outside polygon
   st_sf() #Set as sf object
-hexGrid %>% ggplot()+geom_sf()+geom_sf(data=fieldBoundary,fill=NA,col='red') #Looks OK
+# hexGrid %>% ggplot()+geom_sf()+geom_sf(data=fieldBoundary,fill=NA,col='red') #Looks OK
 
 dat <- read.csv(datSource$dataPath[use],stringsAsFactors=TRUE,fileEncoding='latin1') %>% 
   st_as_sf(coords=c('Longitude','Latitude')) %>% #Add spatial feature info
@@ -785,11 +768,12 @@ theme_set(theme_bw())
 palette <- 'RdYlGn'
 
 #Raw data + 
-(p <-ggplot()+
+(p1 <-ggplot()+
     geom_sf(data=dat,aes(geometry=geometry,col=DryYield),size=0.5,show.legend = 'point')+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     scale_colour_distiller(type='div',palette = palette, direction = 1)+
-    labs(col='Yield (T/ha)'))
+    labs(col='Yield (T/ha)',title='Raw Yield Data')+
+    theme(legend.position='bottom'))
 
 # temp <- lapply(levels(fieldBoundaryType$type),function(x) filter(fieldBoundaryType,type==x)) %>% 
 #   set_names(nm=levels(fieldBoundaryType$type))
@@ -799,31 +783,33 @@ palette <- 'RdYlGn'
 #   geom_sf(data=temp$OTHERCROP,aes(geometry=geometry),col='black')+
 #   geom_sf(data=temp$WETLAND,aes(geometry=geometry),col='darkgreen')+
 #   geom_sf(data=temp$SHELTERBELT,aes(geometry=geometry),col='brown')+
-ggsave(paste0('./Figures/ExamplePlots/rawData.png'),p,height=8,width=8,dpi=350)  
+# ggsave(paste0('./Figures/ExamplePlots/rawData.png'),p,height=8,width=8,dpi=350)  
   
 sapply(modList$smooths,function(x) x$label)
 
 useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fixed=TRUE)) #Spatial smoothers only
 
 #Spatial smoothers
-(p1 <- hexGrid %>% 
+(p2 <- hexGrid %>% 
     bind_cols(getSmooths(smoothLabel=modList$smooths[[useSmooths[1]]]$label,modList=modList,xvals=st_drop_geometry(hexGrid[,c('E','N')]),
                          noIntercept=FALSE,returnSE = TRUE)[,c('pred','se')]) %>% 
     mutate(pred=pred^2) %>% #Back-transform
-    ggplot(aes(fill=pred))+geom_sf(col=NA)+
-    labs(fill='Yield (T/ha)')+
+    ggplot()+geom_sf(col=NA,aes(fill=pred))+
+    geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
+    labs(fill='Yield (T/ha)',title='Yield Average Smoother')+
     scale_fill_distiller(type='div',palette = palette, direction = 1) +
     theme(legend.position='bottom')
   )
 
-(p2 <- hexGrid %>% 
+(p3 <- hexGrid %>% 
   bind_cols(getSmooths(smoothLabel=modList$smooths[[useSmooths[2]]]$label,modList=modList,xvals=st_drop_geometry(hexGrid[,c('E','N')]),noIntercept=FALSE,returnSE = TRUE)[,c('pred','se')]) %>% 
   mutate(pred=log(exp(pred)^2)) %>% #Back-transform
-  ggplot(aes(fill=pred))+geom_sf(col=NA)+
-  labs(fill='log Yield SD')+scale_fill_distiller(type='div',palette = palette) +
+  ggplot()+geom_sf(col=NA,aes(fill=pred))+
+    geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
+  labs(fill='log Yield SD',title='Yield Variability Smoother')+scale_fill_distiller(type='div',palette = palette) +
   theme(legend.position='bottom'))
 
-p <- ggarrange(p1,p2)
+(p <- ggarrange(p1,p2,p3,ncol=3,nrow=1))
 ggsave(paste0('./Figures/ExamplePlots/spatialSmooths.png'),p,height=6,width=12,dpi=350)  
 
 #Distance smoothers
@@ -835,7 +821,8 @@ smoothDat <- lapply(modList$smooths[useSmooths],function(x){
   getSmooths(x$label,modList,xvals,noIntercept = FALSE, returnSE = TRUE) #1D smooth  
 }) %>% bind_rows() %>% 
   mutate(type=rep(ifelse(grepl('s.1',sapply(modList$smooths,function(x) x$label)[useSmooths],fixed = TRUE),'logSD','mean'),each=150)) %>% 
-  mutate(upr=pred+se*1.96,lwr=pred-se*1.96)
+  mutate(upr=pred+se*1.96,lwr=pred-se*1.96) %>% 
+  filter(dist<200)
 
 p1 <- smoothDat %>% filter(type=='mean') %>% mutate(across(c(pred,upr,lwr),~.x^2)) %>% 
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
@@ -850,71 +837,6 @@ p2 <- smoothDat %>% filter(type=='logSD') %>% mutate(across(c(pred,upr,lwr),~log
 (p <- ggarrange(p1,p2,ncol=1))
 ggsave(paste0('./Figures/ExamplePlots/distSmooths.png'),p,height=6,width=12,dpi=350)  
 
-#Order/sequence smoothers 
-useSmooths <- grepl('(r)',sapply(modList$smooths,function(x) x$label),fixed=TRUE)
-
-smoothDat <- lapply(modList$smooths[useSmooths],function(x){
-  xvals <- x$Xu[,1]+as.vector(x$shift)
-  xvals <- seq(min(xvals),max(xvals),length.out=150)
-  getSmooths(x$label,modList,xvals,noIntercept = FALSE, returnSE = TRUE) #1D smooth  
-}) %>% bind_rows() %>% 
-  mutate(type=rep(ifelse(grepl('s.1',sapply(modList$smooths,function(x) x$label)[useSmooths],fixed = TRUE),
-                         'logSD','mean'),each=150)) %>% 
-  mutate(upr=pred+se*1.96,lwr=pred-se*1.96)
-
-
-p1 <- smoothDat %>% filter(type=='mean') %>% mutate(across(c(pred,upr,lwr),~.x^2)) %>% 
-  ggplot(aes(x=r))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
-  labs(x='Order',y='Yield (T/ha)')
-
-p2 <- smoothDat %>% filter(type=='logSD') %>% mutate(across(c(pred,upr,lwr),~log(exp(.x)^2))) %>% 
-  ggplot(aes(x=r))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
-  labs(x='Order',y='log Yield SD')
-
-ggarrange(p1,p2,ncol=1)
-
-#Get coefs for converting pArea (width x distance) to ground speed
-
-#Get statistics on swath width and speed
-minSwathWidth <- min(dat$Swath); maxSwathWidth <- max(dat$Swath)
-minSpeed <- unname(quantile(dat$Speed[dat$Speed>0],0.1)) #10th percentile instead of min
-maxSpeed <- unname(quantile(dat$Speed,0.9)) #90th percentile of speed instead of max
-d <- subset(dat,Swath==maxSwathWidth) #Retain measurements at max swath width
-m <- lm(Speed~Dist-1,data=d) #Predict speed (km/hr) using distance (m)
-dist2Speed <- unname(coef(m)) #Slope coefficient to convert distance to speed
-
-#Converts speed to area term for use with original coefficients (holding width at max value)
-logSpeed <- seq(log(minSpeed),log(maxSpeed),length.out=30) 
-speed <- exp(logSpeed) #Speed measurements to use
-WAS <- maxSwathWidth*speed*(1/dist2Speed) #Width * speed * alpha = creates proxy for pArea
-logWAS <- log(WAS) #proxy for log(pArea)
-
-#Gets coeffients and model matrix
-meanVars <- which(grepl('(^\\(Intercept\\)$|^log\\(pArea\\)$)',names(modList$coefs)))
-sdVars <- which(grepl('(^\\(Intercept\\)\\.1$|^log\\(pArea\\)\\.1$)',names(modList$coefs)))
-meanCoefs <- modList$coefs[meanVars]; sdCoefs <- modList$coefs[sdVars]
-modmat <- cbind(rep(1,length(logSpeed)),logWAS)
-
-speedEffect <- data.frame(speed=speed,predmean=modmat %*% meanCoefs,
-           predmeanSE = sqrt(pmax(0,rowSums(modmat %*% modList$vcv[meanVars,meanVars] * modmat))),
-           predSD = modmat %*% sdCoefs,
-           predSDSE = sqrt(pmax(0,rowSums(modmat %*% modList$vcv[sdVars,sdVars] * modmat)))) %>% 
-  mutate(meanUpr=predmean+predmeanSE*1.96,meanLwr=predmean-predmeanSE*1.96,
-         sdUpr=predSD+predSDSE*1.96,sdLwr=predSD-predSDSE*1.96)
-
-p3 <- speedEffect %>% mutate(across(contains('mean'),~.x^2)) %>% 
-  ggplot(aes(x=speed))+geom_ribbon(aes(ymax=meanUpr,ymin=meanLwr),alpha=0.3)+
-  geom_line(aes(y=predmean))+
-  labs(x='Speed (km/hr)',y='Yield (T/ha)')
-
-p4 <-  speedEffect %>% mutate(across(contains('(sd|SD)'),~log(exp(.x)^2))) %>% 
-  ggplot(aes(x=speed))+geom_ribbon(aes(ymax=sdUpr,ymin=sdLwr),alpha=0.3)+
-  geom_line(aes(y=predSD))+
-  labs(x='Speed (km/hr)',y='log SD Yield')
-
-(p <- ggarrange(p3,p1,p4,p2))
-
-ggsave(paste0('./Figures/ExamplePlots/orderSmooths.png'),p,height=6,width=12,dpi=350)  
 
 # Compare model types -----------------------------------------------------
 
