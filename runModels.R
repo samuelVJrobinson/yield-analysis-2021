@@ -557,41 +557,41 @@ samplePreds <- function(a=NA,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutoff=
 
 # Get crop-specific smoother info from second set of models 
 
-# Add to current samples - canola
-isCanola <- which(with(datSource,use & crop=='Canola' & modelComplete2)) #Canola crops only
-Nsamp <- 500 #Number of samples
-library(parallel)
-cluster <- makeCluster(15) #Memory usage is OK, so could probably max it out
-clusterExport(cluster,c('datSource'))
-a <- Sys.time()
-samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isCanola,margInt=c(FALSE,FALSE,FALSE),kPar=10)
-Sys.time()-a
-stopCluster(cluster)
-save(samp,file='./Data/postSamples_canola.Rdata')
-
-# Add to current samples - wheat
-isWheat <- which(datSource$crop=='Wheat') #Wheat
-Nsamp <- 500 #Number of samples
-library(parallel)
-cluster <- makeCluster(15)
-clusterExport(cluster,c('datSource'))
-a <- Sys.time()
-samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isWheat,margInt=c(FALSE,FALSE,FALSE),kPar=10)
-Sys.time()-a
-stopCluster(cluster)
-save(samp,file='./Data/postSamples_wheat.Rdata')
-
-# Add to current samples - peas
-isPeas <- which(datSource$crop=='Peas') #Peas
-Nsamp <- 500 #Number of samples
-library(parallel)
-cluster <- makeCluster(15)
-clusterExport(cluster,c('datSource'))
-a <- Sys.time()
-samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isPeas,margInt=c(FALSE,FALSE,FALSE),kPar=10)
-Sys.time()-a
-stopCluster(cluster)
-save(samp,file='./Data/postSamples_peas.Rdata')
+# # Add to current samples - canola
+# isCanola <- which(with(datSource,use & crop=='Canola' & modelComplete2)) #Canola crops only
+# Nsamp <- 500 #Number of samples
+# library(parallel)
+# cluster <- makeCluster(15) #Memory usage is OK, so could probably max it out
+# clusterExport(cluster,c('datSource'))
+# a <- Sys.time()
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isCanola,margInt=c(FALSE,FALSE,FALSE),kPar=10)
+# Sys.time()-a
+# stopCluster(cluster)
+# save(samp,file='./Data/postSamples_canola.Rdata')
+# 
+# # Add to current samples - wheat
+# isWheat <- which(datSource$crop=='Wheat') #Wheat
+# Nsamp <- 500 #Number of samples
+# library(parallel)
+# cluster <- makeCluster(15)
+# clusterExport(cluster,c('datSource'))
+# a <- Sys.time()
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isWheat,margInt=c(FALSE,FALSE,FALSE),kPar=10)
+# Sys.time()-a
+# stopCluster(cluster)
+# save(samp,file='./Data/postSamples_wheat.Rdata')
+# 
+# # Add to current samples - peas
+# isPeas <- which(datSource$crop=='Peas') #Peas
+# Nsamp <- 500 #Number of samples
+# library(parallel)
+# cluster <- makeCluster(15)
+# clusterExport(cluster,c('datSource'))
+# a <- Sys.time()
+# samp <- parLapply(cl=cluster,1:Nsamp,fun=samplePreds,useRows=isPeas,margInt=c(FALSE,FALSE,FALSE),kPar=10)
+# Sys.time()-a
+# stopCluster(cluster)
+# save(samp,file='./Data/postSamples_peas.Rdata')
 
 #Get samples from storage
 croptype <- c('canola','wheat','peas')
@@ -617,7 +617,7 @@ ylabSD <- 'Yield variablity (log(T/ha)) '
 
 distLims <- c(0,200)
 alphaVal <- 0.1
-qs <- c(0.1,0.5,0.9) #Quantiles
+qs <- c(0.05,0.5,0.95) #Quantiles
 colshade <- 'black'
 fillshade <- 'black'
 
@@ -653,7 +653,6 @@ propBoundary <- lapply(c('Canola','Wheat','Peas'),function(cr){
 }) %>% set_names(nm = c('canola','wheat','peas'))
 
 #Assemble figures
-
 figList <- vector(mode = 'list',length = 3) %>% set_names(croptype)
 
 for(i in 1:length(croptype)){
@@ -717,7 +716,7 @@ for(i in 1:length(croptype)){
 # (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2)) #Plot of everything
 # ggsave(paste0('./Figures/ModelSummary3_',croptype,'.png'),p,height=6,width=16,dpi=350)
 
-
+#Write to files
 for(i in 1:length(croptype)){
   p1 <- figList[[i]][[1]]
   p2 <- figList[[i]][[2]]

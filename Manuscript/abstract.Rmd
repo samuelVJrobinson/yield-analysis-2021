@@ -4,5 +4,5 @@ However, there is little large-scale evidence showing this, largely because yiel
 Precision yield data from combine yield monitors has huge potential in this respect, as the equipment is relatively cheap and commonly measured by growers.
 In this study, we used 252 field-years of yield monitor data from three common crops -- wheat (_Triticum aestivum_), canola (_Brassica napus_), or peas (_Pisum sativum_) -- recorded across Alberta, Canada, and examined how yield varied with distances from common crop boundary types.
 Average crop yield tended to increase with distance from crop boundaries before plateauing at about 50 m, and yield variation (SD) tended to decrease with distance.
-There was evidence of an intermediate increase in yield for wheat away from shelterbelts, and a weak increase in canola, but no other boundary type showed evidence of this.
+There was evidence of an intermediate increase in yield for wheat away from shelterbelts, and a weak increase in canola, but this was not seen for other crop types or boundary types.
 This study represents one of the first uses of precision yield data to measure ecosystem service provision at large spatial scales.
