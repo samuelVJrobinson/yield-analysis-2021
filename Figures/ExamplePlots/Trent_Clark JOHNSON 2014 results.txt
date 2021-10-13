@@ -1,0 +1,74 @@
+[1] "Time taken: "
+[1] "1.8 hours"
+[1] " "
+[1] "SUMMARY---------------------------------"
+
+Family: gaulss 
+Link function: identity logb 
+
+Formula:
+sqrt(DryYield) ~ s(dist, k = 12, bs = "ts", by = boundaryType) + 
+    s(E, N, k = 60) + s(r, k = 60) + log(pArea)
+<environment: 0x55a37ab012e0>
+~s(dist, k = 12, bs = "ts", by = boundaryType) + s(E, N, k = 60) + 
+    s(r, k = 60) + log(pArea)
+<environment: 0x55a37ab012e0>
+
+Parametric coefficients:
+               Estimate Std. Error z value Pr(>|z|)    
+(Intercept)    2.178708   0.018250 119.384   <2e-16 ***
+log(pArea)    -0.067906   0.007048  -9.635   <2e-16 ***
+(Intercept).1 -0.977764   0.074341 -13.152   <2e-16 ***
+log(pArea).1  -0.319468   0.028845 -11.075   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                                     edf Ref.df  Chi.sq  p-value    
+s(dist):boundaryTypeGRASSLAND     10.003  11.00  374.65  < 2e-16 ***
+s(dist):boundaryTypeOTHERCROP      6.148  11.00   68.47  < 2e-16 ***
+s(dist):boundaryTypeSHELTERBELT    7.765  11.00  383.96  < 2e-16 ***
+s(dist):boundaryTypeWETLAND        8.637  11.00  374.96  < 2e-16 ***
+s(E,N)                            56.150  58.57 1503.07  < 2e-16 ***
+s(r)                              50.825  56.11  845.45  < 2e-16 ***
+s.1(dist):boundaryTypeGRASSLAND    6.213  11.00  100.18  < 2e-16 ***
+s.1(dist):boundaryTypeOTHERCROP    5.913  11.00   22.29 0.000196 ***
+s.1(dist):boundaryTypeSHELTERBELT  7.345  11.00   86.17  < 2e-16 ***
+s.1(dist):boundaryTypeWETLAND      6.484  11.00   66.31  < 2e-16 ***
+s.1(E,N)                          52.882  57.47  668.11  < 2e-16 ***
+s.1(r)                            45.499  52.28  320.29  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Deviance explained = 19.3%
+-REML = -9155.9  Scale est. = 1         n = 30453
+[1] " "
+[1] "GAM.CHECK-------------------------------"
+
+Method: REML   Optimizer: outer newton
+full convergence after 8 iterations.
+Gradient range [-4.639731e-05,8.592538e-05]
+(score -9155.901 & scale 1).
+Hessian positive definite, eigenvalue range [1.15218,23.63376].
+Model rank =  328 / 328 
+
+Basis dimension (k) checking results. Low p-value (k-index<1) may
+indicate that k is too low, especially if edf is close to k'.
+
+                                     k'   edf k-index p-value    
+s(dist):boundaryTypeGRASSLAND     11.00 10.00    0.99    0.35    
+s(dist):boundaryTypeOTHERCROP     11.00  6.15    0.99    0.34    
+s(dist):boundaryTypeSHELTERBELT   11.00  7.76    0.99    0.28    
+s(dist):boundaryTypeWETLAND       11.00  8.64    0.99    0.36    
+s(E,N)                            59.00 56.15    0.68  <2e-16 ***
+s(r)                              59.00 50.83    0.65  <2e-16 ***
+s.1(dist):boundaryTypeGRASSLAND   11.00  6.21    0.99    0.32    
+s.1(dist):boundaryTypeOTHERCROP   11.00  5.91    0.99    0.30    
+s.1(dist):boundaryTypeSHELTERBELT 11.00  7.34    0.99    0.37    
+s.1(dist):boundaryTypeWETLAND     11.00  6.48    0.99    0.32    
+s.1(E,N)                          59.00 52.88    0.68  <2e-16 ***
+s.1(r)                            59.00 45.50    0.65  <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+null device 
+          1 
