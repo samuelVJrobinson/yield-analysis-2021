@@ -54,35 +54,67 @@ curve(leq(x,1,exp(-2))*leq(x,1,-0.1),0,100,ylim=c(0,1)) #Both
 curve(leq2(x,1,exp(-2),1,-0.1),0,100,ylim=c(0,1)) #Both
 
 
-png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
+png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=10,height=10,units='in',res=200)
 
 # png("C:\\Users\\Samuel\\Desktop\\hypothesisPlot.png",width=12,height=6,units='in',res=200) #Path on Multivac
 
 savepar <- par(no.readonly = TRUE)
-par(mfrow=c(1,2),mai=c(1,0.5,0.8,0.4))
-#Scenario 1 - beneficial bugs decrease with distance into field
-a1 <- -2; b1 <- 0.2; a2 <- 3; b2 <- -0.03
+par(mfrow=c(2,2),mai=c(1,0.5,0.8,0.4))
 
+
+#Scenario: no effect environmental effect
+a1 <- 0; b1 <- 0
 plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
      ylab=NA,xlab='Distance from Edge',main='Scenario 1',xaxt='n')
 axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=seq(0,100,by=20))
+curve(leq(x,a1,b1)+0.05,0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
+curve(leq(x,a1,b1)-0.05,0,100,xlim=range(dist),col='black',add=TRUE,lwd=2)
+text(70,0.6,'Edge effect',col='red'); text(70,0.4,'Crop Yield')
 
-curve(leq2(x,a1,b1,a2,b2),0,100,lwd=4,add=TRUE)#,main='Scenario 1: bugs - with dist')
-curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
-curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
-text(10,0.83,'Ecosystem\nservice\neffect',col='blue'); text(70,0.95,'Environmental effect',col='red'); text(80,0.75,'Crop Yield')
-
-#Scenario 2 - beneficial bugs increase with distance into field (or pest insects at edge)
-a2 <- 0; b2 <- 0.03
-
+#Scenario: negative environmental effect
+a1 <- 0; b1 <- 0.1
 plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
      ylab=NA,xlab='Distance from Edge',main='Scenario 2',xaxt='n')
 axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=seq(0,100,by=20))
+curve(leq(x,a1,b1)-0.1,0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
+curve(leq(x,a1,b1)-0.2,0,100,xlim=range(dist),col='black',add=TRUE,lwd=2)
+text(70,0.95,'Edge effect',col='red'); text(70,0.7,'Crop Yield')
 
-curve(leq2(x,a1,b1,a2,b2),0,100,ylim=c(0,1),
-      lwd=4,add=TRUE)
-curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
-curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
+#Scenario: positive environmental effect
+a1 <- 0; b1 <- -0.01
+plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
+     ylab=NA,xlab='Distance from Edge',main='Scenario 3',xaxt='n')
+axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=seq(0,100,by=20))
+
+curve(leq(x,a1,b1)+0.2,0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
+curve(leq(x,a1,b1)+0.1,0,100,xlim=range(dist),col='black',add=TRUE,lwd=2)
+text(70,0.65,'Ecosystem\nservice effect',col='blue'); text(70,0.35,'Crop Yield')
+
+
+#Scenario 3 - beneficial bugs decrease with distance into field
+# a1 <- -1; b1 <- 0.2; a2 <- 3; b2 <- -0.02
+# 
+# plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
+#      ylab=NA,xlab='Distance from Edge',main='Scenario 4',xaxt='n')
+# axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=seq(0,100,by=20))
+# 
+# curve(leq2(x,a1,b1,a2,b2)*0.95,0,100,lwd=4,add=TRUE)#,main='Scenario 3: bugs - with dist')
+# curve(leq(x,a1,b1),0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
+# curve(leq(x,a2,b2),0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
+# text(10,0.83,'Ecosystem\nservice\neffect',col='blue'); text(70,0.95,'Edge effect',col='red'); text(80,0.6,'Crop Yield')
+
+a1 <- 0; b1 <- 0.1; a2 <- 0; b2 <- -0.01
+
+plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
+     ylab=NA,xlab='Distance from Edge',main='Scenario 4',xaxt='n')
+axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=seq(0,100,by=20))
+
+curve(leq2(x,a1,b1,a2,b2)+0.1,0,100,lwd=2,add=TRUE)#,main='Scenario 3: bugs - with dist')
+curve(leq(x,a1,b1)-0.1,0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
+curve(leq(x,a2,b2)+0.2,0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
+text(70,0.65,'Ecosystem\nservice effect',col='blue'); text(70,0.95,'Edge effect',col='red'); text(70,0.3,'Crop Yield')
+arrows(25,0.3,25,0.43); text(25,0.2,'Intermediate yield\nincrease')
+
 par(savepar)
 
 dev.off()
