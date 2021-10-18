@@ -729,7 +729,8 @@ for(i in 1:length(croptype)){
 # Example figures (Trent Clark Johnson 2014) ---------------------------------------------------------
 
 use <- which(datSource$filename == 'Trent_Clark W 34 2014')
-#Could also use 'Trent_Clark JOHNSON 2014'
+use <- which(datSource$filename == 'Trent_Clark JOHNSON 2014') #Could also use this
+
 load(datSource$modelPath2[use]) #Load model
 
 #Spatial smoothers
@@ -764,13 +765,15 @@ hexGrid <- hexGrid %>%  #Center coordinates
 
 theme_set(theme_bw())
 
-palette <- 'RdYlGn'
+# palette <- 'RdYlBu'
+# palette <- 'Spectral'
+palette <- 'YlGnBu'
 
 #Raw data + 
 (p1 <-ggplot()+
     geom_sf(data=dat,aes(geometry=geometry,col=DryYield),size=0.5,show.legend = 'point')+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
-    scale_colour_distiller(type='div',palette = palette, direction = 1)+
+    scale_colour_distiller(type='div',palette = palette, direction = -1)+
     labs(col='Yield (T/ha)',title='Raw Yield Data')+
     theme(legend.position='bottom'))
 
@@ -796,7 +799,7 @@ useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fi
     ggplot()+geom_sf(col=NA,aes(fill=pred))+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     labs(fill='Yield (T/ha)',title='Yield Average Smoother')+
-    scale_fill_distiller(type='div',palette = palette, direction = 1) +
+    scale_fill_distiller(type='div',palette = palette, direction = -1) +
     theme(legend.position='bottom')
   )
 
@@ -805,8 +808,9 @@ useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fi
   mutate(pred=log(exp(pred)^2)) %>% #Back-transform
   ggplot()+geom_sf(col=NA,aes(fill=pred))+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
-  labs(fill='log Yield SD',title='Yield Variability Smoother')+scale_fill_distiller(type='div',palette = palette) +
-  theme(legend.position='bottom'))
+    labs(fill='log Yield SD',title='Yield Variability Smoother')+
+    scale_fill_distiller(type='div',palette = palette, direction = -1) +
+    theme(legend.position='bottom'))
 
 (p <- ggarrange(p1,p2,p3,ncol=3,nrow=1))
 ggsave(paste0('./Figures/ExamplePlots/spatialSmooths.png'),p,height=6,width=12,dpi=350)  
@@ -823,15 +827,15 @@ smoothDat <- lapply(modList$smooths[useSmooths],function(x){
   mutate(upr=pred+se*1.96,lwr=pred-se*1.96) %>% 
   filter(dist<200)
 
-p1 <- smoothDat %>% filter(type=='mean') %>% mutate(across(c(pred,upr,lwr),~.x^2)) %>% 
+(p1 <- smoothDat %>% filter(type=='mean') %>% mutate(across(c(pred,upr,lwr),~.x^2)) %>% 
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
   facet_wrap(~boundaryType,nrow=1)+
-  labs(x='Distance (m)',y='Yield (T/ha)')
+  labs(x='Distance (m)',y='Yield (T/ha)'))
 
-p2 <- smoothDat %>% filter(type=='logSD') %>% mutate(across(c(pred,upr,lwr),~log(exp(.x)^2))) %>% 
+(p2 <- smoothDat %>% filter(type=='logSD') %>% mutate(across(c(pred,upr,lwr),~log(exp(.x)^2))) %>% 
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
   facet_wrap(~boundaryType,nrow=1)+
-  labs(x='Distance (m)',y='log Yield SD')
+  labs(x='Distance (m)',y='log Yield SD'))
 
 (p <- ggarrange(p1,p2,ncol=1))
 ggsave(paste0('./Figures/ExamplePlots/distSmooths.png'),p,height=6,width=12,dpi=350)  

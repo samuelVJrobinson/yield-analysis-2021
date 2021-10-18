@@ -54,9 +54,9 @@ curve(leq(x,1,exp(-2))*leq(x,1,-0.1),0,100,ylim=c(0,1)) #Both
 curve(leq2(x,1,exp(-2),1,-0.1),0,100,ylim=c(0,1)) #Both
 
 
-# png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
+png(paste0('./Figures/ExamplePlots/hypotheses.png'),width=12,height=6,units='in',res=200)
 
-png("C:\\Users\\Samuel\\Desktop\\hypothesisPlot.png",width=12,height=6,units='in',res=200) #Path on Multivac
+# png("C:\\Users\\Samuel\\Desktop\\hypothesisPlot.png",width=12,height=6,units='in',res=200) #Path on Multivac
 
 savepar <- par(no.readonly = TRUE)
 par(mfrow=c(1,2),mai=c(1,0.5,0.8,0.4))
