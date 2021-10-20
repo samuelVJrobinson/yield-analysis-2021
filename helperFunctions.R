@@ -584,14 +584,18 @@ runModII <- function(i,dS,nSubSamp=50000,kPar=c(5,80,5,80),useClosest=TRUE,model
   NrawDat <- nrow(dat)
   
   #Filter data
-  dat <- dat %>% mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) #Vega et al 2019 spatial "inlier" filter - takes about a minute
+  dat <- dat %>% 
+    #Vega et al 2019 spatial "inlier" filter - takes about a minute
+    mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) 
   
   dat <- dat %>% 
-    mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% #JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+    #BS filter - JP recommends maximum filters of 160 bu (10.75 T/ha) for wheat, 120 bu (8 T/ha) for peas & canola
+    mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% 
     mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
     mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
     mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
-    mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+    #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+    mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% 
     mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
     #Combine filter criteria
     mutate(allFilt = noBS & vegaFilt & Qfilt & bFilt & speedFilt & dSpeedFilt & posFilt) %>%  
@@ -1077,7 +1081,6 @@ vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
   # nDist <- 30
   # yield <- data$DryYield
   
-  # if(is.null(ycol)) stop('Specify yield column')
   if(!any(class(data) %in% 'sf')) stop('Dataframe must be sf object')
   
   coords <- st_coordinates(data) #Get coordinates in matrix form
@@ -1098,7 +1101,7 @@ vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
   # # Moran Plot of Yield data against spatially lagged values - not needed for filter, only for plotting
   # MP <- moran.plot(yield,nIndices,quiet=TRUE,labels=TRUE,zero.policy=FALSE,
   #                  xlab='Yield', ylab="Spatially Lagged")
-  # results <- data.frame(LM,MP) %>% #Joins into single dataframe
+  # results <- data.frame(LM,MP) #Joins into single dataframe
     
   results <- data.frame(LM) %>% 
     rename('pval'=contains('Pr.z.')) %>% 

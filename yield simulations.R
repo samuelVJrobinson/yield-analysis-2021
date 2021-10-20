@@ -119,6 +119,17 @@ par(savepar)
 
 dev.off()
 
+#Version of figure for Lan:
+plot(0,0,type='n',xlim=c(0,100),ylim=c(0,1),axes=FALSE,
+     ylab=NA,xlab='Distance from Edge',xaxt='n')
+axis(2,at = c(0,1),labels = c('Low','High')); axis(1,at=c(0,100),labels=c('Near','Far'))
+
+curve(leq2(x,a1,b1,a2,b2)+0.1,0,100,lwd=2,add=TRUE)#,main='Scenario 3: bugs - with dist')
+curve(leq(x,a1,b1)-0.1,0,100,xlim=range(dist),col='red',add=TRUE,lwd=2)
+curve(leq(x,a2,b2)+0.2,0,100,xlim=range(dist),col='blue',add=TRUE,lwd=2)
+text(70,0.65,'Ecosystem\nservice effect',col='blue'); text(70,0.95,'Edge effect',col='red'); text(70,0.3,'Crop Yield')
+
+
 #Approximately how many basis functions needed to represent this?
 library(tidyverse)
 library(mgcv)
