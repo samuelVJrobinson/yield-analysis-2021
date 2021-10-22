@@ -728,10 +728,11 @@ for(i in 1:length(croptype)){
 
 # Example figures (Trent Clark Johnson 2014) ---------------------------------------------------------
 
-use <- which(datSource$filename == 'Trent_Clark W 34 2014')
+# use <- which(datSource$filename == 'Trent_Clark W 34 2014')
 use <- which(datSource$filename == 'Trent_Clark JOHNSON 2014') #Could also use this
 
 load(datSource$modelPath2[use]) #Load model
+load("C:\\Users\\Samuel\\Documents\\Projects\\UofC postdoc\\yield-analysis-2021\\Figures\\ExamplePlots\\Trent_Clark JOHNSON 2014 modList.Rdata") #Path on Multivac
 
 #Spatial smoothers
 
@@ -839,6 +840,24 @@ smoothDat <- lapply(modList$smooths[useSmooths],function(x){
 
 (p <- ggarrange(p1,p2,ncol=1))
 ggsave(paste0('./Figures/ExamplePlots/distSmooths.png'),p,height=6,width=12,dpi=350)  
+
+#Plots of basis functions
+
+# sapply(modList$smooths,function(x) x$term)
+
+colnum <- 15 #How many bases to show?
+dat <- expand.grid(E=seq(-400,400,length.out=21),N=seq(-400,400,length.out=21))
+Z <- PredictMat(modList$smooths[[5]],data=dat)[,1:colnum] #Columns 1-colnum
+colnames(Z) <- paste0('Z',formatC(1:colnum,width=2,flag='0'))
+
+data.frame(dat,Z) %>% 
+  pivot_longer(cols=contains('Z')) %>% 
+  ggplot(aes(x=E,y=N,fill=value))+geom_raster(show.legend = FALSE)+
+  facet_wrap(~name,nrow=3)+
+  scale_fill_distiller(type='div',palette = palette, direction = -1) 
+
+
+
 
 
 # Compare model types -----------------------------------------------------
