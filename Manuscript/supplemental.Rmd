@@ -1,16 +1,142 @@
 \newpage
 
-# Appendix A: Supplementary Material {-}
+# Appendix A: R Code for Filtering Procedure {-}
+
+```{r filterCode, eval=FALSE, include=TRUE}
+# Helper functions -----------------
+
+#"Inlier" spatial filtering procedure from Vega et al 2019, rewritten to work with sf + dplyr. Returns boolean
+vegaFilter <- function(data,ycol,pvalCutoff=0.05,nDist=40){
+  require(sf)
+  require(sp)
+  require(spdep)
+  require(tidyverse)
+  
+  if(!any(class(data) %in% 'sf')) stop('Dataframe must be sf object')
+  
+  coords <- st_coordinates(data) #Get coordinates in matrix form
+  
+  #Get neighbourhood weights from 0 to ndist meters
+  nWeights <- dnearneigh(coords,0,nDist) 
+  
+  if(any(sapply(nWeights,length)==1)) warning('Some points had no neighbours and were removed')
+  
+  #Get neighbourhood indices for each point (which other points are in this point's neighbourhood?)
+  nIndices <- nb2listw(nWeights, style = "W",zero.policy = TRUE) 
+  
+  yield <- pull(data,{{ycol}}) #Get yield data column
+  
+  #Local Moran's I for each neighbourhood
+  LM <- localmoran(yield,nIndices,p.adjust.method="bonferroni",alternative ="less")
+  
+  results <- data.frame(LM) %>% 
+    rename('pval'=contains('Pr.z.')) %>% 
+    mutate(keepThese= Ii > 0 | pval > pvalCutoff) %>% #Filter negative Ii and pvals < 0.05
+    mutate(keepThese=ifelse(is.na(keepThese),FALSE,keepThese)) #NAs (points had no neighbours)
+  
+  ret <- pull(results)
+  return(ret)
+}
+
+#Function to filter anything above a certain z-score. Returns boolean
+ZscoreFilter <- function(x,z=3){
+  xmean <- mean(x,na.rm=TRUE)
+  xsd <- sd(x,na.rm=TRUE)
+  zscore <- abs(((x-xmean)/xsd))
+  zscore<z
+} 
+
+#Function to filter anything above certain quantiles. Returns boolean
+QuantileFilter <- function(x,quant=0.99){ 
+  l <- c((1-quant)/2,1-(1-quant)/2) #Symmetric quantiles
+  x>quantile(x,l[1]) & x<quantile(x,l[2]) 
+}
+
+#Function to filter large changes in bearing. Returns boolean unless returnDiffs==TRUE
+bearingFilter <- function(bearing,q=NULL,z=NULL,returnDiffs=FALSE){
+  if(!xor(is.null(q),is.null(z))&!returnDiffs) stop('Input quantiles or Z-score')
+  #Difference in compass bearings (in degrees)
+  bearingDiff <- function(x1,x2){
+    x <- x1-x2
+    x <- ifelse(abs(x)>180,x-(360*sign(x)),x) #Angle differences can't be >180
+    return(x)
+  }
+  
+  #Looks 1 point ahead and behind
+  bd <- cbind(bearingDiff(lag(bearing),bearing),
+              bearingDiff(lead(bearing),bearing))
+  bd <- apply(bd,1,function(x) max(abs(x),na.rm=TRUE)*sign(x[which.max(abs(x))])) #Maximum bearing difference ahead and behind
+  
+  if(returnDiffs) return(bd) #Return bearing differences only, without filtering
+  
+  if(!is.null(q)){
+    ret <- QuantileFilter(bd,q=q)
+  } else {
+    ret <- ZscoreFilter(bd,z=z)
+  }
+  return(ret)
+} 
 
 
-```{r canolaPlotSpeed, echo=FALSE, fig.cap='Effect of ground speed and order (sequence of harvest) on canola yield.', out.width='100%'}  
-  include_graphics('../Figures/groundSpeed_canola.png',dpi=NA)
+#Positional difference filter - filters out very distant and very close points. Returns boolean unless returnDiffs==TRUE
+posFilter <- function(data,q=NULL,returnDiffs=FALSE){ 
+  require(sf)
+  if(is.null(q)&!returnDiffs) stop('Input upper quantile')
+  
+  if(units(st_distance(data[1,],data[2,]))$numerator!='m') warning('Position differences not in meters')
+  coords <- st_coordinates(data) #Get coordinates
+  pdiff <- sapply(1:(nrow(coords)-1),function(i) as.numeric(dist(coords[i:(i+1),]))) #Distances between points
+  pdiff <- cbind(c(pdiff,NA),c(NA,pdiff)) #Forward and backward lags
+  pdiff <- apply(pdiff,1,max,na.rm=TRUE) #Maximum distance ahead and behind
+  if(returnDiffs){
+    return(pdiff)
+  } else {
+    return(QuantileFilter(pdiff,q)) #Note: uses 2-sided quantiles
+  }
+}
+
+#Filter for (forward and backward) lagged speed differences. Returns boolean
+dSpeedFilter <- function(speed,l=c(-1,1),perc=0.2){ 
+  
+  llist <- sapply(l,function(x) (lag2(speed,x)-speed)/lag2(speed,x)) #Matrix of % diffs
+  
+  #Are any lagged speed values > percent change threshold?
+  ret <- !apply(llist,1,function(y) any(abs(y)[!is.na(y)]>perc))
+  
+  return(ret)
+}
+
+#Overloaded lag function that takes negative values
+lag2 <- function(x,n){
+  require(dplyr)
+  if(n==0) {
+    return(x) #No lag
+  } else if(n>0){
+    lag(x,n) #Positive lag
+  } else {
+    lead(x,abs(n)) #Negative lag
+  } 
+} 
+
+#Filtering pipeline  --------------------------
+
+library(tidyverse)
+library(sf)
+
+#Note: dat == sf dataframe of yield data with columns: DryYield (T/ha), TrackAngle (compass bearing), Speed (km/hr), cropType (Wheat, Canola, Peas)
+
+dat <- dat %>% 
+  #Vega et al 2019 spatial "inlier" filter - takes a few minutes...
+  mutate(vegaFilt = vegaFilter(.,DryYield,nDist = 30)) 
+
+dat <- dat %>% 
+  #"BS" filter - removes values >10.75 T/ha for wheat, >8 T/ha for peas & canola
+  mutate(noBS = DryYield<ifelse(cropType=='Wheat',10.75,8)) %>% 
+  mutate(Qfilt = QuantileFilter(DryYield,q=0.98)) %>% #Trim dry yield outliers
+  mutate(bFilt = bearingFilter(TrackAngle,q=0.98)) %>% #Trim extreme bearing changes (turning)
+  mutate(speedFilt = QuantileFilter(Speed,q=0.98)) %>% #Trim absolute speed outliers
+  #Trim speed differences (>20% change 2 steps forward and backward, suggested by Lyle et al 2014)
+  mutate(dSpeedFilt = dSpeedFilter(Speed,l=c(-2,-1,1,2),perc = 0.2)) %>% 
+  mutate(posFilt = posFilter(.,q=0.98)) %>% #Trim points that are far away from eachother
 ```
 
-```{r wheatPlotSpeed, echo=FALSE, fig.cap='Effect of ground speed and order (sequence of harvest) on wheat yield.', out.width='100%'}  
-  include_graphics('../Figures/groundSpeed_wheat.png',dpi=NA)
-```
-
-```{r peasPlotSpeed, echo=FALSE, fig.cap='Effect of ground speed and order (sequence of harvest) on pea yield.', out.width='100%'}  
-  include_graphics('../Figures/groundSpeed_peas.png',dpi=NA)
-```

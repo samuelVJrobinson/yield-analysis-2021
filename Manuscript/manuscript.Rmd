@@ -157,7 +157,7 @@ However, this scenario is rarely considered within studies of SNL or boundary ef
 <!-- In North America there are financial incentives to make fields large, homogeneous, and geometrically simple [@clare2021], but  -->
 
 
-```{r hypotheses, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. Scenario 1: no effect of boundary. Scenario 2: negative effect on yield. Scenario 3: positive effect on yield. Scenario 4: edge effects are shown in red, ecosystem service effect shown blue, leading to an intermediate peak in yield.', out.width='100%'}  
+```{r hypotheses, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. Scenario 1: no effect of boundary. Scenario 2: negative edge effect on yield. Scenario 3: positive ecosystem service effect on yield. Scenario 4: edge effects are shown in red, ecosystem service effect shown blue, leading to an intermediate peak in yield.', out.width='100%'}  
   include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
 ```
 
@@ -195,7 +195,7 @@ We used dry yield (tonnes of seed per hectare minus - crop moisture) as our meas
 Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data.
 Seeding and application rates were constant across fields, so we did not consider inputs in our analysis.
 Precision yield data can be highly variable and is prone to extreme outliers, especially when combine ground speeds are low and at the beginning of rows [@griffin2007; @whelan2013], or when the combine is accelerating or decelerating [@arslan2002].
-Therefore, we used the following filtering procedure to clean the data prior to model fitting: 
+Therefore, we used the following filtering procedure to clean the data prior to model fitting (see Appendix A for R code): 
 
 1. Removed outliers and "inliers" using the spatial filtering procedure from [@vega2019] 
 2. Removed unrealistic yield values (10.75 T/ha for wheat, 8 T/ha for canola and peas), and values of zero or less
@@ -376,7 +376,7 @@ Yield variability, on the other hand, tended to decrease with distance from bare
 
 <!-- Both average and variability of pea yields were spatially dependent (average p-values: `r with(peaMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(peaMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`). -->
 
-Pea crops were less well-represented in our data (N = `r sum(with(datSource,use&modelComplete2&crop=='Peas'))` fields, compared to ), and the effects of boundaries tended to be less consistent. 
+Pea crops were less well-represented in our data (N = `r sum(with(datSource,use&modelComplete2&crop=='Peas'))` fields, compared to ), and therefore the effects of boundaries tended to be less consistent. 
 Average pea yields (Figure \@ref(fig:peaPlot), top row) were roughly 4.25 T/ha at the field boundary and increased to just below 5 T/ha away from shelterbelt, standard, and other crop boundaries, while the effect of bare, grassland, and wetland boundaries was inconsistent.
 Conversely, yield variability (Figure \@ref(fig:peaPlot), bottom row) decreased with distance from grassland, shelterbelt, standard, and wetland boundaries, while the pattern with distance from other crop and bare was inconsistent. 
 Unlike canola and wheat crops, there was no obvious evidence of an intermediate increase in yield with distance from the field boundary.
@@ -389,15 +389,19 @@ Unlike canola and wheat crops, there was no obvious evidence of an intermediate 
 
 # Discussion
 
-At the level of individual fields, both average and variability of yield changed with distance from the field boundary, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
-Yield tended to increase with distance from field boundaries before plateauing, and there was some evidence of intermediate boosts in yield from shelterbelts next to canola and wheat.
-This increase tended to be small in magnitude in canola crops, meaning that ecosystem services likely increased or did not vary with distance from field boundaries (Scenario 2, Figure \@ref(fig:hypotheses)).
+Within individual fields, both the average and variability of yield changed with distance from the field boundary, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
+Mean yield tended to increase with distance from field boundaries before plateauing, and there was some evidence of intermediate boosts in yield from shelterbelts next to canola and wheat, while peas showed no evidence of this.
+However, this intermediate increase was small in canola crops, meaning that ecosystem services likely did not vary strongly with distance from field boundaries (Scenario 2, Figure \@ref(fig:hypotheses)).
 There was a fairly large (0.75 T/ha) intermediate increase in average wheat yields away from shelterbelts, indicating a potential reduction in ecosystem services with distance.
 However, there was a similar (albeit weaker) pattern associated with bare ground, so this pattern may be caused by something other than the presence of shelterbelts.
 This indicates that shelterbelts may have a positive effect on wheat yields, and future work should expand this across a larger geographic domain in order to inform growers about how best to manage the landscapes surrounding their fields.
 
-<!-- For example, average canola yield was about 0.5 T/ha lower close to Standard field edges, and yield SD was about 0.3 T/ha SD higher. -->
 
+<!-- Need a paragraph on wheat + shelterbelt effect -->
+
+
+
+<!-- For example, average canola yield was about 0.5 T/ha lower close to Standard field edges, and yield SD was about 0.3 T/ha SD higher. -->
 Why did we find few consistent effects of boundary type on crop yield, aside from shelterbelts?
 Our work examined only the first and last links in the causal chain _Field boundary_ $\rightarrow$ _Insect Abundance_ $\rightarrow$ _Crop Yield_, meaning that are two mediating relationships where the overall relationship could be broken or obscured.
 First, field boundaries may not have any influence on insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
