@@ -163,8 +163,8 @@ However, this scenario is rarely considered within studies of SNL or boundary ef
 
 
 Boundary effects are difficult to observe without large amounts of crop data, which is typically expensive and time-consuming to collect.    
-Because of this, studies of SNL effects on crop yield tend to suffer from limited spatial scope and small sample sizes, reducing statistical power and generality [@baker2018; but see also @redhead2020].
-Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs. 
+Because of this, studies of SNL effects on crop yield tend to suffer from limited spatial scope and small sample sizes, reducing statistical power and generality [@brandle1984; @baker2018; but see also @redhead2020].
+Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs [@osorio2018]. 
 However, its use is limited for several reasons, namely 1) a lack of standardized formats between equipment types, 2) sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistical methods.
 Ecosystem services from field boundaries may influence both the mean as well as the variability of yield in agroecosystems [@redhead2020; @hunicken2021]; typically only means are considered, but lower variability in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
@@ -173,7 +173,7 @@ In this paper use a precision yield dataset from Alberta, Canada to ask the foll
   1. How does crop yield change with distance from the edge of field?
   2. Does this depend on type of field edge? 
   3. Is there an intermediate distance where yield is maximized or variance is minimized?
-To our knowledge, no other study has studied the effects of field boundaries using precision yield data, making this study one of the first of its kind.
+To our knowledge, only [@osorio2018] has studied the effects of field boundaries using precision yield data, making this study one of the first of its kind.
 
 # Methods
 
@@ -302,7 +302,7 @@ Finally, the random spatial smoothers in Figure \@ref(fig:spatialSmooths)b and c
 Across all fields, standard field boundaries (grassy borders) were the most common boundary type, followed by shelterbelts and other crops (Figure \@ref(fig:boundaryTypes)).
 <!-- Not sure if we should talk about this. Not very many fields from southern regions, so it's hard to compare. Perhaps mention in Discussion -->
 
-```{r boundaryTypes, echo=FALSE, fig.cap='Percentage of field boundaries across sampled fields.', out.width='100%'}
+```{r boundaryTypes, echo=FALSE, fig.cap='Boxplot of field boundary compositions across sampled fields. The x-axis indicates the boundary type, while the y-axis indicates the percentage of all field boundaries covered by that boundary type.', out.width='100%'}
 
 bLengths %>% 
   mutate(croptype=datSourceFinal$crop) %>% 
@@ -326,7 +326,7 @@ bLengths %>%
 ```
 
 Overall, both yield average and yield variability were extremely spatially dependent across all fields (average p-values both <0.0001), meaning that within-field variation was the primary driver of yield across canola, wheat, and pea crops (Table \@ref(tab:smoothSummary), row 6).
-Distances from boundary types were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5). 
+Divvstances from boundary types were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5). 
 
 
 <!-- `r with(canolaMods,formatC(mean(pval[Smoother=='s(E,N)'])))`, `r with(canolaMods,formatC(mean(pval[Smoother=='s.1(E,N)'],3)))` -->
@@ -399,10 +399,18 @@ This indicates that shelterbelts may have a positive effect on wheat yields, and
 
 <!-- Need a paragraph on wheat + shelterbelt effect -->
 
+While we found an intermediate positive effect of shelterbelts on wheat, other studies have shown variable impacts of shelterbelts, ranging from no effect [@akbar1990; @crawford1998] to a positive effect [@staple1955; @kowalchuk1995; @bao2012]. 
+This is complicated by the fact that their impact also depends on year-to-year water stress, shelterbelt orientation, as well as the physical structure of the shelterbelt [@pelton1967; @kort1988; @singh1999].
+However, @kowalchuk1995 found that positive effects of shelterbelts on wheat yield occur at around 20 m, while our work shows a peak at around 50 m, and were tied to increased snow deposition and reduced water stress.
+This also may be related to soil deposition from shelterbelts [@deJong1995]
+Strangely, we also found this intermediate yield maximum with distance away from bare (flooded or fallow) field boundaries, indicating that the patterns we found may be at least somewhat related to water stress.
+Shelterbelts can harbour predators or parasitoids of wheat crops [@dong2015; @ward2021]
+
+Our work also did not examine orientation-specific effects driven by prevailing wind (e.g. east-west distance rather than absolute distance)
 
 
 <!-- For example, average canola yield was about 0.5 T/ha lower close to Standard field edges, and yield SD was about 0.3 T/ha SD higher. -->
-Why did we find few consistent effects of boundary type on crop yield, aside from shelterbelts?
+Wheat and shelterbelts aside, why did we find few consistent effects of boundary type on crop yield?
 Our work examined only the first and last links in the causal chain _Field boundary_ $\rightarrow$ _Insect Abundance_ $\rightarrow$ _Crop Yield_, meaning that are two mediating relationships where the overall relationship could be broken or obscured.
 First, field boundaries may not have any influence on insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
 Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary yearly, or by location.
