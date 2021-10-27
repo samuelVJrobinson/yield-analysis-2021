@@ -73,36 +73,6 @@
   publisher = {Wiley},
 }
 
-@Article{kort1988,
-  author    = {John Kort},
-  journal   = {Agriculture, Ecosystems {\&} Environment},
-  title     = {9. Benefits of windbreaks to field and forage crops},
-  year      = {1988},
-  month     = {aug},
-  pages     = {165--190},
-  volume    = {22-23},
-  abstract  = {Field shelterbelts increase yields of field and forage crops throughout the world. The increases are due to reduced wind erosion, improved microclimate, snow retention and reduced crop damage by high winds. Crops differ in their responsiveness to shelter. Of the field and forage crops tested, winter wheat, barley, rye, millet, alfalfa and hay (mixed grasses and legumes) appear to be highly responsive to protection, while spring wheat, oats and corn respond to a lesser degree. Shelterbelt height and longevity, field width and shelterbelt orientation are major considerations in determining the effect of shelterbelts on crop yields. Precipitation has an effect on the percentage yield increase reported. Generally, percentage yield increases due to shelterbelts have been higher in drier regions or in drier years. By proper shelterbelt design and maintenance and the use of responsiveness crops, shelterbelt benefits to crop yields can be optimized.},
-  doi       = {10.1016/0167-8809(88)90017-5},
-  file      = {:kort 1988.pdf:PDF},
-  publisher = {Elsevier {BV}},
-}
-
-@Article{kowalchuk1995,
-  author    = {T. E. Kowalchuk and E. de Jong},
-  journal   = {Canadian Journal of Soil Science},
-  title     = {Shelterbelts and their effect on crop yield},
-  year      = {1995},
-  month     = {nov},
-  number    = {4},
-  pages     = {543--550},
-  volume    = {75},
-  abstract  = {Shelterbelts planted to control wind erosion indirectly affect the adjacent crop. Yield data were collected during 3 yr from 15 fields cropped mainly to spring wheat seeded on fallow, to quantify the competition and sheltering effects of the shelterbelts (about 6 m high and 200 m apart) and to relate these to microclimate and plant-available soil N, P and water. In 1989 and 1990, when moisture conditions during the growing season were dry and close to average, respectively, competition by the trees and their approximately 5-m-wide grass edge reduced crop yield about 10 m into the field. Yields were slightly above the field mean about 10–20 m from the field edge. The competition effect was smaller and the zone of improved crop growth was absent in 1991 when water was abundant. Plant-available N and P were close to the field means at the edge of the cultivated fields and were highest about 10 m into the fields. Competition for water is believed to be the main reason for the reduced yields at the edge of the fields as most farmers seed-placed fertilizer P, and response to added fertilizer N appeared independent of distance from the shelterbelt. Competition for water occurs during the growing period of the crop, but also includes water taken up by the shelterbelt when the field is in fallow. The improved crop growth 10–20 m from the field edge appears related to the reduction in potential evaporation as distance to the shelterbelt decreases.},
-  doi       = {10.4141/cjss95-077},
-  file      = {:kowalchuk and de jong 1995.pdf:PDF},
-  keywords  = {Shelterbelts, crop, competition, shelter, evaporation, wind},
-  publisher = {Canadian Science Publishing},
-}
-
 @Article{vanVooren2017,
   author    = {Laura {Van Vooren} and Reubens Bert and Broekx Steven and De Frenne Pieter and Nelissen Victoria and Pardon Paul and Verheyen Kris},
   journal   = {Agriculture, Ecosystems {\&} Environment},
@@ -1009,6 +979,102 @@ Neat figure on pg 2},
 Snow accumulation near shelterbelts varied from almost nil in years of low snowfall to drifts 70 feet wide in years of ample snowfall and strong winds These snow drifts increased the soil moisture near the shelters at seeding time, and this in turn resulted in greater yields than obtained in the centre of the field. The net increase in yield in one group of sheltered fields for the 5-year period, taking into account the area occupied by the trees, was 0 7 bushel per acre Increased yields due to snow accumulation in shelterbelt projects may occur to the extent that loss of snow to ditches or gullies is prevented or the distribution of the snow is improved.},
   doi      = {10.4141/agsci-1955-0056},
   groups   = {Shelterbelts},
+}
+
+@Article{ward2021,
+  author    = {Samantha E. Ward and Paul A. Umina and Sarina Macfadyen and Ary A. Hoffmann},
+  journal   = {Insects},
+  title     = {Hymenopteran Parasitoids of Aphid Pests within {Australian} Grain Production Landscapes},
+  year      = {2021},
+  month     = {jan},
+  number    = {1},
+  pages     = {44},
+  volume    = {12},
+  abstract  = {Simple Summary
+In grain crops, aphids are important pests, but they can be suppressed by parasitoid wasps that use them as hosts for their developing offspring. These wasps occur naturally in the environment and can be utilized in the control of these pests. We investigated how the number and species of pest aphids within the grain crops varied over the season, how their associated parasitoid wasp species and numbers varied over time, and how these organisms interacted at crop edges. In our study, aphid numbers remained low early in the season, and increased as the crop growth progressed. Wheat field edges can act as reservoirs for the aphids and wasps; however, this was not the case for canola field edges, likely due to the different plant hosts available. One wasp dominated this study throughout the canola fields, although it was only found in low numbers at field edges and in wheat fields. Within these areas, another wasp dominated. These findings can assist in the management of grain aphid pests.
+
+Abstract
+In grain crops, aphids are important pests, but they can be suppressed by hymenopteran parasitoids. A challenge in incorporating parasitoids into Integrated Pest Management (IPM) programs, however, is that parasitoid numbers can be low during periods within the season when aphids are most damaging. Understanding the population dynamics of key aphid species and their parasitoids is central to ameliorating this problem. To examine the composition and seasonal trends of both aphid and parasitoid populations in south-eastern Australia, samples were taken throughout the winter growing seasons of 2017 and 2018 in 28 fields of wheat and canola. Myzus persicae (Sulzer) was the most abundant aphid species, particularly within canola crops. Across all fields, aphid populations remained relatively low during the early stages of crop growth and increased as the season progressed. Seasonal patterns were consistent across sites, due to climate, crop growth stage, and interactions between these factors. For canola, field edges did not appear to act as reservoirs for either aphids or parasitoids, as there was little overlap in the community composition of either, but for wheat there was much similarity. This is likely due to the presence of similar host plants within field edges and the neighbouring crop, enabling the same aphid species to persist within both areas. Diaeretiella rapae (M’Intosh) was the most common parasitoid across our study, particularly in canola, yet was present only in low abundance at field edges. The most common parasitoid in wheat fields was Aphidius matricariae (Haliday), with field edges likely acting as a reservoir for this species. Secondary parasitoid numbers were consistently low across our study. Differences in parasitoid species composition are discussed in relation to crop type, inter-field variation, and aphid host. The results highlight potential focal management areas and parasitoids that could help control aphid pests within grain crops},
+  doi       = {10.3390/insects12010044},
+  groups    = {Shelterbelts},
+  publisher = {{MDPI} {AG}},
+}
+
+@Article{brandle1984,
+  author    = {Brandle, James R. and Johnson, Bruce B. and Dearmont, Dave D.},
+  journal   = {Journal of Soil and Water Conservation},
+  title     = {Windbreak economics: The case of winter wheat production in eastern {Nebraska}},
+  year      = {1984},
+  issn      = {0022-4561},
+  number    = {5},
+  pages     = {339--343},
+  volume    = {39},
+  abstract  = {Windbreaks, long considered important in the Great Plains for reducing soil erosion, produce tangible but variable effects on crop yields. An economic analysis of winter wheat production in eastern Nebraska, as influenced by a field windbreak, revealed a positive return to the producer. The yield response of winter wheat averaged 15\% more under windbreak-sheltered conditions. Results indicated a 15-year payback period with a positive net present value.},
+  eprint    = {https://www.jswconline.org/content/39/5/339.full.pdf},
+  groups    = {Shelterbelts},
+  publisher = {Soil and Water Conservation Society},
+  url       = {https://www.jswconline.org/content/39/5/339},
+}
+
+@Article{deJong1995,
+  author   = {E. {de Jong} and T. E. Kowalchuk},
+  journal  = {Soil Science},
+  title    = {The Effect of Shelterbelts on Erosion and Soil Properties},
+  year     = {1995},
+  month    = may,
+  number   = {5},
+  pages    = {337--345},
+  volume   = {159},
+  abstract = {Shelterbelt planting is often recommended as a means to reduce wind erosion. Six sheltered and three unsheltered fields representing moderately coarse to moderately fine textured soils were sampled along transects to determine the effects of the belts on soil wind erosion and soil properties. 137Cs measurements indicated that shelterbelts about 6 m tall and 200 m apart considerably reduced off-field soil losses from moderately coarse and medium textured soils. Off-field soil losses from unsheltered moderately fine textured soils were low and similar to those from sheltered fields. Shelterbelts did not prevent in-field redistribution, and soil deposition was evident out from the shelterbelts for about 20 m. Organic C and 15-bar water content were increased, and bulk density decreased, in a strip about 10 m wide adjacent to the belts. Increased biomass production from the shelterbelt and its grass edge are probably the main cause for the increased organic C content. Decreased bulk electrical conductivity indicated increased leaching out to about 15 m from the belt. Leaching has also decreased the pH of the surface soil but has not affected the depth to carbonates.},
+  groups   = {Shelterbelts},
+  url      = {https://journals.lww.com/soilsci/Abstract/1995/05000/The_Effect_of_Shelterbelts_on_Erosion_and_Soil.7.aspx},
+}
+
+@Article{dong2015,
+  author    = {Zhaoke Dong and Fang Ouyang and Fei Lu and Feng Ge},
+  journal   = {BioControl},
+  title     = {Shelterbelts in agricultural landscapes enhance ladybeetle abundance in spillover from cropland to adjacent habitats},
+  year      = {2015},
+  month     = {jan},
+  number    = {3},
+  pages     = {351--361},
+  volume    = {60},
+  abstract  = {The natural enemies of herbivorous pests in cropping systems may relocate to adjacent habitats in response to declining habitat quality in heterogeneous landscapes. In this study, we measured the cross-edge spillover of ladybeetles from wheat fields to shelterbelts, and tested how landscape variables at various spatial scales influence ladybeetle populations. We conducted a large-scale sampling study of agricultural landscapes differing in structural complexity during 2012 and 2013. The effects of landscape variables (i.e., landscape diversity and the percentage of woody habitats) on the ladybeetle abundance were investigated. Propylea japonica (Thunberg) and Harmonia axyridis (Pallas) were the dominant ladybeetle species. The abundances of ladybeetles in spillover were positively correlated with the percentage of woody area, and negatively correlated with landscape diversity and edge density of crop habitats. It indicates that a low diversity landscape with a large area of shelterbelts supports larger ladybeetle abundance in spillover compared with a high diversity landscape with a limited area of shelterbelts. By contrast, greater numbers of within-field ladybeetles were associated with landscape diversity increase. Landscape features at the spatial scale of 2.5–3 km could best predict the abundance of ladybeetles in spillover, whereas the best prediction model for ladybeetle abundance within field was at the 1.5 km scale. These results suggest that the landscape variables influence ladybeetle abundance differently in spillover and within fields. The introduction of shelterbelts in the agricultural landscape could enhance the conservation of ladybeetle populations.},
+  doi       = {10.1007/s10526-015-9648-5},
+  groups    = {Shelterbelts},
+  publisher = {Springer Science and Business Media {LLC}},
+}
+
+@Article{helmers2005,
+  author    = {Glenn Helmers and James R. Brandle},
+  journal   = {Great Plains Research},
+  title     = {Optimum Windbreak Spacing in Great Plains Agriculture},
+  year      = {2005},
+  issn      = {10525165, 23342463},
+  number    = {2},
+  pages     = {179--198},
+  volume    = {15},
+  abstract  = {Integer programming techniques were used to determine the optimal windbreak pattern for corn and soybean production over a 70-year planning horizon. Field windbreaks provide numerous benefits to agricultural producers, including increased crop yields, erosion control, and wildlife habitat. However, windbreaks involve costs of establishment, maintenance, removal, localized yield reductions, and a loss of income resulting from cropland dedicated to windbreaks. As with any farm investment, windbreaks must be economically viable if they are to be adopted by producers. In addition to the direct costs of establishment, maintenance, and removal, yield increases must be large enough to replace opportunity costs of yield losses due to cropland removed from production and yield reductions in the area immediately adjacent to the windbreak. The economic viability of windbreaks is examined here by comparing the yield benefits resulting from climatic protection to total costs. A key question in determining economic viability is how closely windbreaks should be spaced. Assuming a conservative growth rate and tree height (20 feet in 40 years), the optimal spacing was approximately 386 feet, or 13 times the height of the windbreak. The net return results for the optimum pattern were 7.61% and 9.23% over unprotected production for corn and soybeans, respectively, assuming windbreak maturity is reached at 40 years. Net returns increased as the time required for windbreaks to reach maturity decreased. For taller windbreaks, the optimal spacing remains at 13 times windbreak height, but the absolute distance between windbreaks increases and the number of windbreaks required for optimal protection decreases.},
+  doi       = {10.2307/23779533},
+  groups    = {Shelterbelts},
+  publisher = {University of Nebraska Press},
+  url       = {http://www.jstor.org/stable/23779533},
+}
+
+@TechReport{steel2017,
+  author   = {Steel, Dale},
+  title    = {Analysis of Precision Agriculture Adoption \& Barriers in Western {Canada}},
+  year     = {2017},
+  abstract = {PA is comprised of a wide segment of tools and technologies and it appears that the adoption of PA tools and technologies in western Canada is strong based on the survey responses. 
+ 
+All farms are selective in their use of crop inputs, striving to apply them accurately, making management decisions and measuring results.  GPS guidance of farm equipment appears to now be universally adopted with 98% of respondents using GPS for guidance and the rapid adoption of more accurate forms like Auto-Steer and Automatic Sectional Control.  Many of the sensors to monitor weather and crops are now in place and the tools to measure the soils, water, vegetation and yields are fully understood.  Each year, more of the farm equipment fleet is capable of capturing data and the systems become more user friendly and reliable for technicians and precision agronomists to process the data into actionable outcomes for the farmer. 
+ 
+The ongoing development of the PA infrastructure is also required to enable the efficient transport of the inputs and outputs of agricultural production.  These inputs and outputs are data, information and knowledge.  In rural areas, the development of railway, highway and road infrastructure has enabled the efficient transport of the inputs and outputs of agricultural production in western Canada and the speed of the movement to and from the farm is a critical part of price competitiveness.
+
+An emerging issue in PA is the lack of developers focused on agriculture to create the software, platforms and applications that reduce the data complexity to provide actionable information to meet stakeholder needs.},
+  groups   = {Precision yield},
+  school   = {Agriculture and Agri-Food Canada},
+  url      = {http://static.albertafarmexpress.ca/wp-content/uploads/2017/05/Final-Report-Analysis-of-Precision-Agriculture-Adoption-and-Barriers-in-western-Canada-April-2017.pdf},
 }
 
 @Comment{jabref-meta: databaseType:bibtex;}

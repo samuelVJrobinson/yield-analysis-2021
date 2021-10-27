@@ -1,5 +1,5 @@
 ---
-title: "Living on the edge: crop boundary effects on precision crop yields in Alberta, Canada"
+title: "Livin' on the edge: Precision yield data shows evidence of ecosystem services from field boundaries"
 author:
   - name: Samuel V. J. Robinson
     email: samuel.robinson@ucalgary.ca
@@ -24,6 +24,7 @@ keywords:
   - precision yield;
   - spillover;
   - landscape;
+  - shelterbelt;
   
 bibliography: yieldRefs.bib
 geometry: "left=3cm,right=3cm,top=3cm,bottom=3cm"
@@ -32,13 +33,15 @@ output:
     base_format: rticles::elsevier_article
     toc: false
     fig_caption: true
+    highlight: haddock
 csl: ecology-letters.csl    
 header-includes:
   \makeatletter \def\ps@pprintTitle{  \let\@oddhead\@empty  \let\@evenhead\@empty  \def\@oddfoot{\centerline{\thepage}} \let\@evenfoot\@oddfoot} \makeatother
   \usepackage{float} \floatplacement{figure}{H} 
   \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}}
   \usepackage{setspace}
-  \linenumbers
+  %\linenumbers
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -124,12 +127,18 @@ peaMods <- lapply(paths[use],function(x) getModelInfo(x)$smooths) %>%
 <!-- - Emphasis: implications of natural areas for yield -->
 <!-- - Variable curves are “consistent with  -->
 
-<!-- Things to do on main machine: -->
-<!-- - Update "Field Locations" map to only have canola, wheat, pea fields -->
-<!-- - Update other figures with more "realistic" estimates - what is the average combine ground speed? -->
+<!-- Potential titles (best to worst): -->
+<!-- "Livin' on the edge: Precision yield data shows evidence of ecosystem services from field boundaries" -->
+<!-- "Field boundaries and ecosystem service spillover: evidence from precision yield data" -->
+<!-- "Living on the edge: field boundary effects on precision yield" -->
+<!-- "Ecosystem services for crop yields: do field boundaries matter?" -->
+<!-- "Crop boundary effects on precision yield data" -->
+
+
 
 \newpage
-\doublespacing
+<!-- \doublespacing -->
+\onehalfspacing
 
 # Introduction
 
@@ -143,16 +152,15 @@ SNL in agroecosystems is important for both agricultural production and conserva
 SNL acts as habitat for mobile organisms, and can act as a source of ecosystem services, such as pollination or pest control [@albrecht2020; @gardner2021], but this depends on both the crop system [@gray2014; @quinn2017] and landscape context [@marja2019; @boetzl2020].
 SNL can also create microclimate effects that reduce extreme temperature, trap moisture, and reduce wind speed and soil erosion [@kort1988; @brandle2004; @wratten2012].
 <!-- North American agroecosystems have larger fields, different crop varieties, and agronomic practices, all of which could negate or confound potential effects of SNL. -->
-Field boundaries (e.g. grass and flower strips, tree or shrub shelterbelts, road right-of-ways) are SNL of particular interest, as they are extremely common and require less land than field-sized agricultural set-asides.
+Field boundaries (e.g. grass and flower strips, tree or shrub shelterbelts, road right-of-ways) are SNL of particular interest, as they are extremely common and require less land than larger agricultural set-asides.
   
 <!-- - SNL has conflicting effects on crop yield because of ecosystem service provision as well as negative edge effects -->
 Semi-natural field boundaries may cause positive or negative effects on crops, depending on the spatial scale at which ecosystem services operate.
 Low yields near may occur near the edge of the field because of patchy seed emergence, poor microclimate, shading from trees, or greater competition with weeds (Figure \@ref(fig:hypotheses), Scenario 2).
-Alternatively, yield may be higher near field boundaries (Scenario 3) if they provide helpful ecosystem services, as these also tend to be occur close to the field edge [@duelli2003]. 
-For example, crop pollination services from bees that nest in field boundaries drops rapidly with distance [@kowalchuk1995; @garibaldi2011].
-Depending on the rate at which positive and negative ecosystems services decline with distance, yet another scenario is possible.
-Yield may also be maximized at intermediate distances (Scenario 4), suggesting a "Goldilocks" field size where negative edge effects are canceled out by ecosystem services.
-However, this scenario is rarely considered within studies of SNL or boundary effects [but see @mitchell2014; @vanVooren2017].
+Alternatively, yield may be higher near field boundaries (Scenario 3) if boundaries provide helpful ecosystem services [@duelli2003]. 
+For example, crop pollination services from bees that nest in field boundaries drops rapidly with distance [@garibaldi2011] and wind speed is reduced directly downwind of treelines [@deJong1995], so positive effects will be concentrated close to the boundary.
+Depending on the rate at which positive and negative boundary effects decline with distance, another scenario is also possible.
+Yield may be maximized at intermediate distances (Scenario 4), suggesting a "Goldilocks" field size where negative edge effects are canceled out by ecosystem services [@kowalchuk1995; @helmers2005; @mitchell2014; @vanVooren2017].
 
 <!-- In North America there are financial incentives to make fields large, homogeneous, and geometrically simple [@clare2021], but  -->
 
@@ -162,14 +170,14 @@ However, this scenario is rarely considered within studies of SNL or boundary ef
 ```
 
 
-Boundary effects are difficult to observe without large amounts of crop data, which is typically expensive and time-consuming to collect.    
-Because of this, studies of SNL effects on crop yield tend to suffer from limited spatial scope and small sample sizes, reducing statistical power and generality [@brandle1984; @baker2018; but see also @redhead2020].
-Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs [@osorio2018]. 
+Unfortunately, data to inform these decisions are often minimal, as observing boundary effects requires large amounts of expensive and time-consuming crop yield data.
+This means that studies of SNL effects on crop yield tend to suffer from limited spatial scope and small sample sizes, reducing statistical power and generality [@brandle1984; @baker2018; but see also @redhead2020].
+Meta-analyses are a common solution to this problem [e.g. @albrecht2020; @lowe2021], but precision yield data holds enormous promise because of its relatively common usage and low operating costs [@steel2017; @osorio2018]. 
 However, its use is limited for several reasons, namely 1) a lack of standardized formats between equipment types, 2) sensor calibration required for field-level accuracy, and 3) low familiarity with spatial statistical methods.
 Ecosystem services from field boundaries may influence both the mean as well as the variability of yield in agroecosystems [@redhead2020; @hunicken2021]; typically only means are considered, but lower variability in yield can also be valuable from a grower's perspective.
 There are few studies of yield variability (only those with large datasets), but precision yield data opens up the possibility of modeling within-field variability, as well as average yield.
 
-In this paper use a precision yield dataset from Alberta, Canada to ask the following questions:
+In this paper we use a precision yield dataset from Alberta, Canada to ask the following questions:
   1. How does crop yield change with distance from the edge of field?
   2. Does this depend on type of field edge? 
   3. Is there an intermediate distance where yield is maximized or variance is minimized?
@@ -208,12 +216,13 @@ Field boundaries were digitized using buffers from the yield data locations, the
 Crop boundaries are flexible, and often change yearly depending on planting and emergence conditions.
 For example, ephemeral wetlands are flooded during some years, but consist mainly of grasses during dry years, and grass boundaries can change if fields are used for as haying or pasture during crop rotation.
 This makes accurate and consistent classification of field boundaries difficult, but we used the following general categories for field boundaries:
-    1. Standard: grassy field edge, staging yard, or road right-of-way (grassy strip typically 5-10m wide) 
-    2. Wetland: permanent wetland; borders are largely unchanged from year-to-year
-    3. Shelterbelt: permanent windbreaks, shelterbelts, remnant forests, or shrublands
-    4. Other crop: annual crop or pasture with little or no visible boundary between planted areas
-    5. Bare: unplanted, fallow, flooded area, temporary wetland (only present for a single season), staging yard, oil and gas equipment, or road without a planted boundary
-    6. Grassland: permanent seminatural grassland or pasture (not in rotation)
+
+1. Standard: grassy field edge, staging yard, or road right-of-way (grassy strip typically 5-10m wide) 
+2. Wetland: permanent wetland; borders are largely unchanged from year-to-year
+3. Shelterbelt: permanent windbreaks, shelterbelts, remnant forests, or shrublands
+4. Other crop: annual crop or pasture with little or no visible boundary between planted areas
+5. Bare: unplanted, fallow, flooded area, temporary wetland (only present for a single season), staging yard, oil and gas equipment, or road without a planted boundary
+6. Grassland: permanent seminatural grassland or pasture (not in rotation)
   
 <!-- STANDARD -->
 <!-- WETLAND -->
@@ -237,9 +246,9 @@ We fit the following model to each field-year of data:
   \begin{split}
   \sqrt{Yield} \sim & Normal (\mu, \sigma)\\
   \mu = & Intercept + f(\text{Boundary Distance}, b=5)_i + \\
-   & f(\text{Easting}, \text{Northing}, b=60)\\
+   & f(\text{Easting}, \text{Northing}, b=80)\\
   log(\sigma) =  & Intercept + f(\text{Boundary Distance}, b=5)_i + \\
-   & f(\text{Easting}, \text{Northing}, b=60)\\
+   & f(\text{Easting}, \text{Northing}, b=80)\\
   \end{split}
   \end{equation}
   
@@ -247,31 +256,31 @@ We fit the following model to each field-year of data:
   1. Yield = weight of crop gathered per area of harvest (T/ha)
   2. Boundary Distance = distance from field boundary type _i_ (m)
   3. Easting, Northing = distance from centre of field (m)
-  4. Sequence = order of harvest within field (1--N points)
-  5. f(x,b) = penalized thin-plate regression spline, where _x_ is the predictor and _b_ is the number of basis dimensions
+  4. f(x,b) = penalized thin-plate regression spline, where _x_ is the predictor and _b_ is the number of basis dimensions
   
 In addition to modeling edge effects (our variable of interest), this model also accounts for within-field spatial variation not related to edges.
 Spatiotemporal variation can also be modelled using a Gaussian Process Model (e.g. Kriging, SPDE Approximations) but this was computationally unfeasible with 50,000 data points per field.
 Penalized splines offer a compromise, as they account for nonlinear relationships in the same way as Gaussian processes using a reduced number of dimensions.
-We used 5 basis dimensions for the distance smoother and 60 for the spatial smoothers, as we hypothesized that boundary effects would not be as complex as within-field variation (as in Figure \@ref(fig:hypotheses)).
+We used 5 basis dimensions for the distance smoother and 80 for the spatial smoothers, as we hypothesized that boundary effects would not be as complex as within-field variation (as in Figure \@ref(fig:hypotheses)).
 <!-- The number of basis dimensions was checked with the _gam.check_ function from _mgcv_. -->
 All models were fit in _R_ using the _mgcv_ library [version `r packageVersion('mgcv')`, @wood2017], and figures were created with _ggplot2_ and _ggpubr_ [versions `r packageVersion('ggplot2')`, @wickham2016; and `r packageVersion('ggpubr')`, @kassambara2020].
 
 The residuals in most of the models displayed both spatial autocorrelation in the residuals, indicating "micro-scale" variation that was not captured by the spatial smoothers [@cressie2011; @wickle2019].
-This is extremely common in precision yield data, and can bias standard errors of regression terms, but because a) there were a large number of data points per field, b) standard errors were relatively small (i.e. extremely small p-values), and c) results did not change with the addition of more basis functions (120 rather than 60), we decided to leave the models as-is.
+This is extremely common in precision yield data, and can bias standard errors of regression terms, but because a) there were a large number of data points per field, b) standard errors were relatively small (i.e. extremely small p-values), and c) results did not change with the addition of more basis functions (120 rather than 80), we decided to leave the models as-is.
 Temporal autocorrelation in residuals was also present, but we did not include temporal smoothers because spatial and temporal processes are confounded in precision yield data.
-That is, combining of fields occurs in patterns (e.g. east-to-west) so it is impossible to tell whether changes in yield in certain areas of the field were caused by deviations in the yield monitor sensors over time, or whether they represent changes in growing conditions.
+That is, combining of fields occurs in patterns (e.g. east-to-west) so we cannot tell whether changes in yield in certain areas of the field were caused by deviations in the yield monitor sensors over time, or whether they represent changes in growing conditions.
 We considered the latter to be a more realistic assumption, so we assigned all random variation as spatial in nature. 
-Customized combine driving patterns may be able to detect temporal variation, but this is beyond the scope of this research.
+Non-standard combine driving patterns may be able to gather data in a way that can detect sensor drift, but this is beyond the scope of this research.
 
 <!-- _Not really sure how we can get around this. In practice, this means that SEs for all coefficients are too small (i.e. we gathered 1000 points, but because they're spatially related, it's only equivalent to 100 points)._ -->
 
 To consider results from all field-level models together, we fit models of each field-year independently and then fit overall smoothers as averages of the field-level smoothers.
 This does not account for uncertainty in the field-level smoothers, so we used an approach similar to bootstrapping:
-  1. Extract single posterior sample (_rnorm_ in R) of smoother parameters from each field-level model using coefficient estimates and standard errors
-  2. Use posterior sample to simulate a new smoother from each field
-  3. Fit model of simulated smoothers from all fields, and save this "meta-smoother"
-  4. Repeat 1000 times, and calculate coverage intervals (5-95% percentiles) on saved meta-smoothers
+
+  1. Extract single posterior sample (_rnorm_ in R) of smoother parameters from each field-level model using coefficient estimates and standard errors.
+  2. Use posterior sample to simulate a new smoother from each field.
+  3. Fit new model of simulated smoothers from all fields (with a field-year random intercept), and save this "meta-smoother".
+  4. Repeat 1000 times, and calculate coverage intervals (5-95% percentiles) on saved meta-smoothers.
 This gives coverage intervals (CIs) for the "average" smoother while accounting for field-level variability, and is conceptually similar to a meta-analysis.
 Spatial variability was not averaged between fields because within-field variability is not directly comparable between fields.
 
@@ -286,7 +295,7 @@ Yield mean tended to increase with distance from field boundaries while yield SD
 Finally, the random spatial smoothers in Figure \@ref(fig:spatialSmooths)b and c show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions.
 
 
-```{r spatialSmooths, echo=FALSE, fig.cap='Raw data and spatial smoothers from a single field. Yield averages (means) and variability (log SD) were modeled separately, and both show large spatial dependence within the field.', out.width='100%'}  
+```{r spatialSmooths, echo=FALSE, fig.cap="Raw data and spatial smoothers from a single field. Yield averages (means) and variability (log SD) were modeled separately, and both show large spatial dependence within the field. Field dimensions are approximately 800 x 800 m, but coordinates are hidden to protect data privacy.", out.width='100%'}  
   include_graphics('../Figures/ExamplePlots/spatialSmooths.png',dpi=NA)
 ```
 
@@ -326,7 +335,7 @@ bLengths %>%
 ```
 
 Overall, both yield average and yield variability were extremely spatially dependent across all fields (average p-values both <0.0001), meaning that within-field variation was the primary driver of yield across canola, wheat, and pea crops (Table \@ref(tab:smoothSummary), row 6).
-Divvstances from boundary types were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5). 
+Distances from boundaries were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5). 
 
 
 <!-- `r with(canolaMods,formatC(mean(pval[Smoother=='s(E,N)'])))`, `r with(canolaMods,formatC(mean(pval[Smoother=='s.1(E,N)'],3)))` -->
@@ -353,10 +362,10 @@ canolaMods %>% group_by(Smoother) %>%
 
 
 Average canola yield tended to increase with distance from all crop boundaries, starting at 2.5 T/ha at the field edge and leveling off at about 3 T/ha  (Figure \@ref(fig:canolaPlot) top row).
-Shelterbelt and standard boundaries were well-represented in the data, and average yield quickly increased with distance away from the field boundary, but shelterbelts had a small intermediate maximum at around 50m before a weak decrease with distance, while average yield away from Standard field boundaries plateaued at 50m and remained roughly constant with distance.
+Shelterbelt and standard boundaries were well-represented in the data, and average yield quickly increased with distance away from the field boundary, but shelterbelts had a small intermediate maximum at around 50 m before a weak decrease with distance, while average yield away from Standard field boundaries plateaued at 50 m and remained roughly constant with distance.
 The effect of other boundary types was less consistent, but average yield tended to increase with distance away from grassland, other crop, and wetland, and was roughly the same with distance from bare boundary types.
 Yield variability (Figure \@ref(fig:canolaPlot) bottom row) was essentially constant with distance for shelterbelt, standard, and other crop field boundaries, but showed some evidence of decreasing with distance from field boundary at wetlands, bare, and grassland.
-Interestingly, there was an intermediate reduction in canola yield variability at about 75 m away from Wetland boundaries, indicating a potential stabilizing effect.
+Interestingly, there was an intermediate reduction in canola yield variability at about 75 m away from wetland boundaries, indicating a potential stabilizing effect, but this was offset by the large increase in yield variability at the edge of wetlands.
 
 ```{r canolaPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
   include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
@@ -376,7 +385,7 @@ Yield variability, on the other hand, tended to decrease with distance from bare
 
 <!-- Both average and variability of pea yields were spatially dependent (average p-values: `r with(peaMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(peaMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`). -->
 
-Pea crops were less well-represented in our data (N = `r sum(with(datSource,use&modelComplete2&crop=='Peas'))` fields, compared to ), and therefore the effects of boundaries tended to be less consistent. 
+Pea crops were less well-represented in our data (N = `r sum(with(datSource,use&modelComplete2&crop=='Peas'))` fields), and therefore the effects of boundaries tended to be less consistent. 
 Average pea yields (Figure \@ref(fig:peaPlot), top row) were roughly 4.25 T/ha at the field boundary and increased to just below 5 T/ha away from shelterbelt, standard, and other crop boundaries, while the effect of bare, grassland, and wetland boundaries was inconsistent.
 Conversely, yield variability (Figure \@ref(fig:peaPlot), bottom row) decreased with distance from grassland, shelterbelt, standard, and wetland boundaries, while the pattern with distance from other crop and bare was inconsistent. 
 Unlike canola and wheat crops, there was no obvious evidence of an intermediate increase in yield with distance from the field boundary.
@@ -394,61 +403,63 @@ Mean yield tended to increase with distance from field boundaries before plateau
 However, this intermediate increase was small in canola crops, meaning that ecosystem services likely did not vary strongly with distance from field boundaries (Scenario 2, Figure \@ref(fig:hypotheses)).
 There was a fairly large (0.75 T/ha) intermediate increase in average wheat yields away from shelterbelts, indicating a potential reduction in ecosystem services with distance.
 However, there was a similar (albeit weaker) pattern associated with bare ground, so this pattern may be caused by something other than the presence of shelterbelts.
-This indicates that shelterbelts may have a positive effect on wheat yields, and future work should expand this across a larger geographic domain in order to inform growers about how best to manage the landscapes surrounding their fields.
+This indicates that shelterbelts may have a positive effect on wheat yields, and future work should expand this within relevant geographic sub-regions in order to locally inform growers about how best to manage the landscapes surrounding their fields.
 
-
-<!-- Need a paragraph on wheat + shelterbelt effect -->
-
-While we found an intermediate positive effect of shelterbelts on wheat, other studies have shown variable impacts of shelterbelts, ranging from no effect [@akbar1990; @crawford1998] to a positive effect [@staple1955; @kowalchuk1995; @bao2012]. 
-This is complicated by the fact that their impact also depends on year-to-year water stress, shelterbelt orientation, as well as the physical structure of the shelterbelt [@pelton1967; @kort1988; @singh1999].
-However, @kowalchuk1995 found that positive effects of shelterbelts on wheat yield occur at around 20 m, while our work shows a peak at around 50 m, and were tied to increased snow deposition and reduced water stress.
-This also may be related to soil deposition from shelterbelts [@deJong1995]
-Strangely, we also found this intermediate yield maximum with distance away from bare (flooded or fallow) field boundaries, indicating that the patterns we found may be at least somewhat related to water stress.
-Shelterbelts can harbour predators or parasitoids of wheat crops [@dong2015; @ward2021]
-
-Our work also did not examine orientation-specific effects driven by prevailing wind (e.g. east-west distance rather than absolute distance)
+Our work showed an intermediate increase in wheat yield with distance from shelterbelts and bare ground, but what is the cause of these patterns?
+We hypothesize that the potential yield-increasing mechanisms may be a) microclimate effects, b) soil effects, or c) beneficial animal spillover. 
+Shelterbelts can act to capture snow and moderate downwind microclimate, reducing water stress on crop plants and increasing yield [@staple1955; @kowalchuk1995; @bao2012]. 
+However, @kowalchuk1995 found that positive microclimate effects of shelterbelts on wheat yield occur at around 20 m (3-4 times the shelterbelt height), while our work shows a peak at around 50 m.
+This additionally complicated by the fact that water stress varies from year-to-year, and that the impact of the shelterbelt also depends on the orientation to prevailing winds and the physical structure of the shelterbelt [@pelton1967; @kort1988; @singh1999].
+Unexpectedly, we also found this intermediate yield maximum with distance away from bare field boundaries, indicating that the patterns we found may be at least somewhat related to water stress.
+While we consider microclimate to be the most likely cause of the intermediate increase, it may also be related to soil effects from shelterbelts, where erosion is reduced and leaf litter from the shelterbelt can cause an increase in soil deposition [@deJong1995].
+Finally, shelterbelts may also act as sources of predators or parasitoids of wheat crop pests [@dong2015; @ward2021] but their effect depends on pest pressures, which are typically suppressed by pesticide application.
+We recommend that follow-up studies a) use precision yield data to confirm that this pattern exists across broader geographical areas and b) examine the influence of the three potential mechanisms considered above (as well as their interaction). 
+<!-- While we found an intermediate positive effect of shelterbelts on wheat, other studies have shown variable effects, ranging from no effect [@akbar1990; @crawford1998]  -->
+<!-- Our work also did not examine orientation-specific effects driven by prevailing wind (e.g. east-west distance rather than absolute distance) -->
 
 
 <!-- For example, average canola yield was about 0.5 T/ha lower close to Standard field edges, and yield SD was about 0.3 T/ha SD higher. -->
 Wheat and shelterbelts aside, why did we find few consistent effects of boundary type on crop yield?
-Our work examined only the first and last links in the causal chain _Field boundary_ $\rightarrow$ _Insect Abundance_ $\rightarrow$ _Crop Yield_, meaning that are two mediating relationships where the overall relationship could be broken or obscured.
-First, field boundaries may not have any influence on insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
-Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary yearly, or by location.
+Our work examined only the first and last links in the causal chain _Field Boundary_ $\rightarrow$ _Ecosystem Service_ $\rightarrow$ _Crop Yield_, meaning that are two mediating relationships where the overall relationship could be broken or obscured.
+First, field boundaries may not have any influence on beneficial insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
+Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary among year or location.
 <!-- However, our work does show that precision yield data could easily be joined to data on insect abundance to model this more completely. -->
-Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) when organisms in crops provide tangible ecosystem services.
+Abiotic ecosystem services, such as reduced wind speed or temperature, also depend on the structure of the boundary and whether wind or temperature are limiting crop production.
+Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) under what conditions field boundaries provide tangible ecosystem services.
 We consider these reasons below:
 
 <!-- ## Boundaries may not provide spillover -->
 
-SNL generally has a positive effect on spillover, but field boundaries only represent a fraction of the SNL that surrounds a given field.
+SNL generally has a positive effect on beneficial insect abundance, but field boundaries only represent a fraction of the SNL that surrounds a given field.
 Our analysis only examined boundary types, without considering the landscape context that fields were embedded in, but some studies show the influence of landscape composition at larger spatial scales [@nguyen2021] which could be particularly important when beneficial arthropods are disperse very broadly [@oberg2007].
 There could also be interactions between landscape composition at different scales [@motzke2016; @robinson2021; @haslem2021], but this is not broadly studied.
 Landscape complexity [@fahrig2011] and connectivity are also associated with higher abundance of beneficial arthropods.
 This means that field boundaries such as wetlands or shelterbelts may only be helpful if connected to a larger network of non-crop habitat [but see @fahrig2019].
 
-Field boundary traits may play an important role in mediating spillover, but our definitions of boundaries were (necessarily) loose, as we used satellite imagery to manually classify them.
-Therefore, it may be that other aspects of field boundaries, such as size or plant community composition, are more important for spillover of ecosystems services into fields.
-For example, larger [@lecq2018; @stasiov2020] or more functionally diverse [@bonifacio2011; @boughey2011] hedgerows tend to support more biodiversity than smaller hedgerows, and some studies have shown that leaf litter and soil compaction matters to predatory beetle communities [@sutter2018b].
+Field boundary characteristics, such as height or species composition, may play an important role in mediating spillover, but our definitions of boundaries were necessarily loose, as we used satellite imagery to manually classify them.
+Therefore, it may be that other aspects of field boundaries are more important for spillover of ecosystems services into fields.
+For example, larger or more functionally diverse [@bonifacio2011; @boughey2011; @lecq2018; @stasiov2020] hedgerows tend to support more biodiversity than smaller hedgerows, and some studies have shown that leaf litter and soil compaction influences predatory beetle communities [@sutter2018b].
 These fine-scale boundary characteristics were not measured in our study, but could be used as variables in more biologically-meaningful classifications of field boundaries.
+Finally, the relevant spatial scale of boundary effects are often related to the height or windward orientation of the shelterbelt [@kort1988; @kowalchuk1995], and precision yield data has the potential to show this in far greater detail than previous studies.
 
 Our first scenario (Scenario 1, Figure \@ref(fig:hypotheses)) assumes that beneficial organisms disperse from boundaries into the field, and had a generally positive effect on crop yield.
 However, field boundaries may not have a positive effect if a) ecosystem dis-services -- pest insects or weed seeds -- also disperse along with beneficials, or if b) beneficials do not disperse from the boundary environment.
 Pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services [@zhang2007].
-@gray2014 showed that remnant forest fragments do not provide significant pest control services, but also do not depress yield.
+<!-- @gray2014 showed that remnant forest fragments do not provide significant pest control services, but also do not depress yield. -->
 However, this is still poorly studied, and parsing out services from disservices is impossible using crop yield data _alone_.
-Ecosystem services from field boundaries may be limited if beneficial organisms stay in field boundaries, or disperse at wider spatial scales [@oberg2007; @zamorano2020, but see @robinson2021].
-
-<!-- ## Beneficial organisms may not provide ecosystem services -->
-
-Pest pressure or pollination deficit may be low enough that ecosystem service provision does not significantly change yield.
+Ecosystem services from field boundaries may also be limited if beneficial organisms stay in field boundaries, or disperse at wider spatial scales [@oberg2007; @zamorano2020, but see @robinson2021].
+Lastly, pest pressure or pollination requirements may be low enough that ecosystem service provision does not significantly change yield.
 Canola is largely self-pollinating [at least in hybrid canola varieties, @lindstrom2016] and wheat is wind-pollinated, meaning that slight increases in pollination services may not change yields significantly in either crop [@woodcock2016].
-Pests are also limited by growers' application of insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty.
+Crop pests in most western Canadian fields are suppressed by insecticides (seed-treated or on the crop directly), and insect pest outbreaks tend to be temporally and spatially spotty, meaning spillover of beneficial predators and parasitoids may only matter during outbreak years.
+<!-- no effect [@akbar1990; @crawford1998] -->
 
-Our work is some of the first to use a large precision yield dataset to answer questions about how landscapes influence yield, but this study has only scratched the surface of some of the richest agroecological datasets ever created.
+Our work is some of the first to use a large precision yield dataset to answer questions about how landscapes influence yield.
 Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield.
 Most fields were located in Central Alberta [Dry Mixedwood region, @ABRegions2006], where boundaries contained a higher proportion of shelterbelts (Figure \@ref(fig:boundaryTypes)), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
-Between-year effects may be important, especially during dry years [@kort1988], but this was not considered in our analysis.
+Between-year effects may be important, especially during hot dry years [@kort1988], but this was not considered in our analysis.
 Future work could examine whether boundaries have differing effects during hot or cool years, as shading or cooling effects may increase yield during hot years but have negative (or no) effect during cooler years.
+Finally, about 50\% of growers in western Canada have collected precision agriculture data, and about 85\% have yield monitoring capability [@steel2017], which means that our work has only scratched the surface of what could be (collectively) one of the richest agroecological datasets ever created.
+We urge agronomists, growers, and ecologists to adopt more wide-spread use of precision yield data, as it represents a vast source of incredibly detailed information which can be used to answer a variety of important questions.
   
 <!-- We used harvest time as smoothed variable to deal with temporal autocorrelation in the data, but this is a crude way to deal with this. -->
 <!-- This is because in-field combine driving patterns _almost always_ induce correlation between spatial and temporal measurements (e.g. northern section of the field was harvested before the southern section), meaning that temporal and spatial random effects are difficult to separate. -->
@@ -472,6 +483,9 @@ Funding for this research was provided by Ducks Unlimited Canada's Institute for
 
 <div id="refs"></div>
 
-<!-- ```{r child = 'supplemental.Rmd'} -->
-<!-- ``` -->
+\singlespacing
+\nolinenumbers
+
+```{r child = 'supplemental.Rmd'}
+```
 

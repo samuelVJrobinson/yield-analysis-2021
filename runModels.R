@@ -732,7 +732,7 @@ for(i in 1:length(croptype)){
 use <- which(datSource$filename == 'Trent_Clark JOHNSON 2014') #Could also use this
 
 load(datSource$modelPath2[use]) #Load model
-load("C:\\Users\\Samuel\\Documents\\Projects\\UofC postdoc\\yield-analysis-2021\\Figures\\ExamplePlots\\Trent_Clark JOHNSON 2014 modList.Rdata") #Path on Multivac
+# load("C:\\Users\\Samuel\\Documents\\Projects\\UofC postdoc\\yield-analysis-2021\\Figures\\ExamplePlots\\Trent_Clark JOHNSON 2014 modList.Rdata") #Path on Multivac
 
 #Spatial smoothers
 
@@ -776,7 +776,8 @@ palette <- 'YlGnBu'
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     scale_colour_distiller(type='div',palette = palette, direction = -1)+
     labs(col='Yield (T/ha)',title='Raw Yield Data')+
-    theme(legend.position='bottom'))
+    theme(legend.position='bottom',axis.text = element_blank(),axis.ticks = element_blank())
+  )
 
 # temp <- lapply(levels(fieldBoundaryType$type),function(x) filter(fieldBoundaryType,type==x)) %>% 
 #   set_names(nm=levels(fieldBoundaryType$type))
@@ -801,7 +802,7 @@ useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fi
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     labs(fill='Yield (T/ha)',title='Yield Average Smoother')+
     scale_fill_distiller(type='div',palette = palette, direction = -1) +
-    theme(legend.position='bottom')
+    theme(legend.position='bottom',axis.text = element_blank(),axis.ticks = element_blank())
   )
 
 (p3 <- hexGrid %>% 
@@ -811,7 +812,8 @@ useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fi
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     labs(fill='log Yield SD',title='Yield Variability Smoother')+
     scale_fill_distiller(type='div',palette = palette, direction = -1) +
-    theme(legend.position='bottom'))
+    theme(legend.position='bottom',axis.text = element_blank(),axis.ticks = element_blank())
+  )
 
 (p <- ggarrange(p1,p2,p3,ncol=3,nrow=1))
 ggsave(paste0('./Figures/ExamplePlots/spatialSmooths.png'),p,height=6,width=12,dpi=350)  
