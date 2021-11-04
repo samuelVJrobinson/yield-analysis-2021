@@ -120,7 +120,7 @@
 \newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
 
 % Pandoc header
-\makeatletter \def\ps@pprintTitle{  \let\@oddhead\@empty  \let\@evenhead\@empty  \def\@oddfoot{\centerline{\thepage}} \let\@evenfoot\@oddfoot} \makeatother \usepackage{float} \floatplacement{figure}{H} \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}} \usepackage{setspace} %\linenumbers
+\makeatletter \def\ps@pprintTitle{  \let\@oddhead\@empty  \let\@evenhead\@empty  \def\@oddfoot{\centerline{\thepage}} \let\@evenfoot\@oddfoot} \makeatother \usepackage{float} \floatplacement{figure}{H} \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}} \usepackage{setspace} \linenumbers
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{array}
@@ -158,8 +158,7 @@
  \end{frontmatter}
 
 \newpage
-
-\onehalfspacing
+\doublespacing
 
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
@@ -167,7 +166,7 @@
 Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth (Ramankutty \emph{et al.} 2018).
 This has allowed increases in human population and increased global stability in production (Foley \emph{et al.} 2011).
 However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms.
-Maintaining both biodiversity and production in agroecosystems represents a goal of conservationists and agronomists, and holds the potential for win-win scenarios ({``multifunctionality''} \emph{sensu} Mitchell \emph{et al.} 2014; Frei \emph{et al.} 2018).
+Maintaining both biodiversity and production in agroecosystems represents a goal of conservationists and agronomists, and holds the potential for win-win scenarios ({``multifunctionality''} \emph{sensu} Mitchell \emph{et al.} 2014; Frei \emph{et al.} 2018; but see also Karp \emph{et al.} 2018).
 Key to this goal is the preservation of semi-natural land (SNL) in and around crops, which represents the interface between crops and non-crops within agroecosystems.
 
 SNL in agroecosystems is important for both agricultural production and conservation (Prieto-Benítez \& Méndez 2011), and can create better biotic and abiotic conditions for crop growth (Case \emph{et al.} 2019; Weninger \emph{et al.} 2021; but see Lowe \emph{et al.} 2021).
@@ -210,7 +209,7 @@ Farmers were solicited for yield data through local agronomists, and we received
 We converted raw data to a standard csv format using Ag Leader SMS®.
 85\% of the crop types where either wheat (\emph{Triticum aestivum}), canola (\emph{Brassica napus}), or peas (\emph{Pisum sativum}), three of the most common crops in rotation in Alberta (Statistics Canada 2014).
 The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (94), canola (119), or peas (39), for a total of 252 field-years of data.
-Individual fields contained between 1 and 6 years of data (mean: 3.1), containing a total of 14.4 million data points.
+Individual fields ranged from 5.9 to 369 ha in area (mean: 72.2 ha), and contained between 1 and 6 years of data (mean: 3.1), for a total of 14.4 million data points.
 
 \begin{figure}
 \includegraphics[width=1\linewidth]{../Figures/Field Locations} \caption{Locations of fields that data were collected from}\label{fig:fieldLocataions}
@@ -442,7 +441,7 @@ Our work examined only the first and last links in the causal chain \emph{Field 
 First, field boundaries may not have any influence on beneficial insect abundance if separated from the larger landscape context, or spillover of beneficial organisms may be low.
 Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary among year or location.
 Abiotic ecosystem services, such as reduced wind speed or temperature, also depend on the structure of the boundary and whether wind or temperature are limiting crop production.
-Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) under what conditions field boundaries provide tangible ecosystem services.
+Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) under what conditions field boundaries provide tangible ecosystem services (Karp \emph{et al.} 2018).
 We consider these reasons below:
 
 SNL generally has a positive effect on beneficial insect abundance, but field boundaries only represent a fraction of the SNL that surrounds a given field.
@@ -474,17 +473,15 @@ Future work could examine whether boundaries have differing effects during hot o
 Finally, about 50\% of growers in western Canada have collected precision agriculture data, and about 85\% have yield monitoring capability (Steel 2017), which means that our work has only scratched the surface of what could be (collectively) one of the richest agroecological datasets ever created.
 We urge agronomists, growers, and ecologists to adopt more wide-spread use of precision yield data, as it represents a vast source of incredibly detailed information which can be used to answer a variety of important questions.
 
-\hypertarget{author-contributions}{%
-\section{Author Contributions}\label{author-contributions}}
-
-SVJR, LHN, and PG conceived of the project.
-SVJR collected data, conducted analysis, and wrote the manuscript.
-
 \hypertarget{acknowledgements}{%
 \section{Acknowledgements}\label{acknowledgements}}
 
 We thank Trent Clark, Dean Hubbard, Alvin French, and Kristina Polziehn for providing yield data for us, and providing insight on their yield data.
 We also thank Autumn Barnes and Keith Gabert of the Canola Council of Canada, and Laurel Thompson and JP Pettyjohn of Lakeland College for connecting us with farmers and agronomists.
+
+\hypertarget{funding-sources}{%
+\section{Funding Sources}\label{funding-sources}}
+
 Funding for this research was provided by Ducks Unlimited Canada's Institute for Wetland and Waterfowl Research, the Alberta Canola Producers Commission, Manitoba Canola Growers Association, SaskCanola, the Alberta Biodiversity Monitoring Institute, and the Alberta Conservation Association.
 
 \hypertarget{references}{%
@@ -494,10 +491,10 @@ Funding for this research was provided by Ducks Unlimited Canada's Institute for
 \hypertarget{refs}{}
 \begin{CSLReferences}{1}{0}
 \leavevmode\hypertarget{ref-AAFC_data}{}%
-Agriculture and Agri-Food Canada. (2018). \emph{{Annual Crop Inventory}}. Available at: \url{https://open.canada.ca/data/en/dataset/ba2645d5-4458-414d-b196-6303ac06c1c9}. Last accessed.
+Agriculture and Agri-Food Canada. (2018). \emph{{Annual Crop Inventory}}. Available at: \url{https://open.canada.ca/data/en/dataset/ba2645d5-4458-414d-b196-6303ac06c1c9}. Last accessed 6 February 2019.
 
 \leavevmode\hypertarget{ref-albrecht2020}{}%
-Albrecht, M., Kleijn, D., Williams, N.M., Tschumi, M., Blaauw, B.R., Bommarco, R., \emph{et al.} (2020). The effectiveness of flower strips and hedgerows on pest control, pollination services and crop yield: A quantitative synthesis. \emph{Ecology Letters}.
+Albrecht, M., Kleijn, D., Williams, N.M., Tschumi, M., Blaauw, B.R., Bommarco, R., \emph{et al.} (2020). The effectiveness of flower strips and hedgerows on pest control, pollination services and crop yield: A quantitative synthesis. \emph{Ecology Letters}, 23, 1488--1498.
 
 \leavevmode\hypertarget{ref-arslan2002}{}%
 Arslan, S. \& Colvin, T.S. (2002). An evaluation of the response of yield monitors and combines to varying yields. \emph{Precision Agriculture}, 3, 107--122.
@@ -506,7 +503,7 @@ Arslan, S. \& Colvin, T.S. (2002). An evaluation of the response of yield monito
 Baker, T.P., Moroni, M.T., Mendham, D.S., Smith, R. \& Hunt, M.A. (2018). Impacts of windbreak shelter on crop and livestock production. \emph{Crop and Pasture Science}, 69, 785.
 
 \leavevmode\hypertarget{ref-bao2012}{}%
-Bao, Y., Li, H. \& Zhao, H. (2012). Effect of shelterbelts on winter wheat yields in sanded farmland of north-western shandong province, china. \emph{Journal of Food Agriculture \& Environment}, 10, 1399--1403.
+Bao, Y., Li, H. \& Zhao, H. (2012). Effect of shelterbelts on winter wheat yields in sanded farmland of north-western {Shandong} province, {China}. \emph{Journal of Food Agriculture \& Environment}, 10, 1399--1403.
 
 \leavevmode\hypertarget{ref-boetzl2020}{}%
 Boetzl, F.A., Schuele, M., Krauss, J. \& Steffan-Dewenter, I. (2020). Pest control potential of adjacent agri-environment schemes varies with crop type and is shaped by landscape context and within-field position. \emph{Journal of Applied Ecology}, 57, 1482--1493.
@@ -551,7 +548,7 @@ Foley, J.A., Ramankutty, N., Brauman, K.A., Cassidy, E.S., Gerber, J.S., Johnsto
 Frei, B., Renard, D., Mitchell, M.G.E., Seufert, V., Chaplin-Kramer, R., Rhemtulla, J.M., \emph{et al.} (2018). Bright spots in agricultural landscapes: Identifying areas exceeding expectations for multifunctionality and biodiversity. \emph{Journal of Applied Ecology}, 55, 2731--2743.
 
 \leavevmode\hypertarget{ref-gardner2021}{}%
-Gardner, E., Breeze, T.D., Clough, Y., Smith, H.G., Baldock, K.C.R., Campbell, A., \emph{et al.} (2021). Field boundary features can stabilise bee populations and the pollination of mass-flowering crops in rotational systems. \emph{Journal of Applied Ecology}, In press.
+Gardner, E., Breeze, T.D., Clough, Y., Smith, H.G., Baldock, K.C.R., Campbell, A., \emph{et al.} (2021). Field boundary features can stabilise bee populations and the pollination of mass-flowering crops in rotational systems. \emph{Journal of Applied Ecology}, 58, 2287--2304.
 
 \leavevmode\hypertarget{ref-garibaldi2011}{}%
 Garibaldi, L.A., Steffan-Dewenter, I., Kremen, C., Morales, J.M., Bommarco, R., Cunningham, S.A., \emph{et al.} (2011). Stability of pollination services decreases with isolation from natural areas despite honey bee visits. \emph{Ecology Letters}, 14, 1062--1072.
@@ -560,7 +557,7 @@ Garibaldi, L.A., Steffan-Dewenter, I., Kremen, C., Morales, J.M., Bommarco, R., 
 Gray, C.L. \& Lewis, O.T. (2014). Do riparian forest fragments provide ecosystem services or disservices in surrounding oil palm plantations? \emph{Basic and Applied Ecology}, 15, 693--700.
 
 \leavevmode\hypertarget{ref-griffin2007}{}%
-Griffin, T.W., Brown, J.P. \& Lowenberg-DeBoerc, J. (2007). \emph{Yield monitor data analysis protocol: A primer in the management and analysis of precision agriculture data}.
+Griffin, T.W., Brown, J.P. \& Lowenberg-DeBoerc, J. (2007). \emph{Yield monitor data analysis protocol: A primer in the management and analysis of precision agriculture data}. SSRN.
 
 \leavevmode\hypertarget{ref-haslem2021}{}%
 Haslem, A., Clarke, R.H., Holland, G.J., Radford, J.Q., Stewart, A. \& Bennett, A.F. (2021). Local management or wider context: What determines the value of farm revegetation plantings for birds? \emph{Journal of Applied Ecology}.
@@ -570,6 +567,9 @@ Helmers, G. \& Brandle, J.R. (2005). Optimum windbreak spacing in great plains a
 
 \leavevmode\hypertarget{ref-hunicken2021}{}%
 Hünicken, P.L., Morales, C.L., Aizen, M.A., Anderson, G.K.S., García, N. \& Garibaldi, L.A. (2021). Insect pollination enhances yield stability in two pollinator-dependent crops. \emph{Agriculture, Ecosystems {\&} Environment}, 320, 107573.
+
+\leavevmode\hypertarget{ref-karp2018}{}%
+Karp, D.S., Chaplin-Kramer, R., Meehan, T.D., Martin, E.A., DeClerck, F., Grab, H., \emph{et al.} (2018). Crop pests and predators exhibit inconsistent responses to surrounding landscape composition. \emph{Proceedings of the National Academy of Sciences}, 115, E7863--E7870.
 
 \leavevmode\hypertarget{ref-kassambara2020}{}%
 Kassambara, A. (2020). \emph{{ggpubr}: 'ggplot2' based publication ready plots}.
@@ -587,10 +587,10 @@ Lecq, S., Loisel, A., Mullin, S.J. \& Bonnet, X. (2018). Manipulating hedgerow q
 Lindström, S.A.M., Herbertsson, L., Rundlöf, M., Smith, H.G. \& Bommarco, R. (2016). Large-scale pollination experiment demonstrates the importance of insect pollination in winter oilseed rape. \emph{Oecologia}, 180, 759--769.
 
 \leavevmode\hypertarget{ref-lowe2021}{}%
-Lowe, E.B., Groves, R. \& Gratton, C. (2021). Impacts of field-edge flower plantings on pollinator conservation and ecosystem service delivery {{}} a meta-analysis. \emph{Agriculture, Ecosystems {\&} Environment}, 310, 107290.
+Lowe, E.B., Groves, R. \& Gratton, C. (2021). Impacts of field-edge flower plantings on pollinator conservation and ecosystem service delivery -- a meta-analysis. \emph{Agriculture, Ecosystems {\&} Environment}, 310, 107290.
 
 \leavevmode\hypertarget{ref-marja2019}{}%
-Marja, R., Kleijn, D., Tscharntke, T., Klein, A.-M., Frank, T. \& Batáry, P. (2019). Effectiveness of agri-environmental management on pollinators is moderated more by ecological contrast than by landscape structure or land-use intensity. \emph{Ecology Letters}, In press.
+Marja, R., Kleijn, D., Tscharntke, T., Klein, A.-M., Frank, T. \& Batáry, P. (2019). Effectiveness of agri-environmental management on pollinators is moderated more by ecological contrast than by landscape structure or land-use intensity. \emph{Ecology Letters}, 22, 1493--1500.
 
 \leavevmode\hypertarget{ref-mitchell2014}{}%
 Mitchell, M.G.E., Bennett, E.M. \& Gonzalez, A. (2014). Forest fragments modulate the provision of multiple ecosystem services. \emph{Journal of Applied Ecology}, 51, 909--918.
@@ -602,7 +602,7 @@ Motzke, I., Klein, A.-M., Saleh, S., Wanger, T.C. \& Tscharntke, T. (2016). Habi
 Natural Regions Committee. (2006). \emph{Natural regions and subregions of {Alberta}}. Government of Alberta, Edmonton.
 
 \leavevmode\hypertarget{ref-nguyen2021}{}%
-Nguyen, L.H., Robinson, S.V.J. \& Galpern, P. (2021). Medium-resolution multispectral satellite imagery in precision agriculture: Mapping precision canola (\emph{brassica napus} {L.}) Yield using {Sentinel-2} time series. \emph{Precision Agriculture}, In Review (Preprint: https://www.essoar.org/doi/10.1002/essoar.10507479.2).
+Nguyen, L.H., Robinson, S.V.J. \& Galpern, P. (2021). Medium-resolution multispectral satellite imagery in precision agriculture: Mapping precision canola ({\emph{Brassica napus}} {L.}) Yield using {Sentinel-2} time series. \emph{Precision Agriculture}, In Review (Preprint: https://www.essoar.org/doi/10.1002/essoar.10507479.2).
 
 \leavevmode\hypertarget{ref-osorio2018}{}%
 Osorio, R.J., Barden, C.J. \& Ciampitti, I.A. (2018). {GIS} approach to estimate windbreak crop yield effects in {Kansas}{{}}{Nebraska}. \emph{Agroforestry Systems}, 93, 1567--1576.
@@ -629,7 +629,7 @@ Redhead, J.W., Oliver, T.H., Woodcock, B.A. \& Pywell, R.F. (2020). The influenc
 Robinson, S.V.J., Edwards, D., Vickruck, J.L., Best, L.R. \& Galpern, P. (2021). Non-crop sources of beneficial arthropods vary within-season across a prairie agroecosystem. \emph{Agriculture, Ecosystems {\&} Environment}, 320, 107581.
 
 \leavevmode\hypertarget{ref-singh1999}{}%
-Singh, H.P., Kohli, R.K. \& Batish, D.R. (1999). Impact of \emph{populus deltoides} and \emph{dalbergia sissoo} shelterbelts on wheat {}a comparative study. \emph{International Tree Crops Journal}, 10, 51--60.
+Singh, H.P., Kohli, R.K. \& Batish, D.R. (1999). Impact of {\emph{Populus deltoides}} and {\emph{Dalbergia sissoo}} shelterbelts on wheat {}a comparative study. \emph{International Tree Crops Journal}, 10, 51--60.
 
 \leavevmode\hypertarget{ref-staple1955}{}%
 Staple, W.J. \& Lehane, J.J. (1955). The influence of field shelterbelts on wind velocity, evaporation, soil moisture and crop yield. \emph{Canadian Journal of Agricultural Science}, 35, 440--453.
@@ -656,7 +656,7 @@ Vega, A., Córdoba, M., Castro-Franco, M. \& Balzarini, M. (2019). Protocol for 
 Ward, S.E., Umina, P.A., Macfadyen, S. \& Hoffmann, A.A. (2021). Hymenopteran parasitoids of aphid pests within {Australian} grain production landscapes. \emph{Insects}, 12, 44.
 
 \leavevmode\hypertarget{ref-weninger2021}{}%
-Weninger, T., Scheper, S., Lackóová, L., Kitzler, B., Gartner, K., King, N.W., \emph{et al.} (2021). Ecosystem services of tree windbreaks in rural landscapes -- a systematic review. \emph{Environmental Research Letters}, In press.
+Weninger, T., Scheper, S., Lackóová, L., Kitzler, B., Gartner, K., King, N.W., \emph{et al.} (2021). Ecosystem services of tree windbreaks in rural landscapes -- a systematic review. \emph{Environmental Research Letters}, 16, 103002.
 
 \leavevmode\hypertarget{ref-whelan2013}{}%
 Whelan, B. \& Taylor, J. (2013). \emph{Precision agriculture for grain production systems}. CSIRO Publishing.
@@ -874,10 +874,11 @@ Zhang, W., Ricketts, T.H., Kremen, C., Carney, K. \& Swinton, S.M. (2007). Ecosy
 
 \CommentTok{\#Uses thin{-}plate splines with extra shrinkage (bs = \textquotesingle{}ts\textquotesingle{}), with 5 basis}
 \CommentTok{\#functions for distance smoothers and 80 basis functions for spatial smoothers}
+\CommentTok{\#(see Wood 2017 for more details)}
 
-\CommentTok{\#Variance smoother}
+\CommentTok{\#Variance smoothers}
 \NormalTok{f2 }\OtherTok{\textless{}{-}} \StringTok{\textquotesingle{}\textasciitilde{} s(dist,k=5,bs="ts",by=boundaryType) + s(E,N,k=80)\textquotesingle{}} 
-\CommentTok{\#Means smoother}
+\CommentTok{\#Mean smoothers}
 \NormalTok{f }\OtherTok{\textless{}{-}} \StringTok{\textquotesingle{}sqrt(DryYield)\textasciitilde{} s(dist,k=5,bs="ts",by=boundaryType) + s(E,N,k=80)\textquotesingle{}}\ErrorTok{)} 
 \CommentTok{\#Combine into a list}
 \NormalTok{flist }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\FunctionTok{as.formula}\NormalTok{(f),}\FunctionTok{as.formula}\NormalTok{(f2)) }

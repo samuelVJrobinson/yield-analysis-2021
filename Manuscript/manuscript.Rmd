@@ -40,7 +40,7 @@ header-includes:
   \usepackage{float} \floatplacement{figure}{H} 
   \newcommand{\beginsupplement}{\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}}
   \usepackage{setspace}
-  %\linenumbers
+  \linenumbers
   
 ---
 
@@ -108,6 +108,11 @@ peaMods <- lapply(paths[use],function(x) getModelInfo(x)$smooths) %>%
 #   bind_rows(.id='field') %>% group_by(Parameter) %>% 
 #   summarize(meanEst=mean(Estimate),Z=mean(Estimate/SE))
 
+fieldAreas <- sapply(paste0('.',datSource$boundaryPath),function(x){
+  require(sf)
+  read_sf(x) %>% st_area() %>% sum()/10000 #Field areas in hectares
+})
+
 
 ```
 
@@ -137,15 +142,15 @@ peaMods <- lapply(paths[use],function(x) getModelInfo(x)$smooths) %>%
 
 
 \newpage
-<!-- \doublespacing -->
-\onehalfspacing
+\doublespacing
+<!-- \onehalfspacing -->
 
 # Introduction
 
 Intensive agricultural production has increased over the last 100 years, and agricultural land now makes up over a third of ice-free land on Earth [@ramankutty2018].
 This has allowed increases in human population and increased global stability in production [@foley2011].
 However, this is not without cost, as higher-diversity non-crops are converted to lower-diversity crops, resulting in loss of habitat and overall biodiversity of non-target organisms.
-Maintaining both biodiversity and production in agroecosystems represents a goal of conservationists and agronomists, and holds the potential for win-win scenarios ["multifunctionality" _sensu_ @mitchell2014; @frei2018].
+Maintaining both biodiversity and production in agroecosystems represents a goal of conservationists and agronomists, and holds the potential for win-win scenarios ["multifunctionality" _sensu_ @mitchell2014; @frei2018; but see also @karp2018].
 Key to this goal is the preservation of semi-natural land (SNL) in and around crops, which represents the interface between crops and non-crops within agroecosystems.
 
 SNL in agroecosystems is important for both agricultural production and conservation [@prietoBenitez2011], and can create better biotic and abiotic conditions for crop growth [@case2019; @weninger2021; but see @lowe2021].
@@ -192,7 +197,7 @@ Farmers were solicited for yield data through local agronomists, and we received
 We converted raw data to a standard csv format using Ag Leader SMS®.
 `r round(100*sum(grepl('(Wheat|Canola|Peas)',datSource$crop))/nrow(datSource))`% of the crop types where either wheat (_Triticum aestivum_), canola (_Brassica napus_), or peas (_Pisum sativum_), three of the most common crops in rotation in Alberta [@statscan_canola2014].
 The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (`r sum(datSourceFinal$crop=='Wheat')`), canola (`r sum(datSourceFinal$crop=='Canola')`), or peas (`r sum(datSourceFinal$crop=='Peas')`), for a total of `r nrow(datSourceFinal)` field-years of data.
-Individual fields contained between `r min(yearsPerField)` and `r max(yearsPerField)` years of data (mean: `r round(mean(yearsPerField),1)`), containing a total of `r round(sum(datSourceFinal$npoints)/1e6,1)` million data points.
+Individual fields ranged from `r round(min(fieldAreas),1)` to `r round(max(fieldAreas),1)` ha in area (mean: `r round(mean(fieldAreas),1)` ha), and contained between `r min(yearsPerField)` and `r max(yearsPerField)` years of data (mean: `r round(mean(yearsPerField),1)`), for a total of `r round(sum(datSourceFinal$npoints)/1e6,1)` million data points.
 
 ```{r fieldLocataions, echo=FALSE, fig.cap='Locations of fields that data were collected from', out.width='100%'}  
   include_graphics('../Figures/Field Locations.png',dpi=NA)
@@ -425,7 +430,7 @@ First, field boundaries may not have any influence on beneficial insect abundanc
 Second, beneficial insect abundance may not influence crop yield if pest pressure or pollination deficits are low, which may vary among year or location.
 <!-- However, our work does show that precision yield data could easily be joined to data on insect abundance to model this more completely. -->
 Abiotic ecosystem services, such as reduced wind speed or temperature, also depend on the structure of the boundary and whether wind or temperature are limiting crop production.
-Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) under what conditions field boundaries provide tangible ecosystem services.
+Our work suggests that we need to better examine the context in which a) beneficial organisms spillover from field boundaries and b) under what conditions field boundaries provide tangible ecosystem services [@karp2018].
 We consider these reasons below:
 
 <!-- ## Boundaries may not provide spillover -->
@@ -468,15 +473,18 @@ We urge agronomists, growers, and ecologists to adopt more wide-spread use of pr
 <!-- Future studies could use this to estimate drift in combine sensor measurements over time. -->
   
 
-# Author Contributions
+<!-- # Author Contributions -->
 
-SVJR, LHN, and PG conceived of the project.
-SVJR collected data, conducted analysis, and wrote the manuscript.
+<!-- SVJR, LHN, and PG conceived of the project. -->
+<!-- SVJR collected data, conducted analysis, and wrote the manuscript. -->
 
 # Acknowledgements
 
 We thank Trent Clark, Dean Hubbard, Alvin French, and Kristina Polziehn for providing yield data for us, and providing insight on their yield data. 
 We also thank Autumn Barnes and Keith Gabert of the Canola Council of Canada, and Laurel Thompson and JP Pettyjohn of Lakeland College for connecting us with farmers and agronomists.
+
+# Funding Sources
+
 Funding for this research was provided by Ducks Unlimited Canada's Institute for Wetland and Waterfowl Research, the Alberta Canola Producers Commission, Manitoba Canola Growers Association, SaskCanola, the Alberta Biodiversity Monitoring Institute, and the Alberta Conservation Association.
 
 # References {-}
