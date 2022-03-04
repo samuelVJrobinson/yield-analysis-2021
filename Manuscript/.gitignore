@@ -2,3 +2,7 @@
 manuscript.pdf
 yieldRefs.bib.bak
 manuscript_files
+*.log
+*.spl
+*.synctex.gz
+*.bib.sav.tmp
