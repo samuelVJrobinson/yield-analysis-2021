@@ -190,52 +190,6 @@ ggsave(paste0('./Figures/ModelSummary.png'),p,height=6,width=12,dpi=300)
 getFiles <- datSource$filename[datSource$use] #Field names
 files <- paste0('./Figures/ModelCheck/',getFiles,' modList.Rdata') #File paths
 
-#Function to get predicted smoother values from list of functions, fit models to these, and return results
-# Used for getting 
-# f = files to draw from
-# s = sample from posterior
-# m = marginalize across intercept
-sampleSmooth <- function(f,s,m,...){
-  require(mgcv)
-  require(tidyverse)
-  
-  allSmooths <- lapply(f,getPreds,margInt=m,samp=s)
-  names(allSmooths) <- gsub(' ','-',f)
-  names(allSmooths[[1]]) #Variables to get from allSmooths
-  
-  #Get df of predictions for each variable
-  allEff <- lapply(names(allSmooths[[1]]),function(y){
-    lapply(allSmooths,function(x) x[[y]]) %>% 
-      do.call('rbind',.) %>% 
-      rownames_to_column('field') %>% 
-      mutate(field=gsub('\\.\\d{1,3}','',field))
-  })
-  
-  #Fit models of sampled estimates
-  m1mean <- lm(mean~log(pArea),data=allEff[[1]])
-  m1sd <- lm(logSD~log(pArea),data=allEff[[1]])
-  m2mean <- gam(mean~s(dist,k=30),data=allEff[[2]])
-  m2sd <- gam(logSD~s(dist,k=30),data=allEff[[2]])
-  m3mean <- gam(mean~s(r,k=30),data=allEff[[3]])
-  m3sd <- gam(logSD~s(r,k=30),data=allEff[[3]])
-  
-  #Predictions from models
-  datList <- list(
-    #200 locations along log-pArea line
-    pArea=data.frame(pArea=exp(seq(min(log(allEff[[1]]$pArea)),max(log(allEff[[1]]$pArea)),length.out=200))) %>%
-      mutate(mean=predict(m1mean,newdata=.),logSD=predict(m1sd,newdata=.)),
-    #Unique rounded distance measurements
-    dist=data.frame(dist=sort(unique(round(allEff[[2]]$dist)))) %>% 
-      mutate(mean=predict(m2mean,newdata=.),logSD=predict(m2sd,newdata=.)), 
-    #Unique rounded sequence measurements
-    r=data.frame(r=round(seq(min(allEff[[3]]$r),max(allEff[[3]]$r),length.out=1000))) %>% 
-      mutate(mean=predict(m3mean,newdata=.),logSD=predict(m3sd,newdata=.))
-  )
-  rm(list=ls()[ls()!='datList']) #Cleanup
-  gc()
-  return(datList)
-}
-
 temp <- sampleSmooth(f=files,s=FALSE,m=c(TRUE,TRUE,TRUE)) #Mean smoother
 
 # Nrep <- 3
