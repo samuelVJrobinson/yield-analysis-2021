@@ -320,12 +320,10 @@ stopCluster(cluster)
 Sys.time()-a #Takes ~ 10 hrs for 50 models at 15 procs
 #Takes 2.364893 days to do all fields at 15 procs
 
-
-
 # Get smoother info from second set of models ---------------------------
 
 #Estimate at single field
-debugonce(getPreds)
+# debugonce(getPreds)
 est <- getPreds(paste0('./Figures/ModelCheck2/',datSource$filename[13],' modList.Rdata'),
                 margInt=c(FALSE,TRUE,TRUE),
                 samp=FALSE)$distDat %>% bind_rows(.id='dist_type')
@@ -360,7 +358,7 @@ getFiles <- datSource %>% filter(use,modelComplete2) #Completed models
 allSmooths <- lapply(getFiles$modelPath2,getPreds,margInt=c(FALSE,TRUE,TRUE)) %>% #Takes about 20 seconds
   set_names(getFiles$filename)
 
-#Get df of predictions for each variable
+#Get dataframe of predictions for each variable
 allEff <- lapply(names(allSmooths[[1]]),function(y){
   if(class(allSmooths[[1]][[y]])=='data.frame'){
     lapply(allSmooths,function(x) x[[y]]) %>% 
@@ -418,143 +416,6 @@ ggsave(paste0('./Figures/ModelSummary2a.png'),p,height=6,width=12,dpi=300)
 
 #Draw posterior samples from each field and fit curve at each field
 
-# Function to sample from posterior of each prediction, amalgamate, fit meta-model, return results of meta-model
-# My way of getting around the problem of random effects
-# a = arguments from parLapply, not used
-# useRows = rows of ds to be used, ds = datSource csv, nX = number of samples along range of X
-# rCutoff = restrict point number (some fields have hundreds of thousands of points, but all data uses approximately the same size yield rectangles, so cuts off meta-smoother at "about" the maximum field size - i.e. the most common number of points per field)
-
-#Note: this is more memory-intensive, but quicker. Looks like it maxes out around 12 GB
-samplePreds <- function(a=NA,useRows=NULL,ds=datSource,nX=c(30,100,500),rCutoff=50000,margInt=c(FALSE,FALSE,FALSE),Nsamp=1,ncore=NA,silent=TRUE,samp=TRUE,kPar=5){ 
-  # #Debugging
-  # useRows <- which(datSource$crop=='Canola')
-  # ds <- datSource
-  # nX=c(30,100,500)
-  # rCutoff=50000
-  # margInt=c(FALSE,FALSE,FALSE)
-  # Nsamp <- 10
-  # ncore <- 5
-  
-  if(is.null(useRows)){
-    warning('Rows not specified. Using entire dataset.')
-    useRows <- 1:nrow(datSource)
-  } 
-  require(tidyverse); require(mgcv); require(lme4)
-  source('helperFunctions.R')
-  getFiles <- ds %>% slice(useRows) %>% filter(use,modelComplete2) #Completed models
-  
-  if(!silent) print('Sampling...')
-  #Sample from posterior, get new lines for each field
-  if(is.na(ncore)){
-    allSmooths <- lapply(getFiles$modelPath2,getPreds,l=nX,margInt=margInt,samp=samp,reps=Nsamp) %>% set_names(getFiles$filename) #Serial version
-    if(Nsamp==1) allSmooths <- lapply(allSmooths,function(x){ret <- list(x)})
-  } else { #Parallel version
-    require(parallel)
-    cluster <- makeCluster(ncore) #Memory usage is OK, so could probably max it out
-    clusterExport(cluster,c('datSource','getSmooths'))
-    allSmooths <- parLapply(cl=cluster,getFiles$modelPath2,getPreds,l=nX,margInt=margInt,samp=samp,reps=Nsamp) %>% 
-      set_names(getFiles$filename) 
-  }
-  gc()
-  
-  # #log(Area) meta-models
-  # pAreaDf <- lapply(allSmooths,function(x) x$pAreaDat) %>% bind_rows(.id = 'field')
-  # 
-  # #Adds a small amount of noise so model fit isn't singular
-  # m1 <- pAreaDf %>% 
-  #   mutate(mean=mean+rnorm(n(),0,(max(mean)-min(mean))*0.005)) %>% 
-  #   lmer(mean~log(pArea)+(log(pArea)|field),data=.) 
-  # m2 <- pAreaDf %>% mutate(logSD=logSD+rnorm(n(),0,(max(logSD)-min(logSD))*0.005)) %>% 
-  #   lmer(logSD~log(pArea)+(log(pArea)|field),data=.)
-  
-  #cover class meta-models
-  
-  if(!silent) cat('Fitting meta-models...')
-  
-  #Get cover class names
-  coverNames <- sort(unique(unlist(lapply(allSmooths, function(x) names(x[[1]]$distDat)))))
-  
-  #Which models have which cover classes
-  containsCover <- sapply(coverNames,function(z) sapply(lapply(allSmooths, function(x) names(x[[1]]$distDat)), function(y) z %in% y))
-  
-  #Empty list for results  
-  coverPred <- vector(mode='list',length=length(coverNames)) %>% set_names(gsub('dist:boundaryType','',coverNames))
-  
-  #Helper function to fit smoothers from each cover class
-  metaSmoothFun <- function(j,useThese,cname,allSmooths,nX){
-    require(dplyr); require(mgcv)
-    coverDF <- lapply(allSmooths[useThese],function(x) x[[j]]$distDat[[cname]]) %>% 
-      bind_rows(.id = 'field') %>% mutate(field=factor(field)) #Get all field smoothers from Nsamp repetition
-    meanMod <- gam(mean~s(dist,k=kPar)+s(field,bs='re'),data=coverDF) #Fit meta-models
-    logSDMod <- gam(logSD~s(dist,k=kPar)+s(field,bs='re'),data=coverDF)
-    retDF <- data.frame(dist=seq(min(coverDF$dist),max(coverDF$dist),length.out=nX[2]),field=coverDF$field[1]) %>% #Get predictions
-      mutate(predMean=predict(meanMod,newdata=.,exclude="s(field)"),predLogSD=predict(logSDMod,newdata=.,exclude="s(field)")) %>% 
-      select(-field)
-    rm(coverDF,meanMod,logSDMod); gc() #Cleanup
-    return(retDF) #Return DF
-  }
-  
-  for(i in 1:ncol(containsCover)){ #For each cover type
-    if(!silent) cat(paste0(names(coverPred)[i],' '))
-    useThese <- unname(which(containsCover[,i])) #Which fields have this cover type?
-    cname <- colnames(containsCover)[i]
-    options(dplyr.summarise.inform = FALSE)
-    
-    if(Nsamp==1){ #Single replicate
-      coverPred[[i]] <- metaSmoothFun(1,useThese=useThese,cname=cname,allSmooths=allSmooths,nX=nX)  
-    } else if(is.na(ncore)){ #Serial
-      coverPred[[i]] <- lapply(1:Nsamp,metaSmoothFun,useThese=useThese,cname=cname,allSmooths=allSmooths,nX=nX)  
-    } else { #Parallel
-      coverPred[[i]] <- parLapply(cl=cluster,1:Nsamp,metaSmoothFun,useThese=useThese,cname=cname,allSmooths=allSmooths,nX=nX)  
-    }
-      # set_names(nm=paste0('samp',1:Nsamp)) %>% bind_rows(.id = 'samp') %>%  #Done outside of function
-      # pivot_longer(cols=predMean:predLogSD) %>% 
-      # group_by(dist,name) %>% summarize(med=median(value),upr=quantile(value,0.9),lwr=quantile(value,0.1)) %>% #Get median, 90th and 10th percentiles
-      # pivot_wider(id_cols = dist,values_from = med:lwr) %>% data.frame()
-  }
-  if(!silent) cat('Done')
-  if(!is.na(ncore)) stopCluster(cluster)
-  
-  # #r (point order) meta-models
-  # rDatDf <- lapply(allSmooths,function(x) x$rDat) %>% 
-  #   bind_rows(.id = 'field') %>% mutate(field=factor(field)) %>% 
-  #   filter(r<=rCutoff) #Filters out point values above cutoff
-  # 
-  # r1 <- gam(mean~s(r,k=50)+s(field,bs='re'),data=rDatDf)
-  # r2 <- gam(logSD~s(r,k=50)+s(field,bs='re'),data=rDatDf)
-  
-  # #Assemble predictions
-  # pAreaPred <- data.frame(pArea=exp(seq(log(min(pAreaDf$pArea)),log(max(pAreaDf$pArea)),length.out=nX[1]))) %>% 
-  #   mutate(predMean=predict(m1,newdata=.,re.form=~0),predLogSD=predict(m2,newdata=.,re.form=~0))
-  pAreaPred <- NA
-
-    # rPred <- data.frame(r=seq(min(rDatDf$r),max(rDatDf$r),length.out=nX[3]),field=rDatDf$field[1]) %>% 
-  #   mutate(predMean=predict(r1,newdata=.,exclude="s(field)"),predLogSD=predict(r2,newdata=.,exclude="s(field)"))
-  rPred <- NA
-  
-  retList <- list(pArea=pAreaPred,coverDist=coverPred,r=rPred) #Return list of results
-  
-  rm(list=ls()[!ls() %in% 'retList']) #Remove everything except retList
-  gc()
-  return(retList) 
-
-  # #Code to produce figures of field-level smoothers  
-  # fieldSmooths <- lapply(allSmooths,function(x) x[[1]]$distDat %>% bind_rows(.id='type') %>% mutate(type=gsub('dist:boundaryType','',type))) %>% 
-  #   bind_rows(.id='field')
-  # 
-  # meanSmooth <- bind_rows(coverPred,.id = 'type') #Mean smoothers
-  # 
-  # ggplot(fieldSmooths)+
-  #   geom_line(aes(x=dist,y=mean,group=field))+
-  #   facet_wrap(~type,nrow=1)+
-  #   coord_cartesian(ylim=c(-1,1),xlim=c(0,300))
-  
-  
-}
-# debugonce(samplePreds) #Test
-# isCanola <- which(datSource$crop=='Canola') #Canola crops only
-# samplePreds(useRows=isCanola,Nsamp = 1) #Test
-
 # Get crop-specific smoother info from second set of models 
 
 # # Add to current samples - canola
@@ -604,23 +465,22 @@ for(i in 1:length(croptype)){
 names(samp) <- croptype
 samp <- samp2; rm(samp2)
 
-#Get baseline smoother fit to non-sampled data ("mean" effect)
+#Get baseline smoother fit to sampled data ("mean" effect)
 samp_mean <- vector(mode='list',length=3) %>% set_names(croptype)
 for(i in 1:length(croptype)){
   isCrop <- which(tolower(datSource$crop)==croptype[i] & datSource$use)
   samp_mean[[i]] <- backTrans(samplePreds(1,useRows=isCrop,samp=FALSE))
-}
+} #Takes about 10 secs
 
 # tHa2buAc <- 17.0340 #tonnes per hectare to bushels per acre (https://www.agrimoney.com/calculators/calculators)
-ylabMean <- 'Average Yield (T/ha)'
-ylabSD <- 'Yield variablity (log(T/ha)) '
+ylabMean <- 'Average Yield (t/ha)'
+ylabSD <- 'Yield variablity (log(t/ha)) '
 
 distLims <- c(0,200)
 alphaVal <- 0.1
 qs <- c(0.05,0.5,0.95) #Quantiles
 colshade <- 'black'
 fillshade <- 'black'
-
 
 #Number of fields that have at least _some_ boundary type
 nContains <- lapply(c('Canola','Wheat','Peas'),function(cr){
@@ -716,7 +576,7 @@ for(i in 1:length(croptype)){
 # (p <- ggarrange(p1,p3,p5,p2,p4,p6,ncol=3,nrow=2)) #Plot of everything
 # ggsave(paste0('./Figures/ModelSummary3_',croptype,'.png'),p,height=6,width=16,dpi=350)
 
-#Write to files
+#Write to files for each crop types
 for(i in 1:length(croptype)){
   p1 <- figList[[i]][[1]]
   p2 <- figList[[i]][[2]]
@@ -726,7 +586,7 @@ for(i in 1:length(croptype)){
 }
 
 
-# Example figures (Trent Clark Johnson 2014) ---------------------------------------------------------
+# Example figures from single field (Trent Clark Johnson 2014) ---------------------------------------------------------
 
 # use <- which(datSource$filename == 'Trent_Clark W 34 2014')
 use <- which(datSource$filename == 'Trent_Clark JOHNSON 2014') #Could also use this
@@ -775,7 +635,7 @@ palette <- 'YlGnBu'
     geom_sf(data=dat,aes(geometry=geometry,col=DryYield),size=0.5,show.legend = 'point')+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
     scale_colour_distiller(type='div',palette = palette, direction = -1)+
-    labs(col='Yield (T/ha)',title='Raw Yield Data')+
+    labs(col='Yield (t/ha)',title='Raw Yield Data')+
     theme(legend.position='bottom',axis.text = element_blank(),axis.ticks = element_blank())
   )
 
@@ -800,7 +660,7 @@ useSmooths <- which(grepl('(E,N)',sapply(modList$smooths,function(x) x$label),fi
     mutate(pred=pred^2) %>% #Back-transform
     ggplot()+geom_sf(col=NA,aes(fill=pred))+
     geom_sf(data=fieldBoundaryType,aes(geometry=geometry),show.legend= 'line')+
-    labs(fill='Yield (T/ha)',title='Yield Average Smoother')+
+    labs(fill='Yield (t/ha)',title='Yield Average Smoother')+
     scale_fill_distiller(type='div',palette = palette, direction = -1) +
     theme(legend.position='bottom',axis.text = element_blank(),axis.ticks = element_blank())
   )
@@ -833,7 +693,7 @@ smoothDat <- lapply(modList$smooths[useSmooths],function(x){
 (p1 <- smoothDat %>% filter(type=='mean') %>% mutate(across(c(pred,upr,lwr),~.x^2)) %>% 
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
   facet_wrap(~boundaryType,nrow=1)+
-  labs(x='Distance (m)',y='Yield (T/ha)'))
+  labs(x='Distance (m)',y='Yield (t/ha)'))
 
 (p2 <- smoothDat %>% filter(type=='logSD') %>% mutate(across(c(pred,upr,lwr),~log(exp(.x)^2))) %>% 
   ggplot(aes(x=dist))+geom_ribbon(aes(ymax=upr,ymin=lwr),alpha=0.3)+geom_line(aes(y=pred))+
@@ -858,10 +718,6 @@ data.frame(dat,Z) %>%
   facet_wrap(~name,nrow=3)+
   scale_fill_distiller(type='div',palette = palette, direction = -1) 
 
-
-
-
-
 # Compare model types -----------------------------------------------------
 
 # Get model info
@@ -875,3 +731,133 @@ datSource %>% mutate(reml0=sapply(mod0info,function(x) x$REML),
                      diff1=reml0-reml1,diff2=reml0-reml2)
 
 load(datSource$modelPath0[1])
+# Simulate different types of boundaries at the edge of a quarter-section ---------------
+
+#Get samples from storage
+croptype <- c('canola','wheat','peas')
+samp2 <- vector(mode='list',length=3) %>% set_names(croptype)
+for(i in 1:length(croptype)){
+  load(paste0('./Data/postSamples_',croptype[i],'.Rdata'))
+  # samp <- lapply(samp,backTrans) #Back-transform
+  samp2[[i]] <- samp
+} #Store in nested lists
+names(samp) <- croptype
+samp <- samp2; rm(samp2)
+
+#Get baseline smoother fit to sampled data ("mean" effect)
+samp_mean <- vector(mode='list',length=3) %>% set_names(croptype)
+for(i in 1:length(croptype)){
+  isCrop <- which(tolower(datSource$crop)==croptype[i] & datSource$use)
+  # samp_mean[[i]] <- backTrans(samplePreds(1,useRows=isCrop,samp=FALSE))
+  samp_mean[[i]] <- samplePreds(1,useRows=isCrop,samp=FALSE)
+} #Takes about 10 secs
+
+
+
+lapply(samp$wheat,function(x) x$coverDist[c('STANDARD','SHELTERBELT','WETLAND')]) %>% set_names(paste0('samp',1:length(.))) %>% 
+  lapply(.,function(x) bind_rows(x,.id='boundary') %>% filter(dist<400)) %>% 
+  bind_rows(.id='samp') %>% 
+  pivot_longer(c(predMean,predLogSD)) %>% 
+  ggplot(aes(x=dist))+
+  geom_line(aes(y=value,group=samp),alpha=0.1)+
+  facet_grid(name~boundary,scales='free')
+
+
+#Create field boundary polygon
+qSecDist <- 805/4 #Quarter section = 805 x 805 m
+fieldPoly <- st_polygon(x=list(matrix(c(0,0,0,qSecDist,qSecDist,qSecDist,qSecDist,0,0,0),nrow=5,ncol=2,byrow = TRUE))) #Square field
+fieldBoundary <- lapply(1:(length(st_coordinates(fieldPoly)[, 1]) - 1), #4 boundary segments
+                        function(i){
+                          rbind(
+                            as.numeric(st_coordinates(fieldPoly)[i, 1:2]),
+                            as.numeric(st_coordinates(fieldPoly)[i + 1, 1:2])
+                          )
+                        }) %>%
+    lapply(.,function(i) st_linestring(i)) %>% 
+    st_sfc() %>% 
+    st_sf(a=c('a','b','c','d'),geom=.)
+sampGrid <- st_make_grid(fieldPoly,cellsize = qSecDist/100,square=TRUE) #100 x 100 cells
+
+#Problem: cells are equidistant from some edges, and no systematic way to make sure edges are equally represented.
+#Solution: add very small rotation to the grid - "nearest edge" changes but not distance
+rotGrd <- function(g,a){ #Function to rotate grid g by a degrees
+  rot <- function(aa) matrix(c(cos(aa), sin(aa), -sin(aa), cos(aa)), 2, 2)  
+  (g - st_centroid(st_union(g))) * rot(a * pi / 180) + st_centroid(st_union(g))
+}
+rotSampGrid <- rotGrd(sampGrid,0.1) #Rotate by 0.1 degrees
+cSamp <- st_centroid(sampGrid) #Centroid of each cell 
+cSampRot <- st_centroid(rotSampGrid) #Centroid of rotated cells
+
+#Sampling grid, with nearest edges coded as a-d
+sampGrid <- st_sf(nearest=letters[1:4][apply(st_distance(cSampRot,fieldBoundary),1,function(x) which.min(x)[1])],
+      dist=apply(st_distance(cSamp,fieldBoundary),1,min),
+      geom=st_geometry(sampGrid))
+sampGrid %>% ggplot()+geom_sf(aes(fill=nearest)) #Looks OK
+rm(qSecDist,fieldPoly,fieldBoundary)
+
+# #Single sample
+# samp1 <- samp$canola[[1]]$coverDist
+# grid1 <- sampGrid %>% mutate(m=NA,sd=NA,y=NA) %>% st_drop_geometry()
+# 
+# #Looks OK
+# samp1 %>% bind_rows(.id='boundary') %>% filter(dist<400) %>% 
+#   pivot_longer(predMean:predLogSD) %>% 
+#   ggplot(aes(x=dist,y=value))+geom_point()+
+#   facet_grid(name~boundary,scales='free_y')
+
+#Function to simulate yield given:
+# boundaries = dataframe of boundaries: nearest = letters[1:4], boundary = corresponding name of boundary type (eg "STANDARD")
+# crop = 'canola','wheat','peas'
+# samp = posterior samples from storage
+# grid = sampling 
+simYield <- function(boundaries,crop='canola',samp,grid,Nreps=1){
+  cropSamp <- lapply(1:length(samp[[crop]]), function(i) samp[[crop]][[i]]$coverDist) #Get samples from specific crop
+  f1 <- function(s1,b){ #Replace boundary of grid, fill with means
+    g1 <- grid
+    for(i in 1:nrow(b)){
+      isb <- grid$nearest==b$nearest[i]
+      g1$nearest[isb] <- b$boundary[i]
+      g1$m[isb] <- approx(x = s1[[i]]$dist, y = s1[[i]]$predMean, xout = g1$dist[isb])$y
+      g1$sd[isb] <- exp(approx(x = s1[[i]]$dist, y = s1[[i]]$predLogSD, xout = g1$dist[isb])$y)
+    }
+    g1$y <- (rnorm(nrow(g1),g1$m,g1$sd))^2 #Simulate yield, then transform to normal scale
+    return(mean(g1$y)) #All cells are the same size, so mean is OK
+  }
+  simY <- replicate(Nreps, #Replicate Nreps replicates
+                    sapply(cropSamp, f1, b=boundaries), #Get simulation for each cropSamp
+                    simplify = FALSE)
+  return(unlist(simY))
+}
+
+#Test
+test <- data.frame(b=rep(c('STANDARD','SHELTERBELT','WETLAND'),each=1000),
+           y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'canola',samp,sampGrid,Nreps=2),
+               simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'canola',samp,sampGrid,Nreps=2),
+               simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'canola',samp,sampGrid,Nreps=2))) 
+test %>% ggplot(aes(x=y*17.84,fill=b))+geom_density(alpha=0.2)+xlim(NA,60)+labs(x='Bu/acre canola',fill='Boundary')
+
+test <- data.frame(b=rep(c('STANDARD','SHELTERBELT','WETLAND'),each=1000),
+                   y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'wheat',samp,sampGrid,Nreps=2),
+                       simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'wheat',samp,sampGrid,Nreps=2),
+                       simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'wheat',samp,sampGrid,Nreps=2))) 
+test %>% ggplot(aes(x=y*14.85,fill=b))+geom_density(alpha=0.2)+labs(x='Bu/acre wheat',fill='Boundary')
+ 
+# #Sets of boundaries to use
+# boundaries <- lapply(0:4,function(i) data.frame(nearest = letters[1:4], boundary= c(rep('STANDARD',4-i),rep('SHELTERBELT',i))))
+# 
+# #Shelterbelt
+# sb_canola <- lapply(boundaries,simYield,crop='canola',samp=samp,grid=sampGrid,Nreps=10) %>% 
+#   set_names(paste('shelterbelt',0:4,sep='_')) %>% 
+#   bind_rows(.id = 'scenario') %>% 
+#   pivot_longer(everything()) %>% mutate(crop='canola')
+# sb_wheat <- lapply(boundaries,simYield,crop='wheat',samp=samp,grid=sampGrid,Nreps=10) %>% 
+#   set_names(paste('shelterbelt',0:4,sep='_')) %>% 
+#   bind_rows(.id = 'scenario') %>% 
+#   pivot_longer(everything()) %>% mutate(crop='wheat')
+# 
+# list(sb_canola,sb_wheat) %>% set_names(c('canola','wheat')) %>% 
+#   bind_rows(.id='croptype') %>% 
+#   ggplot(aes(x=value))+geom_density(aes(fill=name))+
+#   facet_wrap(~croptype,ncol=1,scales='free')
+# 
+# 

@@ -2,8 +2,6 @@
 %%% Begin My package additions %%%%%%%%%%%%%%%%%%%
 \usepackage[hyphens]{url}
 
-
-
 \usepackage{lineno} % add
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
@@ -183,7 +181,7 @@ SNL can also create microclimate effects that reduce extreme temperature, trap m
 Field boundaries (e.g.~grass and flower strips, tree or shrub shelterbelts, road right-of-ways) are SNL of particular interest, as they are extremely common and require less land than larger agricultural set-asides.
 
 Semi-natural field boundaries may cause positive or negative effects on crops, depending on the spatial scale at which ecosystem services operate.
-Low yields near may occur near the edge of the field because of patchy seed emergence, poor microclimate, shading from trees, or greater competition with weeds (Figure \ref{fig:hypotheses}, Scenario 2).
+Low yields near may occur near the edge of the field because of patchy seed emergence, poor microclimate, shading from trees, or greater competition with weeds (Figure 1, Scenario 2).
 Alternatively, yield may be higher near field boundaries (Scenario 3) if boundaries provide helpful ecosystem services (Duelli \& Obrist 2003).
 For example, crop pollination services from bees that nest in field boundaries drops rapidly with distance (Garibaldi \emph{et al.} 2011) and wind speed is reduced directly downwind of treelines (de Jong \& Kowalchuk 1995), so positive effects will be concentrated close to the boundary.
 Depending on the rate at which positive and negative boundary effects decline with distance, another scenario is also possible.
@@ -208,7 +206,7 @@ To our knowledge, only (Osorio \emph{et al.} 2018) has studied the effects of fi
 \hypertarget{data-collection}{%
 \subsection{Data collection}\label{data-collection}}
 
-Precision yield data were collected directly from farmers across Alberta (Figure \ref{fig:fieldLocations}).
+Precision yield data were collected directly from farmers across Alberta (Figure S1).
 Farmers were solicited for yield data through local agronomists, and we received 298 field-years of data from 5 growers across a total of 7 years (2014-2020).
 We converted raw data to a standard csv format using Ag Leader SMS®.
 85\% of the crop types where either wheat (\emph{Triticum aestivum}), canola (\emph{Brassica napus}), or peas (\emph{Pisum sativum}), three of the most common crops in rotation in Alberta (Statistics Canada 2014).
@@ -302,7 +300,7 @@ We fit the following model to each field-year of data:
 In addition to modeling edge effects (our variable of interest), this model also accounts for within-field spatial variation not related to edges.
 Spatiotemporal variation can also be modelled using a Gaussian Process Model (e.g.~Kriging, SPDE Approximations) but this was computationally unfeasible with 50,000 data points per field.
 Penalized splines offer a compromise, as they account for nonlinear relationships in the same way as Gaussian processes using a reduced number of dimensions.
-We used 5 basis dimensions for the distance smoother and 80 for the spatial smoothers, as we hypothesized that boundary effects would not be as complex as within-field variation (as in Figure \ref{fig:hypotheses}).
+We used 5 basis dimensions for the distance smoother and 80 for the spatial smoothers, as we hypothesized that boundary effects would not be as complex as within-field variation (as in Figure 1).
 All models were fit in \emph{R} using the \emph{mgcv} library (version 1.8.38, Wood 2017), and figures were created with \emph{ggplot2} and \emph{ggpubr} (versions 3.3.5, Wickham 2016; and 0.4.0, Kassambara 2020).
 
 The residuals in most of the models displayed both spatial autocorrelation in the residuals, indicating ``micro-scale'' variation that was not captured by the spatial smoothers (Cressie \& Wikle 2011; Wikle \emph{et al.} 2019).
@@ -338,31 +336,31 @@ This does not account for uncertainty in the field-level smoothers, so we used a
 
 The filtered data from each field contained a large amount of variation, but the non-stationary additive models were able to reveal underlying yield patterns.
 To illustrate this, we show the results from a single wheat field, where we show the relative impact of boundary distance and spatial variation on both yield mean and yield SD (``patchiness'').
-Figure \ref{fig:spatialSmooths}a shows the filtered data collected from a single field, demonstrating a large amount of variation even after filtering.
-Yield mean tended to increase with distance from field boundaries while yield SD tended to decrease, but there were no consistent differences between boundary types (Figure \ref{fig:distSmooths}).
-Finally, the random spatial smoothers in Figure \ref{fig:spatialSmooths}b and c show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions.
+Figure 2a shows the filtered data collected from a single field, demonstrating a large amount of variation even after filtering.
+Yield mean tended to increase with distance from field boundaries while yield SD tended to decrease, but there were no consistent differences between boundary types (Figure 3).
+Finally, the random spatial smoothers in Figure 2b and c show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions.
 
 \hypertarget{overall-results}{%
 \subsection{Overall results}\label{overall-results}}
 
-Across all fields, standard field boundaries (grassy borders) were the most common boundary type, followed by shelterbelts and other crops (Figure \ref{fig:boundaryTypes}).
+Across all fields, standard field boundaries (grassy borders) were the most common boundary type, followed by shelterbelts and other crops (Figure S2).
 
 Overall, both yield average and yield variability were extremely spatially dependent across all fields (average p-values both \textless0.0001), meaning that within-field variation was the primary driver of yield across canola, wheat, and pea crops (Table \ref{tab:smoothSummary}, row 6).
 Distances from boundaries were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5).
 
-Average canola yield tended to increase with distance from all crop boundaries, starting at 2.5 T/ha at the field edge and leveling off at about 3 T/ha (Figure \ref{fig:canolaPlot} top row).
+Average canola yield tended to increase with distance from all crop boundaries, starting at 2.5 T/ha at the field edge and leveling off at about 3 T/ha (Figure 4 top row).
 Shelterbelt and standard boundaries were well-represented in the data, and average yield quickly increased with distance away from the field boundary, but shelterbelts had a small intermediate maximum at around 50 m before a weak decrease with distance, while average yield away from Standard field boundaries plateaued at 50 m and remained roughly constant with distance.
 The effect of other boundary types was less consistent, but average yield tended to increase with distance away from grassland, other crop, and wetland, and was roughly the same with distance from bare boundary types.
-Yield variability (Figure \ref{fig:canolaPlot} bottom row) was essentially constant with distance for shelterbelt, standard, and other crop field boundaries, but showed some evidence of decreasing with distance from field boundary at wetlands, bare, and grassland.
+Yield variability (Figure 4 bottom row) was essentially constant with distance for shelterbelt, standard, and other crop field boundaries, but showed some evidence of decreasing with distance from field boundary at wetlands, bare, and grassland.
 Interestingly, there was an intermediate reduction in canola yield variability at about 75 m away from wetland boundaries, indicating a potential stabilizing effect, but this was offset by the large increase in yield variability at the edge of wetlands.
 
 The effect of boundary distance on average wheat yield was much more variable than the patterns seen in canola yield.
-Average yield (Figure \ref{fig:wheatPlot}, top row) roughly increased with distance away from wetland, standard, and grasslands, but both shelterbelts and bare ground displayed an intermediate maximum at around 50m (similar to canola), and decreased slightly with distance from Other Crops.
-Yield variability, on the other hand, tended to decrease with distance from bare, grassland, and wetland (before 100 m, at least), increased slightly with distance from shelterbelt and standard boundaries, and was roughly constant with distance from other crops (Figure \ref{fig:wheatPlot}, bottom row).
+Average yield (Figure 5, top row) roughly increased with distance away from wetland, standard, and grasslands, but both shelterbelts and bare ground displayed an intermediate maximum at around 50m (similar to canola), and decreased slightly with distance from Other Crops.
+Yield variability, on the other hand, tended to decrease with distance from bare, grassland, and wetland (before 100 m, at least), increased slightly with distance from shelterbelt and standard boundaries, and was roughly constant with distance from other crops (Figure 5, bottom row).
 
 Pea crops were less well-represented in our data (N = 39 fields), and therefore the effects of boundaries tended to be less consistent.
-Average pea yields (Figure \ref{fig:peaPlot}, top row) were roughly 4.25 T/ha at the field boundary and increased to just below 5 T/ha away from shelterbelt, standard, and other crop boundaries, while the effect of bare, grassland, and wetland boundaries was inconsistent.
-Conversely, yield variability (Figure \ref{fig:peaPlot}, bottom row) decreased with distance from grassland, shelterbelt, standard, and wetland boundaries, while the pattern with distance from other crop and bare was inconsistent.
+Average pea yields (Figure 6, top row) were roughly 4.25 T/ha at the field boundary and increased to just below 5 T/ha away from shelterbelt, standard, and other crop boundaries, while the effect of bare, grassland, and wetland boundaries was inconsistent.
+Conversely, yield variability (Figure 6, bottom row) decreased with distance from grassland, shelterbelt, standard, and wetland boundaries, while the pattern with distance from other crop and bare was inconsistent.
 Unlike canola and wheat crops, there was no obvious evidence of an intermediate increase in yield with distance from the field boundary.
 
 \hypertarget{discussion}{%
@@ -370,7 +368,7 @@ Unlike canola and wheat crops, there was no obvious evidence of an intermediate 
 
 Within individual fields, both the average and variability of yield changed with distance from the field boundary, and there were strong spatial relationships within each field, likely related to underlying soil or moisture conditions.
 Mean yield tended to increase with distance from field boundaries before plateauing, and there was some evidence of intermediate boosts in yield from shelterbelts next to canola and wheat, while peas showed no evidence of this.
-However, this intermediate increase was small in canola crops, meaning that ecosystem services likely did not vary strongly with distance from field boundaries (Scenario 2, Figure \ref{fig:hypotheses}).
+However, this intermediate increase was small in canola crops, meaning that ecosystem services likely did not vary strongly with distance from field boundaries (Scenario 2, Figure 1).
 There was a fairly large (0.75 T/ha) intermediate increase in average wheat yields away from shelterbelts, indicating a potential reduction in ecosystem services with distance.
 However, there was a similar (albeit weaker) pattern associated with bare ground, so this pattern may be caused by something other than the presence of shelterbelts.
 This indicates that shelterbelts may have a positive effect on wheat yields, and future work should expand this within relevant geographic sub-regions in order to locally inform growers about how best to manage the landscapes surrounding their fields.
@@ -405,7 +403,7 @@ For example, larger or more functionally diverse (Bonifacio \emph{et al.} 2011; 
 These fine-scale boundary characteristics were not measured in our study, but could be used as variables in more biologically-meaningful classifications of field boundaries.
 Finally, the relevant spatial scale of boundary effects are often related to the height or windward orientation of the shelterbelt (Kort 1988; Kowalchuk \& de Jong 1995), and precision yield data has the potential to show this in far greater detail than previous studies.
 
-Our first scenario (Scenario 1, Figure \ref{fig:hypotheses}) assumes that beneficial organisms disperse from boundaries into the field, and had a generally positive effect on crop yield.
+Our first scenario (Scenario 1, Figure 1) assumes that beneficial organisms disperse from boundaries into the field, and had a generally positive effect on crop yield.
 However, field boundaries may not have a positive effect if a) ecosystem dis-services -- pest insects or weed seeds -- also disperse along with beneficials, or if b) beneficials do not disperse from the boundary environment.
 Pests and weeds can also disperse from field boundaries, which may negate any positive effect of ecosystem services (Zhang \emph{et al.} 2007).
 However, this is still poorly studied, and parsing out services from disservices is impossible using crop yield data \emph{alone}.
@@ -416,74 +414,11 @@ Crop pests in most western Canadian fields are suppressed by insecticides (seed-
 
 Our work is some of the first to use a large precision yield dataset to answer questions about how landscapes influence yield.
 Since our sampling represents a limited amount of spatial and temporal coverage, there could be additional confounding variables that obscure signals of yield.
-Most fields were located in Central Alberta (Dry Mixedwood region, Natural Regions Committee 2006), where boundaries contained a higher proportion of shelterbelts (Figure \ref{fig:boundaryTypes}), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
+Most fields were located in Central Alberta (Dry Mixedwood region, Natural Regions Committee 2006), where boundaries contained a higher proportion of shelterbelts (Figure S2), but differences from Southern AB (Foothills Fescue and Mixedgrass region) may be confounding the signal.
 Between-year effects may be important, especially during hot dry years (Kort 1988), but this was not considered in our analysis.
 Future work could examine whether boundaries have differing effects during hot or cool years, as shading or cooling effects may increase yield during hot years but have negative (or no) effect during cooler years.
 Finally, about 50\% of growers in western Canada have collected precision agriculture data, and about 85\% have yield monitoring capability (Steel 2017), which means that our work has only scratched the surface of what could be (collectively) one of the richest agroecological datasets ever created.
 We urge agronomists, growers, and ecologists to adopt more wide-spread use of precision yield data, as it represents a vast source of incredibly detailed information which can be used to answer a variety of important questions.
-
-\newpage
-
-\hypertarget{figures}{%
-\section*{Figures}\label{figures}}
-\addcontentsline{toc}{section}{Figures}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ExamplePlots/hypotheses} \caption{Potential yield patterns, depending on ecosystem service effects with distance. Scenario 1: no effect of boundary. Scenario 2: negative edge effect on yield. Scenario 3: positive ecosystem service effect on yield. Scenario 4: edge effects are shown in red, ecosystem service effect shown blue, leading to an intermediate peak in yield.}\label{fig:hypotheses}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ExamplePlots/spatialSmooths} \caption{Raw data and spatial smoothers from a single field. Yield averages (means) and variability (log SD) were modeled separately, and both show large spatial dependence within the field. Field dimensions are approximately 800 x 800 m, but coordinates are hidden to protect data privacy.}\label{fig:spatialSmooths}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ExamplePlots/distSmooths} \caption{Distance smoothers from a single field, showing a positive saturating effect of distance on average yield (first row), while the variability smoothers show a general decrease in yield SD (second row).}\label{fig:distSmooths}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_canola} \caption{Field boundary effect on canola yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \% refers to the average percentage of field boundary accounted for by this boundary type.}\label{fig:canolaPlot}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_wheat} \caption{Field boundary effect on wheat yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \% refers to the average percentage of field boundary accounted for by this boundary type.}\label{fig:wheatPlot}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/ModelSummary3a_peas} \caption{Field boundary effect on pea yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \% refers to the average percentage of field boundary accounted for by this boundary type.}\label{fig:peaPlot}
-\end{figure}
-
-\newpage
-
-\hypertarget{tables}{%
-\section*{Tables}\label{tables}}
-\addcontentsline{toc}{section}{Tables}
-
-\begin{table}
-
-\caption{\label{tab:smoothSummary}Mean $\chi^2$, p-values, and proportion of smoother p-values less than 0.05 (after Bonneferoni correction) for mean and variability smoothers across all models.}
-\centering
-\begin{tabular}[t]{l|r|r|r|r|r|r}
-\hline
-\multicolumn{1}{c|}{} & \multicolumn{3}{c|}{Mean Yield} & \multicolumn{3}{c}{Yield Variability} \\
-\cline{2-4} \cline{5-7}
-Smoother Type & $\chi^2$-value & p-value & Prop. <0.05 & $\chi^2$-value & p-value & Prop. <0.05\\
-\hline
-Bare & 154.7 & 0.036 & 0.877 & 121.4 & 0.054 & 0.860\\
-\hline
-Grassland & 303.1 & 0.079 & 0.794 & 93.2 & 0.061 & 0.794\\
-\hline
-Other Crop & 174.9 & 0.063 & 0.860 & 104.5 & 0.044 & 0.840\\
-\hline
-Shelterbelt & 328.1 & 0.014 & 0.936 & 137.6 & 0.058 & 0.817\\
-\hline
-Standard & 281.9 & 0.021 & 0.938 & 159.6 & 0.057 & 0.832\\
-\hline
-Wetland & 148.9 & 0.045 & 0.833 & 106.7 & 0.013 & 0.857\\
-\hline
-Spatial Smoother & 17357.5 & 0.000 & 1.000 & 4739.1 & 0.000 & 1.000\\
-\hline
-\end{tabular}
-\end{table}
 
 \hypertarget{acknowledgements}{%
 \section{Acknowledgements}\label{acknowledgements}}
@@ -695,230 +630,6 @@ Zamorano, J., Bartomeus, I., Grez, A.A. \& Garibaldi, L.A. (2020). Field margin 
 Zhang, W., Ricketts, T.H., Kremen, C., Carney, K. \& Swinton, S.M. (2007). Ecosystem services and dis-services to agriculture. \emph{Ecological Economics}, 64, 253--260.
 
 \end{CSLReferences}
-
-\singlespacing
-\nolinenumbers
-
-\newpage
-
-\hypertarget{appendix-a-supplemental-information}{%
-\section*{Appendix A: Supplemental Information}\label{appendix-a-supplemental-information}}
-\addcontentsline{toc}{section}{Appendix A: Supplemental Information}
-
-\setcounter{table}{0} \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{../Figures/Field Locations} \caption{Locations of fields that data were collected from}\label{fig:fieldLocations}
-\end{figure}
-
-\begin{figure}
-\includegraphics[width=1\linewidth]{manuscript_files/figure-latex/boundaryTypes-1} \caption{Boxplot of field boundary compositions across sampled fields. The x-axis indicates the boundary type, while the y-axis indicates the percentage of all field boundaries covered by that boundary type.}\label{fig:boundaryTypes}
-\end{figure}
-
-\newpage
-
-\hypertarget{appendix-b-r-code-for-data-filtering}{%
-\section*{Appendix B: R Code for Data Filtering}\label{appendix-b-r-code-for-data-filtering}}
-\addcontentsline{toc}{section}{Appendix B: R Code for Data Filtering}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Helper functions {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-
-\CommentTok{\#"Inlier" spatial filtering procedure from Vega et al 2019, rewritten to work}
-\CommentTok{\#with sf + dplyr. Returns boolean}
-\NormalTok{vegaFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(data,ycol,}\AttributeTok{pvalCutoff=}\FloatTok{0.05}\NormalTok{,}\AttributeTok{nDist=}\DecValTok{40}\NormalTok{)\{}
-  \FunctionTok{require}\NormalTok{(sf)}
-  \FunctionTok{require}\NormalTok{(sp)}
-  \FunctionTok{require}\NormalTok{(spdep)}
-  \FunctionTok{require}\NormalTok{(tidyverse)}
-  
-  \ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{any}\NormalTok{(}\FunctionTok{class}\NormalTok{(data) }\SpecialCharTok{\%in\%} \StringTok{\textquotesingle{}sf\textquotesingle{}}\NormalTok{)) }\FunctionTok{stop}\NormalTok{(}\StringTok{\textquotesingle{}Dataframe must be sf object\textquotesingle{}}\NormalTok{)}
-  
-\NormalTok{  coords }\OtherTok{\textless{}{-}} \FunctionTok{st\_coordinates}\NormalTok{(data) }\CommentTok{\#Get coordinates in matrix form}
-  
-  \CommentTok{\#Get neighbourhood weights from 0 to ndist meters}
-\NormalTok{  nWeights }\OtherTok{\textless{}{-}} \FunctionTok{dnearneigh}\NormalTok{(coords,}\DecValTok{0}\NormalTok{,nDist) }
-  
-  \ControlFlowTok{if}\NormalTok{(}\FunctionTok{any}\NormalTok{(}\FunctionTok{sapply}\NormalTok{(nWeights,length)}\SpecialCharTok{==}\DecValTok{1}\NormalTok{))\{}
-    \FunctionTok{warning}\NormalTok{(}\StringTok{\textquotesingle{}Some points had no neighbours and were removed\textquotesingle{}}\NormalTok{)}
-\NormalTok{  \} }
-  
-  \CommentTok{\#Get neighbourhood indices for each point (which other points are in this}
-  \CommentTok{\#point\textquotesingle{}s neighbourhood?)}
-\NormalTok{  nIndices }\OtherTok{\textless{}{-}} \FunctionTok{nb2listw}\NormalTok{(nWeights, }\AttributeTok{style =} \StringTok{"W"}\NormalTok{,}\AttributeTok{zero.policy =} \ConstantTok{TRUE}\NormalTok{) }
-  
-\NormalTok{  yield }\OtherTok{\textless{}{-}} \FunctionTok{pull}\NormalTok{(data,\{\{ycol\}\}) }\CommentTok{\#Get yield data column}
-  
-  \CommentTok{\#Local Moran\textquotesingle{}s I for each neighbourhood}
-\NormalTok{  LM }\OtherTok{\textless{}{-}} \FunctionTok{localmoran}\NormalTok{(yield,nIndices,}\AttributeTok{p.adjust.method=}\StringTok{"bonferroni"}\NormalTok{,}
-                   \AttributeTok{alternative =}\StringTok{"less"}\NormalTok{)}
-  
-\NormalTok{  results }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(LM) }\SpecialCharTok{\%\textgreater{}\%} 
-    \FunctionTok{rename}\NormalTok{(}\StringTok{\textquotesingle{}pval\textquotesingle{}}\OtherTok{=}\FunctionTok{contains}\NormalTok{(}\StringTok{\textquotesingle{}Pr.z.\textquotesingle{}}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-    \CommentTok{\#Filter negative Ii and pvals \textless{} 0.05}
-    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{keepThese=}\NormalTok{ Ii }\SpecialCharTok{\textgreater{}} \DecValTok{0} \SpecialCharTok{|}\NormalTok{ pval }\SpecialCharTok{\textgreater{}}\NormalTok{ pvalCutoff) }\SpecialCharTok{\%\textgreater{}\%} 
-    \CommentTok{\#NAs (points had no neighbours)}
-    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{keepThese=}\FunctionTok{ifelse}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(keepThese),}\ConstantTok{FALSE}\NormalTok{,keepThese)) }
-  
-\NormalTok{  ret }\OtherTok{\textless{}{-}} \FunctionTok{pull}\NormalTok{(results)}
-  \FunctionTok{return}\NormalTok{(ret)}
-\NormalTok{\}}
-
-\CommentTok{\#Function to filter anything above a certain z{-}score. Returns boolean}
-\NormalTok{ZscoreFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x,}\AttributeTok{z=}\DecValTok{3}\NormalTok{)\{}
-\NormalTok{  xmean }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(x,}\AttributeTok{na.rm=}\ConstantTok{TRUE}\NormalTok{)}
-\NormalTok{  xsd }\OtherTok{\textless{}{-}} \FunctionTok{sd}\NormalTok{(x,}\AttributeTok{na.rm=}\ConstantTok{TRUE}\NormalTok{)}
-\NormalTok{  zscore }\OtherTok{\textless{}{-}} \FunctionTok{abs}\NormalTok{(((x}\SpecialCharTok{{-}}\NormalTok{xmean)}\SpecialCharTok{/}\NormalTok{xsd))}
-\NormalTok{  zscore}\SpecialCharTok{\textless{}}\NormalTok{z}
-\NormalTok{\} }
-
-\CommentTok{\#Function to filter anything above certain quantiles. Returns boolean}
-\NormalTok{QuantileFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x,}\AttributeTok{quant=}\FloatTok{0.99}\NormalTok{)\{ }
-\NormalTok{  l }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{((}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{quant)}\SpecialCharTok{/}\DecValTok{2}\NormalTok{,}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{quant)}\SpecialCharTok{/}\DecValTok{2}\NormalTok{) }\CommentTok{\#Symmetric quantiles}
-\NormalTok{  x}\SpecialCharTok{\textgreater{}}\FunctionTok{quantile}\NormalTok{(x,l[}\DecValTok{1}\NormalTok{]) }\SpecialCharTok{\&}\NormalTok{ x}\SpecialCharTok{\textless{}}\FunctionTok{quantile}\NormalTok{(x,l[}\DecValTok{2}\NormalTok{]) }
-\NormalTok{\}}
-
-\CommentTok{\#Function to filter large changes in bearing. Returns boolean unless}
-\CommentTok{\#returnDiffs==TRUE}
-\NormalTok{bearingFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(bearing,}\AttributeTok{q=}\ConstantTok{NULL}\NormalTok{,}\AttributeTok{z=}\ConstantTok{NULL}\NormalTok{,}\AttributeTok{returnDiffs=}\ConstantTok{FALSE}\NormalTok{)\{}
-  \ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{xor}\NormalTok{(}\FunctionTok{is.null}\NormalTok{(q),}\FunctionTok{is.null}\NormalTok{(z))}\SpecialCharTok{\&!}\NormalTok{returnDiffs) }\FunctionTok{stop}\NormalTok{(}\StringTok{\textquotesingle{}Input quantiles or Z{-}score\textquotesingle{}}\NormalTok{)}
-  \CommentTok{\#Difference in compass bearings (in degrees)}
-\NormalTok{  bearingDiff }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x1,x2)\{}
-\NormalTok{    x }\OtherTok{\textless{}{-}}\NormalTok{ x1}\SpecialCharTok{{-}}\NormalTok{x2}
-\NormalTok{    x }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{abs}\NormalTok{(x)}\SpecialCharTok{\textgreater{}}\DecValTok{180}\NormalTok{,x}\SpecialCharTok{{-}}\NormalTok{(}\DecValTok{360}\SpecialCharTok{*}\FunctionTok{sign}\NormalTok{(x)),x) }\CommentTok{\#Angle differences can\textquotesingle{}t be \textgreater{}180}
-    \FunctionTok{return}\NormalTok{(x)}
-\NormalTok{  \}}
-  
-  \CommentTok{\#Looks 1 point ahead and behind}
-\NormalTok{  bd }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(}\FunctionTok{bearingDiff}\NormalTok{(}\FunctionTok{lag}\NormalTok{(bearing),bearing),}
-              \FunctionTok{bearingDiff}\NormalTok{(}\FunctionTok{lead}\NormalTok{(bearing),bearing))}
-  \CommentTok{\#Maximum bearing difference ahead and behind}
-\NormalTok{  bd }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(bd,}\DecValTok{1}\NormalTok{,}\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{max}\NormalTok{(}\FunctionTok{abs}\NormalTok{(x),}\AttributeTok{na.rm=}\ConstantTok{TRUE}\NormalTok{)}\SpecialCharTok{*}\FunctionTok{sign}\NormalTok{(x[}\FunctionTok{which.max}\NormalTok{(}\FunctionTok{abs}\NormalTok{(x))])) }
-  
-  \ControlFlowTok{if}\NormalTok{(returnDiffs) }\FunctionTok{return}\NormalTok{(bd) }\CommentTok{\#Return bearing differences only, without filtering}
-  
-  \ControlFlowTok{if}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.null}\NormalTok{(q))\{}
-\NormalTok{    ret }\OtherTok{\textless{}{-}} \FunctionTok{QuantileFilter}\NormalTok{(bd,}\AttributeTok{q=}\NormalTok{q)}
-\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
-\NormalTok{    ret }\OtherTok{\textless{}{-}} \FunctionTok{ZscoreFilter}\NormalTok{(bd,}\AttributeTok{z=}\NormalTok{z)}
-\NormalTok{  \}}
-  \FunctionTok{return}\NormalTok{(ret)}
-\NormalTok{\} }
-
-
-\CommentTok{\#Positional difference filter {-} filters out very distant and very close points.}
-\CommentTok{\#Returns boolean unless returnDiffs==TRUE}
-\NormalTok{posFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(data,}\AttributeTok{q=}\ConstantTok{NULL}\NormalTok{,}\AttributeTok{returnDiffs=}\ConstantTok{FALSE}\NormalTok{)\{ }
-  \FunctionTok{require}\NormalTok{(sf)}
-  \ControlFlowTok{if}\NormalTok{(}\FunctionTok{is.null}\NormalTok{(q)}\SpecialCharTok{\&!}\NormalTok{returnDiffs) }\FunctionTok{stop}\NormalTok{(}\StringTok{\textquotesingle{}Input upper quantile\textquotesingle{}}\NormalTok{)}
-  
-  \ControlFlowTok{if}\NormalTok{(}\FunctionTok{units}\NormalTok{(}\FunctionTok{st\_distance}\NormalTok{(data[}\DecValTok{1}\NormalTok{,],data[}\DecValTok{2}\NormalTok{,]))}\SpecialCharTok{$}\NormalTok{numerator}\SpecialCharTok{!=}\StringTok{\textquotesingle{}m\textquotesingle{}}\NormalTok{)\{}
-    \FunctionTok{warning}\NormalTok{(}\StringTok{\textquotesingle{}Position differences not in meters\textquotesingle{}}\NormalTok{)}
-\NormalTok{  \} }
-\NormalTok{  coords }\OtherTok{\textless{}{-}} \FunctionTok{st\_coordinates}\NormalTok{(data) }\CommentTok{\#Get coordinates}
-  \CommentTok{\#Distances between points}
-\NormalTok{  pdiff }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(}\DecValTok{1}\SpecialCharTok{:}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(coords)}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{),}\ControlFlowTok{function}\NormalTok{(i) }\FunctionTok{as.numeric}\NormalTok{(}\FunctionTok{dist}\NormalTok{(coords[i}\SpecialCharTok{:}\NormalTok{(i}\SpecialCharTok{+}\DecValTok{1}\NormalTok{),]))) }
-\NormalTok{  pdiff }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(}\FunctionTok{c}\NormalTok{(pdiff,}\ConstantTok{NA}\NormalTok{),}\FunctionTok{c}\NormalTok{(}\ConstantTok{NA}\NormalTok{,pdiff)) }\CommentTok{\#Forward and backward lags}
-\NormalTok{  pdiff }\OtherTok{\textless{}{-}} \FunctionTok{apply}\NormalTok{(pdiff,}\DecValTok{1}\NormalTok{,max,}\AttributeTok{na.rm=}\ConstantTok{TRUE}\NormalTok{) }\CommentTok{\#Maximum distance ahead and behind}
-  \ControlFlowTok{if}\NormalTok{(returnDiffs)\{}
-    \FunctionTok{return}\NormalTok{(pdiff)}
-\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
-    \FunctionTok{return}\NormalTok{(}\FunctionTok{QuantileFilter}\NormalTok{(pdiff,q)) }\CommentTok{\#Note: uses 2{-}sided quantiles}
-\NormalTok{  \}}
-\NormalTok{\}}
-
-\CommentTok{\#Filter for (forward and backward) lagged speed differences. Returns boolean}
-\NormalTok{dSpeedFilter }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(speed,}\AttributeTok{l=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{),}\AttributeTok{perc=}\FloatTok{0.2}\NormalTok{)\{ }
-  
-  \CommentTok{\#Matrix of \% diffs}
-\NormalTok{  llist }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(l,}\ControlFlowTok{function}\NormalTok{(x) (}\FunctionTok{lag2}\NormalTok{(speed,x)}\SpecialCharTok{{-}}\NormalTok{speed)}\SpecialCharTok{/}\FunctionTok{lag2}\NormalTok{(speed,x)) }
-  
-  \CommentTok{\#Are any lagged speed values \textgreater{} percent change threshold?}
-\NormalTok{  ret }\OtherTok{\textless{}{-}} \SpecialCharTok{!}\FunctionTok{apply}\NormalTok{(llist,}\DecValTok{1}\NormalTok{,}\ControlFlowTok{function}\NormalTok{(y) }\FunctionTok{any}\NormalTok{(}\FunctionTok{abs}\NormalTok{(y)[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(y)]}\SpecialCharTok{\textgreater{}}\NormalTok{perc))}
-  
-  \FunctionTok{return}\NormalTok{(ret)}
-\NormalTok{\}}
-
-\CommentTok{\#Overloaded lag function that takes negative values}
-\NormalTok{lag2 }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x,n)\{}
-  \FunctionTok{require}\NormalTok{(dplyr)}
-  \ControlFlowTok{if}\NormalTok{(n}\SpecialCharTok{==}\DecValTok{0}\NormalTok{) \{}
-    \FunctionTok{return}\NormalTok{(x) }\CommentTok{\#No lag}
-\NormalTok{  \} }\ControlFlowTok{else} \ControlFlowTok{if}\NormalTok{(n}\SpecialCharTok{\textgreater{}}\DecValTok{0}\NormalTok{)\{}
-    \FunctionTok{lag}\NormalTok{(x,n) }\CommentTok{\#Positive lag}
-\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
-    \FunctionTok{lead}\NormalTok{(x,}\FunctionTok{abs}\NormalTok{(n)) }\CommentTok{\#Negative lag}
-\NormalTok{  \} }
-\NormalTok{\} }
-
-\CommentTok{\#Filtering pipeline  {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-
-\FunctionTok{library}\NormalTok{(tidyverse)}
-\FunctionTok{library}\NormalTok{(sf)}
-
-\CommentTok{\#Note: dat == sf dataframe of yield data with columns: DryYield (T/ha),}
-\CommentTok{\#TrackAngle (compass bearing), Speed (km/hr), cropType (Wheat, Canola, Peas)}
-
-\NormalTok{dat }\OtherTok{\textless{}{-}}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Vega et al 2019 spatial "inlier" filter {-} takes a few minutes...}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{vegaFilt =} \FunctionTok{vegaFilter}\NormalTok{(.,DryYield,}\AttributeTok{nDist =} \DecValTok{30}\NormalTok{)) }
-
-\NormalTok{dat }\OtherTok{\textless{}{-}}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#"BS" filter {-} removes values \textgreater{}10.75 T/ha for wheat, \textgreater{}8 T/ha for peas \& canola}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{noBS =}\NormalTok{ DryYield}\SpecialCharTok{\textless{}}\FunctionTok{ifelse}\NormalTok{(cropType}\SpecialCharTok{==}\StringTok{\textquotesingle{}Wheat\textquotesingle{}}\NormalTok{,}\FloatTok{10.75}\NormalTok{,}\DecValTok{8}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Trim dry yield outliers}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Qfilt =} \FunctionTok{QuantileFilter}\NormalTok{(DryYield,}\AttributeTok{q=}\FloatTok{0.98}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Trim extreme bearing changes (turning)}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{bFilt =} \FunctionTok{bearingFilter}\NormalTok{(TrackAngle,}\AttributeTok{q=}\FloatTok{0.98}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Trim absolute speed outliers}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{speedFilt =} \FunctionTok{QuantileFilter}\NormalTok{(Speed,}\AttributeTok{q=}\FloatTok{0.98}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Trim speed differences (\textgreater{}20\% change 2 steps forward and backward, suggested}
-  \CommentTok{\#by Lyle et al 2014)}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{dSpeedFilt =} \FunctionTok{dSpeedFilter}\NormalTok{(Speed,}\AttributeTok{l=}\FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{2}\NormalTok{,}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{),}\AttributeTok{perc =} \FloatTok{0.2}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Trim points that are far away from eachother}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{posFilt =} \FunctionTok{posFilter}\NormalTok{(.,}\AttributeTok{q=}\FloatTok{0.98}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
-  \CommentTok{\#Combine filter criteria}
-  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{allFilt =}\NormalTok{ noBS }\SpecialCharTok{\&}\NormalTok{ vegaFilt }\SpecialCharTok{\&}\NormalTok{ Qfilt }\SpecialCharTok{\&}\NormalTok{ bFilt }\SpecialCharTok{\&}\NormalTok{ speedFilt }\SpecialCharTok{\&} 
-\NormalTok{           dSpeedFilt }\SpecialCharTok{\&}\NormalTok{ posFilt) }\SpecialCharTok{\%\textgreater{}\%}  
-  \CommentTok{\#Remove filtered values}
-  \FunctionTok{filter}\NormalTok{(allFilt)}
-\end{Highlighting}
-\end{Shaded}
-
-\newpage
-
-\hypertarget{appendix-c-r-code-for-modelling}{%
-\section*{Appendix C: R Code for Modelling}\label{appendix-c-r-code-for-modelling}}
-\addcontentsline{toc}{section}{Appendix C: R Code for Modelling}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Fit models {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
-
-\FunctionTok{library}\NormalTok{(mgcv)}
-
-\CommentTok{\#Note: dat == dataframe of yield data with columns: DryYield (T/ha), dist}
-\CommentTok{\#(distance to nearest field boundary, m), boundaryType (type of boundary,}
-\CommentTok{\#factor), E,N (easting and northing distance from centre of field, m)}
-
-\CommentTok{\#Uses thin{-}plate splines with extra shrinkage (bs = \textquotesingle{}ts\textquotesingle{}), with 5 basis}
-\CommentTok{\#functions for distance smoothers and 80 basis functions for spatial smoothers}
-\CommentTok{\#(see Wood 2017 for more details)}
-
-\CommentTok{\#Variance smoothers}
-\NormalTok{f2 }\OtherTok{\textless{}{-}} \StringTok{\textquotesingle{}\textasciitilde{} s(dist,k=5,bs="ts",by=boundaryType) + s(E,N,k=80)\textquotesingle{}} 
-\CommentTok{\#Mean smoothers}
-\NormalTok{f }\OtherTok{\textless{}{-}} \StringTok{\textquotesingle{}sqrt(DryYield)\textasciitilde{} s(dist,k=5,bs="ts",by=boundaryType) + s(E,N,k=80)\textquotesingle{}}\ErrorTok{)} 
-\CommentTok{\#Combine into a list}
-\NormalTok{flist }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{(}\FunctionTok{as.formula}\NormalTok{(f),}\FunctionTok{as.formula}\NormalTok{(f2)) }
-
-\CommentTok{\#Fit model {-} takes about 45 mins for a 50000 point dataset using an AMD Ryzen 7}
-\CommentTok{\#3800X 8{-}core processor}
-\NormalTok{mod }\OtherTok{\textless{}{-}} \FunctionTok{gam}\NormalTok{(flist,}\AttributeTok{data=}\NormalTok{dat,}\AttributeTok{family=}\FunctionTok{gaulss}\NormalTok{()) }
-\end{Highlighting}
-\end{Shaded}
-
 
 
 \end{document}

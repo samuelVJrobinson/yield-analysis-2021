@@ -1,6 +1,39 @@
 \newpage
 
-# Appendix A: R Code for Data Filtering {-}
+# Appendix A: Supplemental Information {-}
+
+\beginsupplement
+
+```{r fieldLocations, echo=FALSE, fig.cap='Locations of fields that data were collected from', out.width='100%'}  
+  include_graphics('../Figures/Field Locations.png',dpi=NA)
+```
+
+```{r boundaryTypes, echo=FALSE, fig.cap='Boxplot of field boundary compositions across sampled fields. The x-axis indicates the boundary type, while the y-axis indicates the percentage of all field boundaries covered by that boundary type.', out.width='100%'}
+
+bLengths %>% 
+  mutate(croptype=datSourceFinal$crop) %>% 
+  mutate(location=ifelse(grepl('(Alvin|Dean)',filename),'Southern Alberta','Central Alberta')) %>%
+  group_by(location) %>% mutate(nFields=length(unique(filename))) %>% ungroup() %>% 
+  mutate(location=paste0(location,' (N = ',nFields,')')) %>%
+  select(filename,croptype,location,contains('prop_')) %>% 
+  pivot_longer(contains('prop_')) %>% 
+  mutate(name=gsub('prop_','',name),value=value*100) %>% na.omit() %>%
+  mutate(name=factor(name,labels=c('Bare','Grassland','Other\nCrop','Shelterbelt','Standard','Wetland'))) %>% 
+  group_by(croptype) %>% mutate(croptype=paste0(croptype,'\n(N = ',length(unique(filename)),')')) %>% 
+  ggplot(aes(x=name,y=value,fill=croptype))+geom_boxplot()+
+  facet_wrap(~location,ncol=1) +
+  labs(y='Percentage of field boundary',fill='Crop')+
+  scale_fill_manual(values=c('grey50','grey80','white'))+
+  theme(axis.title.x = element_blank(),legend.position = 'bottom')
+
+# bLengthSummary %>% #Table version
+#   kable(.,format='latex',caption='Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.',col.names = c('Type','Mean','SD','Number of Fields'),digits = c(1,4,4,1),escape = FALSE)
+
+```
+
+\newpage
+
+# Appendix B: R Code for Data Filtering {-}
 
 ```{r filterCode, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE, paged.print=FALSE}
 # Helper functions -----------------
@@ -167,7 +200,9 @@ dat <- dat %>%
 
 ```
 
-# Appendix B: R Code for Modelling {-}
+\newpage
+
+# Appendix C: R Code for Modelling {-}
 
 ```{r modelCode, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE, paged.print=FALSE}
 

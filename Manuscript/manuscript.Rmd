@@ -170,9 +170,6 @@ Yield may be maximized at intermediate distances (Scenario 4), suggesting a "Gol
 <!-- In North America there are financial incentives to make fields large, homogeneous, and geometrically simple [@clare2021], but  -->
 
 
-```{r hypotheses, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. Scenario 1: no effect of boundary. Scenario 2: negative edge effect on yield. Scenario 3: positive ecosystem service effect on yield. Scenario 4: edge effects are shown in red, ecosystem service effect shown blue, leading to an intermediate peak in yield.', out.width='100%'}  
-  include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
-```
 
 
 Unfortunately, data to inform these decisions are often minimal, as observing boundary effects requires large amounts of expensive and time-consuming crop yield data.
@@ -192,23 +189,19 @@ To our knowledge, only [@osorio2018] has studied the effects of field boundaries
 
 ## Data collection
 
-Precision yield data were collected directly from farmers across Alberta.
+Precision yield data were collected directly from farmers across Alberta (Figure \@ref(fig:fieldLocations)).
 Farmers were solicited for yield data through local agronomists, and we received `r nrow(datSource)` field-years of data from `r length(unique(datSource$grower))` growers across a total of `r length(unique(datSource$year))` years (`r min(unique(datSource$year))`-`r max(unique(datSource$year))`).
 We converted raw data to a standard csv format using Ag Leader SMS®.
 `r round(100*sum(grepl('(Wheat|Canola|Peas)',datSource$crop))/nrow(datSource))`% of the crop types where either wheat (_Triticum aestivum_), canola (_Brassica napus_), or peas (_Pisum sativum_), three of the most common crops in rotation in Alberta [@statscan_canola2014].
 The remaining crop types had low replication, so we constrained our analysis to only field-years containing wheat (`r sum(datSourceFinal$crop=='Wheat')`), canola (`r sum(datSourceFinal$crop=='Canola')`), or peas (`r sum(datSourceFinal$crop=='Peas')`), for a total of `r nrow(datSourceFinal)` field-years of data.
 Individual fields ranged from `r round(min(fieldAreas),1)` to `r round(max(fieldAreas),1)` ha in area (mean: `r round(mean(fieldAreas),1)` ha), and contained between `r min(yearsPerField)` and `r max(yearsPerField)` years of data (mean: `r round(mean(yearsPerField),1)`), for a total of `r round(sum(datSourceFinal$npoints)/1e6,1)` million data points.
 
-```{r fieldLocataions, echo=FALSE, fig.cap='Locations of fields that data were collected from', out.width='100%'}  
-  include_graphics('../Figures/Field Locations.png',dpi=NA)
-```
-  
 Yield data was collected in rectangles of the same length as the data interval (distance = combine ground speed $\times$ interval, typically 1 second) and the same width as the combine header (5-7 m, adjusted by the combine to account for overlap with adjacent swaths).
 We used dry yield (tonnes of seed per hectare minus - crop moisture) as our measure of yield, using the size of each rectangle (m$^2$), dry yield (tonnes), and the spatial location.
 Because of the large number of yield rectangles per field (30-800 thousand), we used the centroid of each polygon as its location, treating areal data as point data.
 Seeding and application rates were constant across fields, so we did not consider inputs in our analysis.
 Precision yield data can be highly variable and is prone to extreme outliers, especially when combine ground speeds are low and at the beginning of rows [@griffin2007; @whelan2013], or when the combine is accelerating or decelerating [@arslan2002].
-Therefore, we used the following filtering procedure to clean the data prior to model fitting (see Appendix A for R code): 
+Therefore, we used the following filtering procedure to clean the data prior to model fitting (see Appendix B for R code): 
 
 1. Removed outliers and "inliers" using the spatial filtering procedure from [@vega2019] 
 2. Removed unrealistic yield values (10.75 T/ha for wheat, 8 T/ha for canola and peas), and values of zero or less
@@ -299,45 +292,10 @@ Figure \@ref(fig:spatialSmooths)a shows the filtered data collected from a singl
 Yield mean tended to increase with distance from field boundaries while yield SD tended to decrease, but there were no consistent differences between boundary types (Figure \@ref(fig:distSmooths)).
 Finally, the random spatial smoothers in Figure \@ref(fig:spatialSmooths)b and c show that yield mean and SD systematically vary within fields, likely due to moisture, elevation, or soil conditions.
 
-
-```{r spatialSmooths, echo=FALSE, fig.cap="Raw data and spatial smoothers from a single field. Yield averages (means) and variability (log SD) were modeled separately, and both show large spatial dependence within the field. Field dimensions are approximately 800 x 800 m, but coordinates are hidden to protect data privacy.", out.width='100%'}  
-  include_graphics('../Figures/ExamplePlots/spatialSmooths.png',dpi=NA)
-```
-
-
-```{r distSmooths, echo=FALSE, fig.cap='Distance smoothers from a single field, showing a positive saturating effect of distance on average yield (first row), while the variability smoothers show a general decrease in yield SD (second row).', out.width='100%'}  
-  include_graphics('../Figures/ExamplePlots/distSmooths.png',dpi=NA)
-```
-
-
-
 ## Overall results
 
 Across all fields, standard field boundaries (grassy borders) were the most common boundary type, followed by shelterbelts and other crops (Figure \@ref(fig:boundaryTypes)).
 <!-- Not sure if we should talk about this. Not very many fields from southern regions, so it's hard to compare. Perhaps mention in Discussion -->
-
-```{r boundaryTypes, echo=FALSE, fig.cap='Boxplot of field boundary compositions across sampled fields. The x-axis indicates the boundary type, while the y-axis indicates the percentage of all field boundaries covered by that boundary type.', out.width='100%'}
-
-bLengths %>% 
-  mutate(croptype=datSourceFinal$crop) %>% 
-  mutate(location=ifelse(grepl('(Alvin|Dean)',filename),'Southern Alberta','Central Alberta')) %>%
-  group_by(location) %>% mutate(nFields=length(unique(filename))) %>% ungroup() %>% 
-  mutate(location=paste0(location,' (N = ',nFields,')')) %>%
-  select(filename,croptype,location,contains('prop_')) %>% 
-  pivot_longer(contains('prop_')) %>% 
-  mutate(name=gsub('prop_','',name),value=value*100) %>% na.omit() %>%
-  mutate(name=factor(name,labels=c('Bare','Grassland','Other\nCrop','Shelterbelt','Standard','Wetland'))) %>% 
-  group_by(croptype) %>% mutate(croptype=paste0(croptype,'\n(N = ',length(unique(filename)),')')) %>% 
-  ggplot(aes(x=name,y=value,fill=croptype))+geom_boxplot()+
-  facet_wrap(~location,ncol=1) +
-  labs(y='Percentage of field boundary',fill='Crop')+
-  scale_fill_manual(values=c('grey50','grey80','white'))+
-  theme(axis.title.x = element_blank(),legend.position = 'bottom')
-
-# bLengthSummary %>% #Table version
-#   kable(.,format='latex',caption='Mean and SD of proportion of boundary types across all fields, along with the number of fields bordered by at least some of the boundary type.',col.names = c('Type','Mean','SD','Number of Fields'),digits = c(1,4,4,1),escape = FALSE)
-
-```
 
 Overall, both yield average and yield variability were extremely spatially dependent across all fields (average p-values both <0.0001), meaning that within-field variation was the primary driver of yield across canola, wheat, and pea crops (Table \@ref(tab:smoothSummary), row 6).
 Distances from boundaries were also important, but a lower proportion of the fields had strong effects (rows 1-5, cols 3 + 5). 
@@ -345,36 +303,11 @@ Distances from boundaries were also important, but a lower proportion of the fie
 
 <!-- `r with(canolaMods,formatC(mean(pval[Smoother=='s(E,N)'])))`, `r with(canolaMods,formatC(mean(pval[Smoother=='s.1(E,N)'],3)))` -->
 
-```{r smoothSummary, echo=FALSE, out.width='100%'}
-
-canolaMods %>% group_by(Smoother) %>% 
-  summarize(N=n(),meanChi=mean(Chisq),meanP=mean(pval),propSig=sum(pval<(0.05/N))/n()) %>% 
-  ungroup() %>% 
-  mutate(par=ifelse(grepl('\\.',Smoother),'Variability','Mean')) %>% 
-  mutate(type=case_when(
-    grepl('boundaryType',Smoother) ~ gsub('s[\\.1]*\\(dist\\)\\:boundaryType','',Smoother),
-    grepl('E,N',Smoother) ~ 'Spatial Smoother'
-  )) %>% 
-  select(-N,-Smoother) %>% relocate(type,par,meanChi,meanP,propSig) %>% 
-  pivot_wider(id_cols=type,names_from=par,values_from=c(meanChi,meanP,propSig)) %>% 
-  relocate(type,meanChi_Mean,meanP_Mean,propSig_Mean,meanChi_Variability,meanP_Variability,propSig_Variability) %>% 
-  mutate(type=c('Bare','Grassland','Other Crop','Shelterbelt','Standard','Wetland','Spatial Smoother')) %>% 
-  kable(.,format='latex',caption='Mean $\\chi^2$, p-values, and proportion of smoother p-values less than 0.05 (after Bonneferoni correction) for mean and variability smoothers across all models.',col.names = c('Smoother Type','$\\chi^2$-value','p-value','Prop. <0.05','$\\chi^2$-value','p-value','Prop. <0.05'),
-        digits = c(1,1,3,3,1,3,3),escape = FALSE) %>% 
-  add_header_above(c('', 'Mean Yield' = 3, 'Yield Variability' = 3))
-
-```
-
-
 Average canola yield tended to increase with distance from all crop boundaries, starting at 2.5 T/ha at the field edge and leveling off at about 3 T/ha  (Figure \@ref(fig:canolaPlot) top row).
 Shelterbelt and standard boundaries were well-represented in the data, and average yield quickly increased with distance away from the field boundary, but shelterbelts had a small intermediate maximum at around 50 m before a weak decrease with distance, while average yield away from Standard field boundaries plateaued at 50 m and remained roughly constant with distance.
 The effect of other boundary types was less consistent, but average yield tended to increase with distance away from grassland, other crop, and wetland, and was roughly the same with distance from bare boundary types.
 Yield variability (Figure \@ref(fig:canolaPlot) bottom row) was essentially constant with distance for shelterbelt, standard, and other crop field boundaries, but showed some evidence of decreasing with distance from field boundary at wetlands, bare, and grassland.
 Interestingly, there was an intermediate reduction in canola yield variability at about 75 m away from wetland boundaries, indicating a potential stabilizing effect, but this was offset by the large increase in yield variability at the edge of wetlands.
-
-```{r canolaPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
-  include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
-```
 
 
 <!-- Similar to canola, both yield average and yield variability of wheat was spatially dependent (average p-values: `r with(wheatMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(wheatMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`). -->
@@ -384,22 +317,12 @@ The effect of boundary distance on average wheat yield was much more variable th
 Average yield (Figure \@ref(fig:wheatPlot), top row) roughly increased with distance away from wetland, standard, and grasslands, but both shelterbelts and bare ground displayed an intermediate maximum at around 50m (similar to canola), and decreased slightly with distance from Other Crops.
 Yield variability, on the other hand, tended to decrease with distance from bare, grassland, and wetland (before 100 m, at least), increased slightly with distance from shelterbelt and standard boundaries, and was roughly constant with distance from other crops (Figure \@ref(fig:wheatPlot), bottom row).
 
-```{r wheatPlot, echo=FALSE, fig.cap='Field boundary effect on wheat yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
-  include_graphics('../Figures/ModelSummary3a_wheat.png',dpi=NA)
-```
-
 <!-- Both average and variability of pea yields were spatially dependent (average p-values: `r with(peaMods,formatC(meanP[Smoother=='s(E,N)']))`, `r with(peaMods,formatC(meanP[Smoother=='s.1(E,N)'],3))`). -->
 
 Pea crops were less well-represented in our data (N = `r sum(with(datSource,use&modelComplete2&crop=='Peas'))` fields), and therefore the effects of boundaries tended to be less consistent. 
 Average pea yields (Figure \@ref(fig:peaPlot), top row) were roughly 4.25 T/ha at the field boundary and increased to just below 5 T/ha away from shelterbelt, standard, and other crop boundaries, while the effect of bare, grassland, and wetland boundaries was inconsistent.
 Conversely, yield variability (Figure \@ref(fig:peaPlot), bottom row) decreased with distance from grassland, shelterbelt, standard, and wetland boundaries, while the pattern with distance from other crop and bare was inconsistent. 
 Unlike canola and wheat crops, there was no obvious evidence of an intermediate increase in yield with distance from the field boundary.
-
-
-```{r peaPlot, echo=FALSE, fig.cap='Field boundary effect on pea yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
-  include_graphics('../Figures/ModelSummary3a_peas.png',dpi=NA)
-```
-
 
 # Discussion
 
@@ -477,6 +400,61 @@ We urge agronomists, growers, and ecologists to adopt more wide-spread use of pr
 
 <!-- SVJR, LHN, and PG conceived of the project. -->
 <!-- SVJR collected data, conducted analysis, and wrote the manuscript. -->
+
+\newpage
+
+# Figures {-}
+
+```{r hypotheses, echo=FALSE, fig.cap='Potential yield patterns, depending on ecosystem service effects with distance. Scenario 1: no effect of boundary. Scenario 2: negative edge effect on yield. Scenario 3: positive ecosystem service effect on yield. Scenario 4: edge effects are shown in red, ecosystem service effect shown blue, leading to an intermediate peak in yield.', out.width='100%'}  
+include_graphics('../Figures/ExamplePlots/hypotheses.png',dpi=NA)
+```
+
+
+```{r spatialSmooths, echo=FALSE, fig.cap="Raw data and spatial smoothers from a single field. Yield averages (means) and variability (log SD) were modeled separately, and both show large spatial dependence within the field. Field dimensions are approximately 800 x 800 m, but coordinates are hidden to protect data privacy.", out.width='100%'}  
+include_graphics('../Figures/ExamplePlots/spatialSmooths.png',dpi=NA)
+```
+
+
+```{r distSmooths, echo=FALSE, fig.cap='Distance smoothers from a single field, showing a positive saturating effect of distance on average yield (first row), while the variability smoothers show a general decrease in yield SD (second row).', out.width='100%'}  
+include_graphics('../Figures/ExamplePlots/distSmooths.png',dpi=NA)
+```
+
+```{r canolaPlot, echo=FALSE, fig.cap='Field boundary effect on canola yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
+include_graphics('../Figures/ModelSummary3a_canola.png',dpi=NA)
+```
+
+```{r wheatPlot, echo=FALSE, fig.cap='Field boundary effect on wheat yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
+include_graphics('../Figures/ModelSummary3a_wheat.png',dpi=NA)
+```
+
+
+```{r peaPlot, echo=FALSE, fig.cap='Field boundary effect on pea yield, accounting for the effect of spatial variation. Upper panel represents mean yield, while the lower panel represents yield variation. N refers to number of fields containing this boundary type, and \\% refers to the average percentage of field boundary accounted for by this boundary type.', out.width='100%'}  
+include_graphics('../Figures/ModelSummary3a_peas.png',dpi=NA)
+```
+
+\newpage
+
+# Tables {-}
+
+```{r smoothSummary, echo=FALSE, out.width='100%'}
+
+canolaMods %>% group_by(Smoother) %>% 
+  summarize(N=n(),meanChi=mean(Chisq),meanP=mean(pval),propSig=sum(pval<(0.05/N))/n()) %>% 
+  ungroup() %>% 
+  mutate(par=ifelse(grepl('\\.',Smoother),'Variability','Mean')) %>% 
+  mutate(type=case_when(
+    grepl('boundaryType',Smoother) ~ gsub('s[\\.1]*\\(dist\\)\\:boundaryType','',Smoother),
+    grepl('E,N',Smoother) ~ 'Spatial Smoother'
+  )) %>% 
+  select(-N,-Smoother) %>% relocate(type,par,meanChi,meanP,propSig) %>% 
+  pivot_wider(id_cols=type,names_from=par,values_from=c(meanChi,meanP,propSig)) %>% 
+  relocate(type,meanChi_Mean,meanP_Mean,propSig_Mean,meanChi_Variability,meanP_Variability,propSig_Variability) %>% 
+  mutate(type=c('Bare','Grassland','Other Crop','Shelterbelt','Standard','Wetland','Spatial Smoother')) %>% 
+  kable(.,format='latex',caption='Mean $\\chi^2$, p-values, and proportion of smoother p-values less than 0.05 (after Bonneferoni correction) for mean and variability smoothers across all models.',col.names = c('Smoother Type','$\\chi^2$-value','p-value','Prop. <0.05','$\\chi^2$-value','p-value','Prop. <0.05'),
+        digits = c(1,1,3,3,1,3,3),escape = FALSE) %>% 
+  add_header_above(c('', 'Mean Yield' = 3, 'Yield Variability' = 3))
+
+```
 
 # Acknowledgements
 
