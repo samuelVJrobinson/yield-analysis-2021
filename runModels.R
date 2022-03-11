@@ -703,10 +703,8 @@ samp_mean <- vector(mode='list',length=3) %>% set_names(croptype)
 for(i in 1:length(croptype)){
   isCrop <- which(tolower(datSource$crop)==croptype[i] & datSource$use)
   # samp_mean[[i]] <- backTrans(samplePreds(1,useRows=isCrop,samp=FALSE))
-  samp_mean[[i]] <- samplePreds(1,useRows=isCrop,samp=FALSE)
+  samp_mean[[i]][[1]] <- samplePreds(1,useRows=isCrop,samp=FALSE)
 } #Takes about 10 secs
-
-
 
 lapply(samp$wheat,function(x) x$coverDist[c('STANDARD','SHELTERBELT','WETLAND')]) %>% set_names(paste0('samp',1:length(.))) %>% 
   lapply(.,function(x) bind_rows(x,.id='boundary') %>% filter(dist<400)) %>% 
@@ -718,7 +716,8 @@ lapply(samp$wheat,function(x) x$coverDist[c('STANDARD','SHELTERBELT','WETLAND')]
 
 
 #Create field boundary polygon
-qSecDist <- 805/4 #Quarter section = 805 x 805 m
+qSecDist <- 805 #Quarter section = 805 x 805 m
+# qSecDist <- 805/2 #half Quarter section 
 fieldPoly <- st_polygon(x=list(matrix(c(0,0,0,qSecDist,qSecDist,qSecDist,qSecDist,0,0,0),nrow=5,ncol=2,byrow = TRUE))) #Square field
 fieldBoundary <- lapply(1:(length(st_coordinates(fieldPoly)[, 1]) - 1), #4 boundary segments
                         function(i){
@@ -754,8 +753,8 @@ rm(qSecDist,fieldPoly,fieldBoundary)
 # grid1 <- sampGrid %>% mutate(m=NA,sd=NA,y=NA) %>% st_drop_geometry()
 # 
 # #Looks OK
-# samp1 %>% bind_rows(.id='boundary') %>% filter(dist<400) %>% 
-#   pivot_longer(predMean:predLogSD) %>% 
+# samp1 %>% bind_rows(.id='boundary') %>% filter(dist<400) %>%
+#   pivot_longer(predMean:predLogSD) %>%
 #   ggplot(aes(x=dist,y=value))+geom_point()+
 #   facet_grid(name~boundary,scales='free_y')
 
@@ -764,54 +763,92 @@ rm(qSecDist,fieldPoly,fieldBoundary)
 # crop = 'canola','wheat','peas'
 # samp = posterior samples from storage
 # grid = sampling 
-simYield <- function(boundaries,crop='canola',samp,grid,Nreps=1){
+simYield <- function(boundaries,crop='canola',samp,grid,Nreps=1,sim=TRUE){
   cropSamp <- lapply(1:length(samp[[crop]]), function(i) samp[[crop]][[i]]$coverDist) #Get samples from specific crop
-  f1 <- function(s1,b){ #Replace boundary of grid, fill with means
+  f1 <- function(s1,b,useSim){ #Replace boundary of grid, fill with means
     g1 <- grid
     for(i in 1:nrow(b)){
       isb <- grid$nearest==b$nearest[i]
       g1$nearest[isb] <- b$boundary[i]
-      g1$m[isb] <- approx(x = s1[[i]]$dist, y = s1[[i]]$predMean, xout = g1$dist[isb])$y
-      g1$sd[isb] <- exp(approx(x = s1[[i]]$dist, y = s1[[i]]$predLogSD, xout = g1$dist[isb])$y)
+      g1$m[isb] <- approx(x = s1[[i]]$dist, y = s1[[b$boundary[i]]]$predMean, xout = g1$dist[isb])$y
+      g1$sd[isb] <- exp(approx(x = s1[[i]]$dist, y = s1[[b$boundary[i]]]$predLogSD, xout = g1$dist[isb])$y)
     }
-    g1$y <- (rnorm(nrow(g1),g1$m,g1$sd))^2 #Simulate yield, then transform to normal scale
-    return(mean(g1$y)) #All cells are the same size, so mean is OK
+    if(useSim){
+      g1$y <- rnorm(nrow(g1),g1$m,g1$sd) #Simulate yield
+    } else {
+      g1$y <- g1$m #Use mean value
+    }
+    g1$y <- g1$y^2 #Transform to normal scale
+    if(any(is.na(mean(g1$y)))) warning('Some predicted values are NA')
+    return(mean(g1$y,na.rm=TRUE)) #All cells are the same size, so mean is OK
   }
   simY <- replicate(Nreps, #Replicate Nreps replicates
-                    sapply(cropSamp, f1, b=boundaries), #Get simulation for each cropSamp
+                    sapply(cropSamp, f1, b=boundaries, useSim=sim), #Get simulation for each cropSamp
                     simplify = FALSE)
   return(unlist(simY))
 }
 
-#Test
-test <- data.frame(b=rep(c('STANDARD','SHELTERBELT','WETLAND'),each=1000),
-           y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'canola',samp,sampGrid,Nreps=2),
-               simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'canola',samp,sampGrid,Nreps=2),
-               simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'canola',samp,sampGrid,Nreps=2))) 
-test %>% ggplot(aes(x=y*17.84,fill=b))+geom_density(alpha=0.2)+xlim(NA,60)+labs(x='Bu/acre canola',fill='Boundary')
+# debugonce(simYield)
+#Standard boundary - all draws
+simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),
+         'canola',samp,sampGrid,Nreps=1,sim = FALSE) %>% hist()
 
+#Standard boundary - mean
+simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),
+         'canola',samp_mean,sampGrid,Nreps=1,sim = FALSE)
+#Shelterbelt
+simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),
+         'canola',samp_mean,sampGrid,Nreps=1,sim = FALSE)
+
+#Canola yield: 0-4 shelterbelts per field
+sapply(0:4,function(i){
+  simYield(data.frame(nearest = letters[1:4], boundary= c(rep('STANDARD',4-i),rep('SHELTERBELT',i))),
+           'canola',samp_mean,sampGrid,Nreps=1,sim = FALSE)
+}) %>% plot
+
+sapply(0:4,function(i){
+  simYield(data.frame(nearest = letters[1:4], boundary= c(rep('STANDARD',4-i),rep('SHELTERBELT',i))),
+           'wheat',samp_mean,sampGrid,Nreps=1,sim = FALSE)
+}) %>% plot
+
+
+#Canola - all boundaries = standard, shelterbelt, or wetland
 test <- data.frame(b=rep(c('STANDARD','SHELTERBELT','WETLAND'),each=1000),
-                   y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'wheat',samp,sampGrid,Nreps=2),
-                       simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'wheat',samp,sampGrid,Nreps=2),
-                       simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'wheat',samp,sampGrid,Nreps=2))) 
-test %>% ggplot(aes(x=y*14.85,fill=b))+geom_density(alpha=0.2)+labs(x='Bu/acre wheat',fill='Boundary')
+           y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'canola',samp,sampGrid,sim = FALSE),
+               simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'canola',samp,sampGrid,sim = FALSE),
+               simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'canola',samp,sampGrid,sim = FALSE)))
+test %>% ggplot(aes(x=y*17.84,fill=b))+geom_density(alpha=0.2)+xlim(NA,60)+labs(x='Bu/acre canola',fill='Boundary')
  
-# #Sets of boundaries to use
-# boundaries <- lapply(0:4,function(i) data.frame(nearest = letters[1:4], boundary= c(rep('STANDARD',4-i),rep('SHELTERBELT',i))))
-# 
-# #Shelterbelt
-# sb_canola <- lapply(boundaries,simYield,crop='canola',samp=samp,grid=sampGrid,Nreps=10) %>% 
-#   set_names(paste('shelterbelt',0:4,sep='_')) %>% 
-#   bind_rows(.id = 'scenario') %>% 
-#   pivot_longer(everything()) %>% mutate(crop='canola')
-# sb_wheat <- lapply(boundaries,simYield,crop='wheat',samp=samp,grid=sampGrid,Nreps=10) %>% 
-#   set_names(paste('shelterbelt',0:4,sep='_')) %>% 
-#   bind_rows(.id = 'scenario') %>% 
-#   pivot_longer(everything()) %>% mutate(crop='wheat')
-# 
-# list(sb_canola,sb_wheat) %>% set_names(c('canola','wheat')) %>% 
-#   bind_rows(.id='croptype') %>% 
-#   ggplot(aes(x=value))+geom_density(aes(fill=name))+
-#   facet_wrap(~croptype,ncol=1,scales='free')
-# 
-# 
+#Wheat - all boundaries = standard, shelterbelt, or wetland
+test <- data.frame(b=rep(c('STANDARD','SHELTERBELT','WETLAND'),each=1000),
+                   y=c(simYield(data.frame(nearest = letters[1:4], boundary= rep('STANDARD',4)),'wheat',samp,sampGrid,sim = FALSE),
+                       simYield(data.frame(nearest = letters[1:4], boundary= rep('SHELTERBELT',4)),'wheat',samp,sampGrid,sim = FALSE),
+                       simYield(data.frame(nearest = letters[1:4], boundary= rep('WETLAND',4)),'wheat',samp,sampGrid,sim = FALSE)))
+test %>% ggplot(aes(x=y*14.85,fill=b))+geom_density(alpha=0.2)+labs(x='Bu/acre wheat',fill='Boundary')
+
+#Simulate 0-4 shelterbelts around different crop types
+sims <- lapply(c('canola','wheat','peas'),function(x)
+  sim <- lapply(0:4,function(i){
+    simYield(data.frame(nearest = letters[1:4], boundary= c(rep('STANDARD',4-i),rep('SHELTERBELT',i))),
+             x,samp,sampGrid,Nreps=1,sim = FALSE)}))
+
+(p <- sims %>% set_names(nm=c('canola','wheat','peas')) %>% 
+  lapply(.,function(x) data.frame(sim=rep(paste0(4:0,' STANDARD,\n',0:4,' SHELTERBELT'),each=length(x[[1]])),yield=unlist(x))) %>% 
+  bind_rows(.id='crop') %>% 
+  ggplot(aes(x=yield))+
+  geom_density(alpha=0.3,fill='grey')+
+  facet_grid(sim~crop,scales='free_x')+
+  labs(x='Simulated yield (t/ha)',y='Proportion'))
+
+ggsave(paste0('./Figures/simBoundary_shelterbelt.png'),p,height=8,width=8,dpi=300)  
+  
+
+
+# 50 bu/ac = 3.36 t/ha 
+3.36 * 65
+
+#~65 ha per 1/4 section
+#160 acres per 1/4 section
+#4046.86 m2 per acre
+
+
